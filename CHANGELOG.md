@@ -7,18 +7,34 @@
 - **CRITICAL**: Implemented non-recursive admin RLS policies while maintaining security
 - **CRITICAL**: Restored ability for users to access their company data and subscription status
 - **CRITICAL**: Fixed Stripe checkout failures caused by admin data retrieval errors
+- **CRITICAL**: Fixed infinite recursion in team_members table RLS policies
+- **CRITICAL**: Resolved circular dependencies between admin and team_members RLS policies
+- **CRITICAL**: Eliminated "infinite recursion detected in policy for relation" errors during authentication
+- **CRITICAL**: Implemented non-recursive team_members RLS policies using direct auth.uid() checks
+- **CRITICAL**: Fixed authentication store initialization failures caused by RLS policy conflicts
+- **CRITICAL**: Restored proper access control for team member data without circular references
 
 ### Security
 - **Admin RLS Policy Security Fix**: Completely rewrote admin table RLS policies to eliminate recursion
 - Enhanced policy structure to prevent circular dependencies while maintaining access control
 - Maintained owner and team member access levels without recursive policy evaluations
 - Fixed authentication flow by ensuring admin data can be properly retrieved
+- **Team Members RLS Policy Security Fix**: Completely rewrote team_members table RLS policies to eliminate recursion
+- Enhanced policy structure to prevent circular dependencies with admin table policies
+- Implemented direct auth.uid() checks to avoid recursive policy evaluations
+- Maintained proper role-based access control without creating infinite loops
+- Fixed policy conflicts that were causing database query failures during authentication
 
 ### Database
 - **Critical RLS Fix**: Replaced recursive admin policies with direct auth.uid() checks
 - Enhanced policy structure to prevent infinite loops during admin data queries
 - Improved database query performance by removing recursive policy evaluations
 - Added proper access control checks that don't reference the same table being queried
+- **Critical Team Members RLS Fix**: Replaced recursive team_members policies with non-circular implementations
+- Enhanced policy structure to prevent infinite loops during team member data queries
+- Implemented direct subqueries to admin table that don't create circular dependencies
+- Improved database query performance by eliminating recursive policy evaluations
+- Added proper access control checks that maintain security without causing recursion
 
 ### Fixed
 - **STRIPE CHECKOUT DEBUGGING**: Added comprehensive logging to stripe-checkout function for existing customer troubleshooting
