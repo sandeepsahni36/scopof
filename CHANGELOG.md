@@ -1,6 +1,19 @@
 ## [Unreleased]
 
+### Added
+- **ACCESS RESTRICTED PAGE**: Added dedicated page for non-admin members when company subscription is inactive
+- Created AccessRestrictedPage component with clear messaging for members to contact their administrator
+- Enhanced user experience by providing role-specific messaging based on admin status
+- Added proper routing logic to differentiate between admin and member access restrictions
+- Implemented user-friendly interface with company information and support contact details
+
 ### Fixed
+- **MEMBER ACCESS CONTROL**: Enhanced ProtectedRoute to handle different user roles during subscription restrictions
+- **ADMIN ROUTE PROTECTION**: Improved AdminRoute component with better authentication and role checking
+- **ROLE-BASED REDIRECTS**: Implemented different redirect paths for admins vs members when payment is required
+- Non-admin members are now directed to access restricted page instead of subscription management
+- Admins continue to be directed to subscription required page where they can upgrade the plan
+- Enhanced user experience by providing appropriate messaging based on user role and permissions
 - **TRIAL RESTRICTION**: Disabled further trial access once trial is completed or expired
 - **ROUTE PROTECTION**: Protected StartTrialPage route to prevent access by users with active subscriptions
 - **AUTOMATIC REDIRECTS**: Users with active subscriptions are automatically redirected to dashboard from trial page

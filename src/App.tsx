@@ -7,6 +7,7 @@ import StartTrialPage from './pages/auth/StartTrialPage';
 import EmailConfirmationPage from './pages/auth/EmailConfirmationPage';
 import TestEmailConfirmation from './pages/auth/TestEmailConfirmation';
 import SubscriptionRequiredPage from './pages/auth/SubscriptionRequiredPage';
+import AccessRestrictedPage from './pages/auth/AccessRestrictedPage';
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
@@ -35,7 +36,7 @@ import LandingPage from './pages/marketing/LandingPage';
 
 // Auth Guard Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading, isDevMode, requiresPayment, isTrialExpired } = useAuthStore();
+  const { isAuthenticated, loading, isDevMode, requiresPayment, isTrialExpired, isAdmin } = useAuthStore();
   
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -47,7 +48,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   // Check if user needs to complete payment setup
   if (requiresPayment && !isDevMode) {
-    return <Navigate to="/subscription-required\" replace />;
+    // Redirect admins to subscription page, members to access restricted page
+    if (isAdmin) {
+      return <Navigate to="/subscription-required" replace />;
+    } else {
+      return <Navigate to="/access-restricted" replace />;
+    }
   }
   
   return <>{children}</>;
@@ -55,19 +61,23 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Admin Guard Component
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAdmin, loading, isDevMode, requiresPayment } = useAuthStore();
+  const { isAdmin, loading, isDevMode, requiresPayment, isAuthenticated } = useAuthStore();
   
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
   
+  if (!isAuthenticated && !isDevMode) {
+    return <Navigate to="/login" replace />;
+  }
+  
   if (!isAdmin && !isDevMode) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/access-restricted" replace />;
   }
 
   // Check if user needs to complete payment setup
   if (requiresPayment && !isDevMode) {
-    return <Navigate to="/subscription-required\" replace />;
+    return <Navigate to="/subscription-required" replace />;
   }
   
   return <>{children}</>;
@@ -96,6 +106,9 @@ function App() {
           
           {/* Subscription required page */}
           <Route path="/subscription-required" element={<SubscriptionRequiredPage />} />
+          
+          {/* Access restricted page for non-admin members */}
+          <Route path="/access-restricted" element={<AccessRestrictedPage />} />
           
           {/* Auth routes */}
           <Route element={<AuthLayout />}>
