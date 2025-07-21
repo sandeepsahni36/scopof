@@ -6,16 +6,30 @@ import { Button } from '../../components/ui/Button';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { createCheckoutSession } from '../../lib/stripe';
 import { validateUserSession, handleAuthError } from '../../lib/supabase';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from 'sonner';
 
 const StartTrialPage = () => {
   const navigate = useNavigate();
+  const { hasActiveSubscription, isTrialExpired, requiresPayment } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [selectedTier, setSelectedTier] = useState('professional');
   const [authError, setAuthError] = useState<string | null>(null);
   const [validatingAuth, setValidatingAuth] = useState(true);
 
   useEffect(() => {
+    // Redirect users who already have active subscriptions
+    if (hasActiveSubscription) {
+      navigate('/dashboard');
+      return;
+    }
+
+    // Redirect users whose trial has expired to subscription required page
+    if (isTrialExpired || requiresPayment) {
+      navigate('/subscription-required');
+      return;
+    }
+
     // Validate user session on component mount
     const checkAuth = async () => {
       try {
@@ -32,7 +46,7 @@ const StartTrialPage = () => {
     };
 
     checkAuth();
-  }, []);
+  }, [hasActiveSubscription, isTrialExpired, requiresPayment, navigate]);
 
   const handleStartTrial = async () => {
     try {

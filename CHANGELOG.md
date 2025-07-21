@@ -1,6 +1,13 @@
 ## [Unreleased]
 
 ### Fixed
+- **TRIAL RESTRICTION**: Disabled further trial access once trial is completed or expired
+- **ROUTE PROTECTION**: Protected StartTrialPage route to prevent access by users with active subscriptions
+- **AUTOMATIC REDIRECTS**: Users with active subscriptions are automatically redirected to dashboard from trial page
+- **EXPIRED TRIAL HANDLING**: Users with expired trials are redirected to subscription required page instead of trial page
+- **SUBSCRIPTION FLOW**: Streamlined user flow to prevent confusion between trial and paid subscription states
+
+### Fixed
 - **CRITICAL**: Fixed infinite recursion in admin table RLS policies causing 500 errors
 - **CRITICAL**: Resolved "infinite recursion detected in policy for relation \"admin\"" error
 - **CRITICAL**: Fixed authentication failures preventing users from accessing admin data
