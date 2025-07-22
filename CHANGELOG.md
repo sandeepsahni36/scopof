@@ -1,6 +1,14 @@
 ## [Unreleased]
 
 ### Added
+- **DRAG AND DROP TEMPLATE ITEMS**: Implemented intuitive drag-and-drop functionality for reordering template items
+- Added @hello-pangea/dnd library for smooth drag-and-drop interactions in template builder
+- Enhanced template creation workflow with visual drag handles and reordering capabilities
+- Implemented visual feedback during drag operations with hover states and drop zone indicators
+- Added smooth animations and transitions for dragging items with rotation and scaling effects
+- Enhanced user experience with clear drag handles and tooltips for better usability
+- Maintained form validation and data integrity during drag-and-drop operations
+- Improved template organization with intuitive reordering without manual deletion and re-addition
 - **ENHANCED START INSPECTION PAGE**: Added property usage type toggle between "Short Term Rental" and "Real Estate Property"
 - Created modern toggle switch to switch between property usage types with smooth animations
 - Added new inspection types: "Move-In" and "Move-Out" for real estate properties

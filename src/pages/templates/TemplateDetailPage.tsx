@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Plus, Trash2, GripVertical, ArrowLeft, FolderPlus, ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -245,6 +246,23 @@ const TemplateDetailPage = () => {
     return fields[itemIndex].parentId !== undefined;
   };
 
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, source } = result;
+
+    // If dropped outside a valid droppable area
+    if (!destination) {
+      return;
+    }
+
+    // If dropped in the same position
+    if (destination.index === source.index) {
+      return;
+    }
+
+    // Move the item to the new position
+    move(source.index, destination.index);
+  };
+
   if (initialLoading) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -309,344 +327,370 @@ const TemplateDetailPage = () => {
           </div>
 
           <div className="space-y-4">
-            {fields.map((field, index) => {
-              const isSection = field.type === 'section';
-              const isChild = isChildOfSection(index);
-              const isExpanded = expandedSections.has(index);
-              const sectionChildren = isSection ? getSectionChildren(index) : [];
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="template-items">
+                {(provided, snapshot) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className={`space-y-4 ${snapshot.isDraggingOver ? 'bg-blue-50 rounded-lg p-2' : ''}`}
+                  >
+                    {fields.map((field, index) => {
+                      const isSection = field.type === 'section';
+                      const isChild = isChildOfSection(index);
+                      const isExpanded = expandedSections.has(index);
+                      const sectionChildren = isSection ? getSectionChildren(index) : [];
 
-              // Don't render child items directly - they're rendered within sections
-              if (isChild && !isSection) {
-                return null;
-              }
+                      // Don't render child items directly - they're rendered within sections
+                      if (isChild && !isSection) {
+                        return null;
+                      }
 
-              return (
-                <div key={field.id} className={`border border-gray-200 rounded-lg ${isSection ? 'bg-blue-50' : 'bg-white'}`}>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center">
-                        <button
-                          type="button"
-                          className="cursor-move p-1 text-gray-400 hover:text-gray-600 mr-2"
-                        >
-                          <GripVertical size={20} />
-                        </button>
-                        {isSection && (
-                          <button
-                            type="button"
-                            onClick={() => toggleSection(index)}
-                            className="p-1 text-gray-600 hover:text-gray-800 mr-2"
-                          >
-                            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                          </button>
-                        )}
-                        <span className="text-sm font-medium text-gray-900">
-                          {isSection ? 'Section' : `Item ${index + 1}`} - {field.type.replace('_', ' ')}
-                          {isSection && ` (${sectionChildren.length} items)`}
-                        </span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => remove(index)}
-                        leftIcon={<Trash2 size={16} />}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4">
-                      {isSection ? (
-                        <Input
-                          label="Section Name"
-                          error={errors.items?.[index]?.sectionName?.message}
-                          {...register(`items.${index}.sectionName` as const, {
-                            required: 'Section name is required',
-                          })}
-                          placeholder="Enter section name"
-                        />
-                      ) : (
-                        <Input
-                          label="Label"
-                          error={errors.items?.[index]?.label?.message}
-                          {...register(`items.${index}.label` as const, {
-                            required: 'Label is required',
-                          })}
-                        />
-                      )}
-
-                      {!isSection && (
-                        <>
-                          <div className="flex items-center space-x-4">
-                            <label className="flex items-center">
-                              <input
-                                type="checkbox"
-                                {...register(`items.${index}.required` as const)}
-                                className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                              />
-                              <span className="ml-2 text-sm text-gray-900">Required</span>
-                            </label>
-
-                            <label className="flex items-center">
-                              <input
-                                type="checkbox"
-                                {...register(`items.${index}.reportEnabled` as const)}
-                                className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                              />
-                              <span className="ml-2 text-sm text-gray-900">Enable Reporting</span>
-                            </label>
-                          </div>
-
-                          {watch(`items.${index}.reportEnabled`) && (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Report Recipient
-                              </label>
-                              <select
-                                {...register(`items.${index}.reportRecipientId` as const, {
-                                  required: 'Report recipient is required when reporting is enabled',
-                                })}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                              >
-                                <option value="">Select a team...</option>
-                                {reportServiceTeams.map((team) => (
-                                  <option key={team.id} value={team.id}>
-                                    {team.designation} ({team.email})
-                                  </option>
-                                ))}
-                              </select>
-                              {errors.items?.[index]?.reportRecipientId && (
-                                <p className="mt-1 text-sm text-red-600">
-                                  {errors.items[index]?.reportRecipientId?.message}
-                                </p>
-                              )}
-                              {reportServiceTeams.length === 0 && (
-                                <p className="mt-1 text-sm text-amber-600">
-                                  No teams available. Add teams in Company Settings first.
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          {(field.type === 'single_choice' || field.type === 'multiple_choice') && (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Options
-                              </label>
-                              <div className="space-y-2">
-                                {(watch(`items.${index}.options`) || []).map((_, optionIndex) => (
-                                  <div key={optionIndex} className="flex items-center space-x-2">
-                                    <Input
-                                      {...register(
-                                        `items.${index}.options.${optionIndex}` as const,
-                                        { required: 'Option is required' }
-                                      )}
-                                      placeholder={`Option ${optionIndex + 1}`}
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => removeOptionFromItem(index, optionIndex)}
-                                      leftIcon={<Trash2 size={16} />}
-                                    />
-                                  </div>
-                                ))}
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => addOptionToItem(index)}
-                                  leftIcon={<Plus size={16} />}
-                                >
-                                  Add Option
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* Section Children */}
-                    {isSection && isExpanded && (
-                      <div className="mt-6 pl-6 border-l-2 border-blue-200">
-                        <div className="mb-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Section Items</h4>
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAddItem('text', index)}
-                              leftIcon={<Plus size={16} />}
+                      return (
+                        <Draggable key={field.id} draggableId={field.id || `item-${index}`} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              className={`border border-gray-200 rounded-lg transition-all duration-200 ${
+                                isSection ? 'bg-blue-50' : 'bg-white'
+                              } ${
+                                snapshot.isDragging ? 'shadow-lg rotate-2 scale-105' : 'shadow-sm'
+                              }`}
                             >
-                              Add Text Field
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAddItem('single_choice', index)}
-                              leftIcon={<Plus size={16} />}
-                            >
-                              Add Single Choice
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAddItem('multiple_choice', index)}
-                              leftIcon={<Plus size={16} />}
-                            >
-                              Add Multiple Choice
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAddItem('photo', index)}
-                              leftIcon={<Plus size={16} />}
-                            >
-                              Add Photo Upload
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Render section children */}
-                        <div className="space-y-3">
-                          {sectionChildren.map(({ field: childField, index: childIndex }) => (
-                            <div key={childField.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-                              <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center">
-                                  <button
-                                    type="button"
-                                    className="cursor-move p-1 text-gray-400 hover:text-gray-600"
-                                  >
-                                    <GripVertical size={16} />
-                                  </button>
-                                  <span className="ml-2 text-sm font-medium text-gray-900">
-                                    {childField.type.replace('_', ' ')}
-                                  </span>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => remove(childIndex)}
-                                  leftIcon={<Trash2 size={16} />}
-                                >
-                                  Remove
-                                </Button>
-                              </div>
-
-                              <div className="grid grid-cols-1 gap-4">
-                                <Input
-                                  label="Label"
-                                  error={errors.items?.[childIndex]?.label?.message}
-                                  {...register(`items.${childIndex}.label` as const, {
-                                    required: 'Label is required',
-                                  })}
-                                />
-
-                                <div className="flex items-center space-x-4">
-                                  <label className="flex items-center">
-                                    <input
-                                      type="checkbox"
-                                      {...register(`items.${childIndex}.required` as const)}
-                                      className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                    />
-                                    <span className="ml-2 text-sm text-gray-900">Required</span>
-                                  </label>
-
-                                  <label className="flex items-center">
-                                    <input
-                                      type="checkbox"
-                                      {...register(`items.${childIndex}.reportEnabled` as const)}
-                                      className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                    />
-                                    <span className="ml-2 text-sm text-gray-900">Enable Reporting</span>
-                                  </label>
-                                </div>
-
-                                {watch(`items.${childIndex}.reportEnabled`) && (
-                                  <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                      Report Recipient
-                                    </label>
-                                    <select
-                                      {...register(`items.${childIndex}.reportRecipientId` as const, {
-                                        required: 'Report recipient is required when reporting is enabled',
-                                      })}
-                                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              <div className="p-4">
+                                <div className="flex items-center justify-between mb-4">
+                                  <div className="flex items-center">
+                                    <div
+                                      {...provided.dragHandleProps}
+                                      className="cursor-move p-1 text-gray-400 hover:text-gray-600 mr-2 rounded hover:bg-gray-100 transition-colors"
+                                      title="Drag to reorder"
                                     >
-                                      <option value="">Select a team...</option>
-                                      {reportServiceTeams.map((team) => (
-                                        <option key={team.id} value={team.id}>
-                                          {team.designation} ({team.email})
-                                        </option>
-                                      ))}
-                                    </select>
-                                    {errors.items?.[childIndex]?.reportRecipientId && (
-                                      <p className="mt-1 text-sm text-red-600">
-                                        {errors.items[childIndex]?.reportRecipientId?.message}
-                                      </p>
+                                      <GripVertical size={20} />
+                                    </div>
+                                    {isSection && (
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleSection(index)}
+                                        className="p-1 text-gray-600 hover:text-gray-800 mr-2"
+                                      >
+                                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                      </button>
                                     )}
-                                    {reportServiceTeams.length === 0 && (
-                                      <p className="mt-1 text-sm text-amber-600">
-                                        No teams available. Add teams in Company Settings first.
-                                      </p>
-                                    )}
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {isSection ? 'Section' : `Item ${index + 1}`} - {field.type.replace('_', ' ')}
+                                      {isSection && ` (${sectionChildren.length} items)`}
+                                    </span>
                                   </div>
-                                )}
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => remove(index)}
+                                    leftIcon={<Trash2 size={16} />}
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
 
-                                {(childField.type === 'single_choice' || childField.type === 'multiple_choice') && (
-                                  <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                      Options
-                                    </label>
-                                    <div className="space-y-2">
-                                      {(watch(`items.${childIndex}.options`) || []).map((_, optionIndex) => (
-                                        <div key={optionIndex} className="flex items-center space-x-2">
-                                          <Input
-                                            {...register(
-                                              `items.${childIndex}.options.${optionIndex}` as const,
-                                              { required: 'Option is required' }
+                                <div className="grid grid-cols-1 gap-4">
+                                  {isSection ? (
+                                    <Input
+                                      label="Section Name"
+                                      error={errors.items?.[index]?.sectionName?.message}
+                                      {...register(`items.${index}.sectionName` as const, {
+                                        required: 'Section name is required',
+                                      })}
+                                      placeholder="Enter section name"
+                                    />
+                                  ) : (
+                                    <Input
+                                      label="Label"
+                                      error={errors.items?.[index]?.label?.message}
+                                      {...register(`items.${index}.label` as const, {
+                                        required: 'Label is required',
+                                      })}
+                                    />
+                                  )}
+
+                                  {!isSection && (
+                                    <>
+                                      <div className="flex items-center space-x-4">
+                                        <label className="flex items-center">
+                                          <input
+                                            type="checkbox"
+                                            {...register(`items.${index}.required` as const)}
+                                            className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                          />
+                                          <span className="ml-2 text-sm text-gray-900">Required</span>
+                                        </label>
+
+                                        <label className="flex items-center">
+                                          <input
+                                            type="checkbox"
+                                            {...register(`items.${index}.reportEnabled` as const)}
+                                            className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                          />
+                                          <span className="ml-2 text-sm text-gray-900">Enable Reporting</span>
+                                        </label>
+                                      </div>
+
+                                      {watch(`items.${index}.reportEnabled`) && (
+                                        <div>
+                                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Report Recipient
+                                          </label>
+                                          <select
+                                            {...register(`items.${index}.reportRecipientId` as const, {
+                                              required: 'Report recipient is required when reporting is enabled',
+                                            })}
+                                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                          >
+                                            <option value="">Select a team...</option>
+                                            {reportServiceTeams.map((team) => (
+                                              <option key={team.id} value={team.id}>
+                                                {team.designation} ({team.email})
+                                              </option>
+                                            ))}
+                                          </select>
+                                          {errors.items?.[index]?.reportRecipientId && (
+                                            <p className="mt-1 text-sm text-red-600">
+                                              {errors.items[index]?.reportRecipientId?.message}
+                                            </p>
+                                          )}
+                                          {reportServiceTeams.length === 0 && (
+                                            <p className="mt-1 text-sm text-amber-600">
+                                              No teams available. Add teams in Company Settings first.
+                                            </p>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {(field.type === 'single_choice' || field.type === 'multiple_choice') && (
+                                        <div>
+                                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Options
+                                          </label>
+                                          <div className="space-y-2">
+                                            {(watch(`items.${index}.options`) || []).map((_, optionIndex) => (
+                                              <div key={optionIndex} className="flex items-center space-x-2">
+                                                <Input
+                                                  {...register(
+                                                    `items.${index}.options.${optionIndex}` as const,
+                                                    { required: 'Option is required' }
+                                                  )}
+                                                  placeholder={`Option ${optionIndex + 1}`}
+                                                />
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => removeOptionFromItem(index, optionIndex)}
+                                                  leftIcon={<Trash2 size={16} />}
+                                                />
+                                              </div>
+                                            ))}
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => addOptionToItem(index)}
+                                              leftIcon={<Plus size={16} />}
+                                            >
+                                              Add Option
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+
+                                {/* Section Children */}
+                                {isSection && isExpanded && (
+                                  <div className="mt-6 pl-6 border-l-2 border-blue-200">
+                                    <div className="mb-4">
+                                      <h4 className="text-sm font-medium text-gray-700 mb-2">Section Items</h4>
+                                      <div className="flex flex-wrap gap-2">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleAddItem('text', index)}
+                                          leftIcon={<Plus size={16} />}
+                                        >
+                                          Add Text Field
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleAddItem('single_choice', index)}
+                                          leftIcon={<Plus size={16} />}
+                                        >
+                                          Add Single Choice
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleAddItem('multiple_choice', index)}
+                                          leftIcon={<Plus size={16} />}
+                                        >
+                                          Add Multiple Choice
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleAddItem('photo', index)}
+                                          leftIcon={<Plus size={16} />}
+                                        >
+                                          Add Photo Upload
+                                        </Button>
+                                      </div>
+                                    </div>
+
+                                    {/* Render section children */}
+                                    <div className="space-y-3">
+                                      {sectionChildren.map(({ field: childField, index: childIndex }) => (
+                                        <div key={childField.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                                          <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center">
+                                              <button
+                                                type="button"
+                                                className="cursor-move p-1 text-gray-400 hover:text-gray-600"
+                                              >
+                                                <GripVertical size={16} />
+                                              </button>
+                                              <span className="ml-2 text-sm font-medium text-gray-900">
+                                                {childField.type.replace('_', ' ')}
+                                              </span>
+                                            </div>
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => remove(childIndex)}
+                                              leftIcon={<Trash2 size={16} />}
+                                            >
+                                              Remove
+                                            </Button>
+                                          </div>
+
+                                          <div className="grid grid-cols-1 gap-4">
+                                            <Input
+                                              label="Label"
+                                              error={errors.items?.[childIndex]?.label?.message}
+                                              {...register(`items.${childIndex}.label` as const, {
+                                                required: 'Label is required',
+                                              })}
+                                            />
+
+                                            <div className="flex items-center space-x-4">
+                                              <label className="flex items-center">
+                                                <input
+                                                  type="checkbox"
+                                                  {...register(`items.${childIndex}.required` as const)}
+                                                  className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                                />
+                                                <span className="ml-2 text-sm text-gray-900">Required</span>
+                                              </label>
+
+                                              <label className="flex items-center">
+                                                <input
+                                                  type="checkbox"
+                                                  {...register(`items.${childIndex}.reportEnabled` as const)}
+                                                  className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                                />
+                                                <span className="ml-2 text-sm text-gray-900">Enable Reporting</span>
+                                              </label>
+                                            </div>
+
+                                            {watch(`items.${childIndex}.reportEnabled`) && (
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                  Report Recipient
+                                                </label>
+                                                <select
+                                                  {...register(`items.${childIndex}.reportRecipientId` as const, {
+                                                    required: 'Report recipient is required when reporting is enabled',
+                                                  })}
+                                                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                                >
+                                                  <option value="">Select a team...</option>
+                                                  {reportServiceTeams.map((team) => (
+                                                    <option key={team.id} value={team.id}>
+                                                      {team.designation} ({team.email})
+                                                    </option>
+                                                  ))}
+                                                </select>
+                                                {errors.items?.[childIndex]?.reportRecipientId && (
+                                                  <p className="mt-1 text-sm text-red-600">
+                                                    {errors.items[childIndex]?.reportRecipientId?.message}
+                                                  </p>
+                                                )}
+                                                {reportServiceTeams.length === 0 && (
+                                                  <p className="mt-1 text-sm text-amber-600">
+                                                    No teams available. Add teams in Company Settings first.
+                                                  </p>
+                                                )}
+                                              </div>
                                             )}
-                                            placeholder={`Option ${optionIndex + 1}`}
-                                          />
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => removeOptionFromItem(childIndex, optionIndex)}
-                                            leftIcon={<Trash2 size={16} />}
-                                          />
+
+                                            {(childField.type === 'single_choice' || childField.type === 'multiple_choice') && (
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                  Options
+                                                </label>
+                                                <div className="space-y-2">
+                                                  {(watch(`items.${childIndex}.options`) || []).map((_, optionIndex) => (
+                                                    <div key={optionIndex} className="flex items-center space-x-2">
+                                                      <Input
+                                                        {...register(
+                                                          `items.${childIndex}.options.${optionIndex}` as const,
+                                                          { required: 'Option is required' }
+                                                        )}
+                                                        placeholder={`Option ${optionIndex + 1}`}
+                                                      />
+                                                      <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => removeOptionFromItem(childIndex, optionIndex)}
+                                                        leftIcon={<Trash2 size={16} />}
+                                                      />
+                                                    </div>
+                                                  ))}
+                                                  <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => addOptionToItem(childIndex)}
+                                                    leftIcon={<Plus size={16} />}
+                                                  >
+                                                    Add Option
+                                                  </Button>
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
                                       ))}
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => addOptionToItem(childIndex)}
-                                        leftIcon={<Plus size={16} />}
-                                      >
-                                        Add Option
-                                      </Button>
                                     </div>
                                   </div>
                                 )}
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                          )}
+                        </Draggable>
+                      );
+                    })}
+                    {provided.placeholder}
                   </div>
-                </div>
-              );
-            })}
+                )}
+              </Droppable>
+            </DragDropContext>
           </div>
 
           <div className="mt-6">
