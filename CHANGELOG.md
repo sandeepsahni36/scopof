@@ -4,6 +4,10 @@
 - **CRITICAL**: Fixed inspection workflow failing to load checklist items during inspection
 - **CRITICAL**: Resolved RLS policy issues preventing inspection items from being created and accessed
 - **CRITICAL**: Simplified complex RLS policies for inspections and inspection_items tables
+- **CRITICAL**: Fixed inspection workflow failing to load checklist templates
+- **CRITICAL**: Resolved RLS policy issues preventing property checklist templates from being accessed
+- **CRITICAL**: Simplified complex RLS policies for property_checklist_templates table
+
 - **CRITICAL**: Fixed inspection page jumping directly to signature instead of showing checklist items
 - **CRITICAL**: Resolved database access issues that were preventing proper inspection workflow
 - **CRITICAL**: Enhanced RLS policies to avoid complex joins that were causing query failures
@@ -14,6 +18,10 @@
 - **Inspection RLS Policy Simplification**: Completely rewrote RLS policies for inspections and inspection_items tables
 - Enhanced policy structure to prevent complex join failures during inspection operations
 - Improved database query performance by simplifying RLS policy logic
+- **Property Checklist Templates RLS Policy Simplification**: Completely rewrote RLS policies for property_checklist_templates table
+- Enhanced policy structure to prevent complex join failures during checklist operations
+- Improved database query performance by simplifying RLS policy logic
+
 - Maintained security while ensuring reliable access to inspection data for authorized users
 - Fixed policy conflicts that were preventing inspection items from being properly created and accessed
 
@@ -22,6 +30,9 @@
 - Enhanced inspection data access control to ensure only authorized team members can access inspection data
 - Secured inspection workflow without compromising on role-based access control
 - Fixed authentication issues that were preventing proper inspection data operations
+- Enhanced property checklist templates data access control to ensure only authorized team members can access
+- Secured property checklist templates workflow without compromising on role-based access control
+
 
 ### Fixed
 - **CRITICAL**: Fixed "TypeError: Failed to fetch" and "User session is invalid" errors
@@ -29,6 +40,7 @@
 - Modified `validateUserSession` to proactively call `handleAuthError` on invalid sessions
 - Updated `authStore.initialize` to catch and handle errors during initial session retrieval
 - **TEMPLATE ITEM COUNT DISPLAY**: Fixed template item count showing as "0 items" in property checklist view
+- **CRITICAL**: Fixed "No property checklist ID found" error when starting inspection
 - Enhanced property checklist query to fetch actual count of template items from database
 - Updated data transformation logic to correctly display item counts next to template names
 - Fixed property detail page to show accurate template statistics (e.g., "5 items" instead of "0 items")
@@ -169,6 +181,9 @@
 - **CONSTRAINTS**: Added appropriate constraints and comments for new fields
 - **BACKWARD COMPATIBILITY**: Ensured schema changes maintain backward compatibility
 - **INDEX OPTIMIZATION**: Maintained proper indexing for enhanced inspection queries
+- **RLS POLICY OPTIMIZATION**: Optimized RLS policies for `inspections` and `inspection_items` tables
+- **RLS POLICY OPTIMIZATION**: Optimized RLS policies for `property_checklist_templates` table
+
 - **TYPE SAFETY**: Enhanced database type safety with proper enum handling
 - **DOCUMENTATION**: Added comprehensive comments for new database fields and types
 - **STRIPE CHECKOUT DEBUGGING**: Added comprehensive logging to stripe-checkout function for existing customer troubleshooting
@@ -201,6 +216,10 @@
 - **Critical RLS Fix**: Completely rewrote admin and team_members RLS policies to eliminate recursion
 - Enhanced policy structure to prevent circular dependencies while maintaining functionality
 - Improved database query performance by removing recursive policy evaluations
+- **Critical RLS Fix**: Replaced complex property_checklist_templates policies with simplified ones
+- Enhanced policy structure to prevent complex join failures during checklist template queries
+- Improved database query performance by simplifying RLS policy logic
+
 - Added proper access control checks that don't reference the same table being queried
 
 ### Added
@@ -279,6 +298,9 @@
 - **DATABASE SCHEMA**: Updated inspection table structure to support enhanced property inspection workflows
 - **API INTERFACES**: Updated all inspection-related API functions to use new data structure
 - **MOCK DATA**: Updated development mock data to reflect new inspection data model
+- **RLS POLICY SIMPLIFICATION**: Simplified RLS policies for `inspections` and `inspection_items` tables
+- **RLS POLICY SIMPLIFICATION**: Simplified RLS policies for `property_checklist_templates` table
+
 - **SEARCH FUNCTIONALITY**: Enhanced search to work with unified contact name structure
 - **USER EXPERIENCE**: Improved inspection workflow with clearer property type distinction
 - **Report Management Enhancement**: Replaced manual email entry with structured team designation system
