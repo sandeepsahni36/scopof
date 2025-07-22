@@ -106,9 +106,6 @@ const StartInspectionPage = () => {
       setSubmitting(true);
 
       // Debug logging and validation
-      console.log('Starting inspection with propertyChecklist:', propertyChecklist);
-      console.log('Property checklist ID:', propertyChecklist?.id);
-      
       if (!propertyChecklist?.id || !isValidUUID(propertyChecklist.id)) {
         toast.error('Invalid property checklist ID. Please ensure the checklist is properly configured.');
         return;

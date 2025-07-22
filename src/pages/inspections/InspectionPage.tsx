@@ -117,13 +117,8 @@ const InspectionPage = () => {
 
   const buildRoomsFromInspectionData = async (inspection: any, inspectionItems: any[]): Promise<Room[]> => {
     try {
-      // Debug logging
-      console.log('Building rooms from inspection data:', inspection);
-      console.log('Inspection propertyChecklistId:', inspection.propertyChecklistId);
-      console.log('Inspection items count:', inspectionItems.length);
-      
       // Check if propertyChecklistId exists before querying
-      if (!inspection.propertyChecklistId) {
+      if (!inspection.property_checklist_id) {
         console.warn('No property checklist ID found for inspection:', inspection.id);
         // Return signature room only if no checklist is attached
         return [{ id: 'signature', name: 'Signature', items: [] }];
@@ -153,7 +148,7 @@ const InspectionPage = () => {
             )
           )
         `)
-        .eq('property_checklist_id', inspection.propertyChecklistId)
+        .eq('property_checklist_id', inspection.property_checklist_id)
         .order('order_index');
 
       if (error) {
