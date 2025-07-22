@@ -99,6 +99,7 @@ export type Template = {
 };
 
 export type TemplateItemType = 'text' | 'single_choice' | 'multiple_choice' | 'photo' | 'section';
+export type TemplateItemType = 'text' | 'single_choice' | 'multiple_choice' | 'photo' | 'section' | 'divider';
 
 export type TemplateItem = {
   id: string;

@@ -379,6 +379,7 @@ const TemplateDetailPage = () => {
                                     )}
                                     <span className="text-sm font-medium text-gray-900">
                                       {isSection ? 'Section' : `Item ${index + 1}`} - {field.type.replace('_', ' ')}
+                                      {isSection ? 'Section' : field.type === 'divider' ? 'Divider' : `Item ${index + 1}`} - {field.type.replace('_', ' ')}
                                       {isSection && ` (${sectionChildren.length} items)`}
                                     </span>
                                   </div>
@@ -403,6 +404,13 @@ const TemplateDetailPage = () => {
                                       })}
                                       placeholder="Enter section name"
                                     />
+                                  ) : field.type === 'divider' ? (
+                                    <div className="py-4">
+                                      <div className="border-t border-gray-300"></div>
+                                      <p className="text-sm text-gray-500 text-center mt-2">
+                                        Visual divider - no configuration needed
+                                      </p>
+                                    </div>
                                   ) : (
                                     <Input
                                       label="Label"
@@ -414,6 +422,7 @@ const TemplateDetailPage = () => {
                                   )}
 
                                   {!isSection && (
+                                  {!isSection && field.type !== 'divider' && (
                                     <>
                                       <div className="flex items-center space-x-4">
                                         <label className="flex items-center">
@@ -548,6 +557,24 @@ const TemplateDetailPage = () => {
                                         >
                                           Add Photo Upload
                                         </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleAddItem('divider', index)}
+                                          leftIcon={<Plus size={16} />}
+                                        >
+                                          Add Divider
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleAddItem('divider', index)}
+                                          leftIcon={<Plus size={16} />}
+                                        >
+                                          Add Divider
+                                        </Button>
                                       </div>
                                     </div>
 
@@ -583,11 +610,13 @@ const TemplateDetailPage = () => {
                                               label="Label"
                                               error={errors.items?.[childIndex]?.label?.message}
                                               {...register(`items.${childIndex}.label` as const, {
-                                                required: 'Label is required',
+                                                required: childField.type !== 'divider' ? 'Label is required' : false,
                                               })}
                                             />
 
                                             <div className="flex items-center space-x-4">
+                                            {childField.type !== 'divider' && (
+                                              <div className="flex items-center space-x-4">
                                               <label className="flex items-center">
                                                 <input
                                                   type="checkbox"
@@ -606,6 +635,17 @@ const TemplateDetailPage = () => {
                                                 <span className="ml-2 text-sm text-gray-900">Enable Reporting</span>
                                               </label>
                                             </div>
+                                              </div>
+                                            )}
+
+                                            {childField.type === 'divider' && (
+                                              <div className="py-4">
+                                                <div className="border-t border-gray-300"></div>
+                                                <p className="text-sm text-gray-500 text-center mt-2">
+                                                  Visual divider - no configuration needed
+                                                </p>
+                                              </div>
+                                            )}
 
                                             {watch(`items.${childIndex}.reportEnabled`) && (
                                               <div>
@@ -734,6 +774,14 @@ const TemplateDetailPage = () => {
                 leftIcon={<Plus size={16} />}
               >
                 Add Photo Upload
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleAddItem('divider')}
+                leftIcon={<Plus size={16} />}
+              >
+                Add Divider
               </Button>
             </div>
           </div>

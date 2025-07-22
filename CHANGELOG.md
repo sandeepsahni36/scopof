@@ -1,6 +1,12 @@
 ## [Unreleased]
 
 ### Added
+- **DIVIDER TEMPLATE ITEM**: Added new "Divider" item type for template organization
+- Implemented visual separator option in template builder to create clear sections between template items
+- Added divider buttons to both main template area and within sections for flexible organization
+- Enhanced template creation workflow with divider support for better visual structure
+- Divider items require no configuration and automatically render as horizontal lines during inspections
+- Improved template organization capabilities with visual separators for complex inspection workflows
 - **DRAG AND DROP TEMPLATE ITEMS**: Implemented intuitive drag-and-drop functionality for reordering template items
 - Added @hello-pangea/dnd library for smooth drag-and-drop interactions in template builder
 - Enhanced template creation workflow with visual drag handles and reordering capabilities

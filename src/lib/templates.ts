@@ -103,9 +103,9 @@ const MOCK_TEMPLATE_ITEMS: TemplateItem[] = [
   {
     id: 'mock-item-3',
     templateId: 'mock-template-1',
-    type: 'text',
+    label: type === 'divider' ? 'Divider' : '',
     label: 'Additional kitchen notes',
-    required: false,
+    required: type === 'divider' ? false : false,
     options: null,
     reportEnabled: false,
     maintenanceEmail: null,
