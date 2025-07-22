@@ -71,7 +71,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Admin Guard Component
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAdmin, loading, isDevMode, requiresPayment, isAuthenticated } = useAuthStore();
+  const { isAdmin, loading, isDevMode, requiresPayment, isAuthenticated, needsPaymentSetup } = useAuthStore();
   
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -85,9 +85,20 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/access-restricted" replace />;
   }
 
-  // Check if user needs to complete payment setup
-  if (requiresPayment && !isDevMode) {
-    return <Navigate to="/subscription-required" replace />;
+  if (isAdmin && !isDevMode) {
+    const currentPath = window.location.pathname;
+
+    // Rule 1: If admin is trialing and needs to complete payment setup (customer_id is NULL)
+    // AND they are not already on the /start-trial page
+    if (needsPaymentSetup && currentPath !== '/start-trial') {
+      return <Navigate to="/start-trial" replace />;
+    }
+
+    // Rule 2: If admin's trial has expired OR their subscription is in a state requiring payment
+    // AND they are not already on the /subscription-required page
+    if (requiresPayment && currentPath !== '/subscription-required') {
+      return <Navigate to="/subscription-required" replace />;
+    }
   }
   
   return <>{children}</>;
