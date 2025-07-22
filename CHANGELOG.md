@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+### Changed
+- **Database Optimization**: Consolidated all SQL migrations into a single comprehensive schema file (`consolidated_schema.sql`)
+- **Memory Optimization**: Removed 19 individual migration files to reduce project size and improve performance
+- **Schema Consolidation**: Combined all table definitions, indexes, RLS policies, triggers, and functions into one file
+
 ### Added
 - **INSPECTION DEBUGGING**: Added comprehensive debugging for inspection checklist ID validation
 - Added UUID validation for property checklist IDs before creating inspections
