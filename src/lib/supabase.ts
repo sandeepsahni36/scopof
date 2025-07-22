@@ -80,12 +80,17 @@ export async function handleAuthError(error: any) {
 
 export async function signUp(email: string, password: string, metadata?: { full_name?: string; company_name?: string }) {
   try {
+    const redirectUrl = `${getSiteUrl()}/auth/callback`;
+    console.log('SignUp: Using redirect URL:', redirectUrl);
+    console.log('SignUp: Site URL from getSiteUrl():', getSiteUrl());
+    console.log('SignUp: window.location.origin:', window.location.origin);
+    
     // Create the auth user with metadata included
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${getSiteUrl()}/auth/callback`,
+        emailRedirectTo: redirectUrl,
         data: {
           full_name: metadata?.full_name,
           company_name: metadata?.company_name,
@@ -148,10 +153,14 @@ export async function getCurrentUser() {
 }
 
 export async function resendConfirmationEmail(email: string) {
+  const redirectUrl = `${getSiteUrl()}/auth/callback`;
+  console.log('ResendConfirmation: Using redirect URL:', redirectUrl);
+  console.log('ResendConfirmation: Site URL from getSiteUrl():', getSiteUrl());
+  
   return supabase.auth.resend({
     email,
     options: {
-      emailRedirectTo: `${getSiteUrl()}/auth/callback`,
+      emailRedirectTo: redirectUrl,
     },
   });
 }
