@@ -1,6 +1,10 @@
 ## [Unreleased]
 
 ### Added
+- **DATABASE SCHEMA FIX**: Added 'divider' value to template_item_type enum
+- Extended template_item_type enum to support divider items for visual organization
+- Created database migration to safely add new enum value without affecting existing data
+- Enhanced template system to support visual separators between inspection items
 - **DATABASE SCHEMA FIX**: Added missing `type` column to `template_items` table
 - Created database migration to add `type` column using `template_item_type` enum
 - Added proper indexing for efficient querying by template item type
