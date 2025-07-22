@@ -56,6 +56,7 @@ export type User = {
 export type Company = {
   id: string;
   name: string;
+  customerId?: string;
   logo?: string;
   brandColor?: string;
   reportBackground?: string;

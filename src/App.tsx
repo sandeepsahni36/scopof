@@ -36,7 +36,7 @@ import LandingPage from './pages/marketing/LandingPage';
 
 // Auth Guard Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading, isDevMode, requiresPayment, isTrialExpired, isAdmin } = useAuthStore();
+  const { isAuthenticated, loading, isDevMode, requiresPayment, isTrialExpired, isAdmin, needsPaymentSetup } = useAuthStore();
   
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -46,13 +46,23 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Check if user needs to complete payment setup
-  if (requiresPayment && !isDevMode) {
-    // Redirect admins to subscription page, members to access restricted page
-    if (isAdmin) {
-      return <Navigate to="/subscription-required" replace />;
-    } else {
-      return <Navigate to="/access-restricted" replace />;
+  if (isAuthenticated && !isDevMode) {
+    const currentPath = window.location.pathname;
+
+    // Rule 1: If user is trialing and needs to complete payment setup (customer_id is NULL)
+    // AND they are not already on the /start-trial page
+    if (needsPaymentSetup && currentPath !== '/start-trial') {
+      return <Navigate to="/start-trial" replace />;
+    }
+
+    // Rule 2: If user's trial has expired OR their subscription is in a state requiring payment (e.g., canceled, past_due)
+    // AND they are not already on the /subscription-required or /access-restricted pages
+    if (requiresPayment && currentPath !== '/subscription-required' && currentPath !== '/access-restricted') {
+      if (isAdmin) {
+        return <Navigate to="/subscription-required" replace />;
+      } else {
+        return <Navigate to="/access-restricted" replace />;
+      }
     }
   }
   
