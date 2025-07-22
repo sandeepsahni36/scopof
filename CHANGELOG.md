@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- Fixed authentication flow to properly redirect new users to start-trial page after email confirmation
+- Simplified subscription status logic in authStore to correctly identify new users vs. users requiring payment
+- Removed overly restrictive `requiresPayment` logic that was blocking new users from accessing start-trial page
+- AuthCallbackPage now consistently redirects to `/start-trial` after successful email confirmation
+- New users (with no admin data or `subscription_status` of `not_started`) are no longer incorrectly flagged as requiring payment
+
+### Fixed
 - Fixed email confirmation redirect URL to properly route to `/auth/callback` instead of root path
 - Ensured both `signUp` and `resendConfirmationEmail` functions use the correct `emailRedirectTo` URL
 - This resolves the issue where clicking email confirmation links would redirect to the landing page instead of the AuthCallbackPage

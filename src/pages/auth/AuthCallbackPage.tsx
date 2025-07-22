@@ -90,7 +90,7 @@ const AuthCallbackPage = () => {
               try {
                 await initialize();
                 toast.success('Email confirmed successfully');
-                navigate('/start-trial');
+                navigate('/start-trial'); // Always go to start-trial after email confirmation
                 return;
               } catch (error: any) {
                 addDebugInfo(`Auth initialization failed: ${error.message}`);
@@ -126,7 +126,7 @@ const AuthCallbackPage = () => {
           try {
             await initialize();
             toast.success('Email confirmed successfully');
-            navigate('/start-trial');
+            navigate('/start-trial'); // Always go to start-trial after email confirmation
             return;
           } catch (error: any) {
             addDebugInfo(`Auth initialization failed: ${error.message}`);
@@ -201,7 +201,7 @@ const AuthCallbackPage = () => {
         hasProcessedRef.current = true;
         initialize().then(() => {
           toast.success('Email confirmed successfully');
-          navigate('/start-trial');
+          navigate('/start-trial'); // Always go to start-trial after email confirmation
         }).catch((error) => {
           addDebugInfo(`Retry initialization failed: ${error.message}`);
           setError(error.message || 'Failed to initialize user session');
