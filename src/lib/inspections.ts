@@ -87,7 +87,8 @@ export async function createInspection(
       return newInspection;
     }
 
-    const { data, error } = await supabase
+    // First create the inspection
+    const { data: inspection, error: inspectionError } = await supabase
       .from('inspections')
       .insert([{
         property_id: propertyId,
@@ -103,15 +104,78 @@ export async function createInspection(
       .select()
       .single();
 
-    if (error) {
-      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-        await handleAuthError(error);
+    if (inspectionError) {
+      if (inspectionError.message?.includes('user_not_found') || inspectionError.message?.includes('JWT')) {
+        await handleAuthError(inspectionError);
         return null;
       }
-      throw error;
+      throw inspectionError;
     }
 
-    return data;
+    // Get the templates for this checklist to create inspection items
+    const { data: checklistTemplates, error: templatesError } = await supabase
+      .from('property_checklist_templates')
+      .select(`
+        template_id,
+        order_index,
+        templates!inner(
+          id,
+          name,
+          template_items(
+            id,
+            type,
+            label,
+            required,
+            options,
+            report_enabled,
+            maintenance_email,
+            report_recipient_id,
+            order,
+            parent_id,
+            section_name
+          )
+        )
+      `)
+      .eq('property_checklist_id', propertyChecklistId)
+      .order('order_index');
+
+    if (templatesError) {
+      console.error('Error fetching checklist templates:', templatesError);
+      // Continue without pre-creating items - they can be created on-demand
+    } else if (checklistTemplates) {
+      // Create inspection items for all template items
+      const inspectionItems = [];
+      let orderIndex = 0;
+
+      for (const checklistTemplate of checklistTemplates) {
+        const template = checklistTemplate.templates;
+        if (template && template.template_items) {
+          for (const templateItem of template.template_items) {
+            inspectionItems.push({
+              inspection_id: inspection.id,
+              template_item_id: templateItem.id,
+              value: null,
+              notes: null,
+              photo_urls: null,
+              order_index: orderIndex++,
+            });
+          }
+        }
+      }
+
+      if (inspectionItems.length > 0) {
+        const { error: itemsError } = await supabase
+          .from('inspection_items')
+          .insert(inspectionItems);
+
+        if (itemsError) {
+          console.error('Error creating inspection items:', itemsError);
+          // Continue without pre-created items
+        }
+      }
+    }
+
+    return inspection;
   } catch (error: any) {
     console.error('Error creating inspection:', error);
     

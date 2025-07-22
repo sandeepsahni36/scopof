@@ -7,6 +7,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { getInspectionDetails, updateInspectionItem, updateInspectionStatus, uploadInspectionPhoto } from '../../lib/inspections';
 import { generateInspectionReport } from '../../lib/reports';
 import { toast } from 'sonner';
+import { supabase } from '../../lib/supabase';
 
 type InspectionItem = {
   id: string;
@@ -97,80 +98,10 @@ const InspectionPage = () => {
         setPrimaryContactName(data.inspection.primaryContactName || '');
         setInspectorName(data.inspection.inspectorName || '');
         
-        // Mock room data based on templates - this would come from the actual checklist
-        const mockRooms: Room[] = [
-          {
-            id: '1',
-            name: 'Living Room',
-            items: [
-              {
-                id: '1-1',
-                type: 'single_choice',
-                label: 'Furniture condition',
-                value: null,
-                notes: '',
-                required: true,
-                options: ['Excellent', 'Good', 'Fair', 'Poor', 'Damaged'],
-              },
-              {
-                id: '1-2',
-                type: 'photo',
-                label: 'Overall room condition',
-                value: null,
-                photos: [],
-                notes: '',
-                required: true,
-              },
-              {
-                id: '1-3',
-                type: 'text',
-                label: 'Additional notes',
-                value: '',
-                required: false,
-              },
-            ],
-          },
-          {
-            id: '2',
-            name: 'Kitchen',
-            items: [
-              {
-                id: '2-1',
-                type: 'single_choice',
-                label: 'Appliances working',
-                value: null,
-                notes: '',
-                required: true,
-                options: ['All working', 'Some issues', 'Major problems'],
-              },
-              {
-                id: '2-2',
-                type: 'photo',
-                label: 'Counter surfaces',
-                value: null,
-                photos: [],
-                notes: '',
-                required: true,
-              },
-              {
-                id: '2-3',
-                type: 'multiple_choice',
-                label: 'Items present',
-                value: [],
-                notes: '',
-                required: false,
-                options: ['Microwave', 'Coffee maker', 'Toaster', 'Blender'],
-              },
-            ],
-          },
-          {
-            id: '3',
-            name: 'Signature',
-            items: [],
-          },
-        ];
+        // Build rooms from actual inspection items and template data
+        const rooms = await buildRoomsFromInspectionData(data.inspection, data.items);
         
-        setRooms(mockRooms);
+        setRooms(rooms);
       } else {
         toast.error('Inspection not found');
         navigate('/dashboard');
@@ -181,6 +112,130 @@ const InspectionPage = () => {
       navigate('/dashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const buildRoomsFromInspectionData = async (inspection: any, inspectionItems: any[]): Promise<Room[]> => {
+    try {
+      // Get the checklist templates to understand the structure
+      const { data: checklistTemplates, error } = await supabase
+        .from('property_checklist_templates')
+        .select(`
+          template_id,
+          order_index,
+          templates!inner(
+            id,
+            name,
+            template_items(
+              id,
+              type,
+              label,
+              required,
+              options,
+              report_enabled,
+              maintenance_email,
+              report_recipient_id,
+              order,
+              parent_id,
+              section_name
+            )
+          )
+        `)
+        .eq('property_checklist_id', inspection.propertyChecklistId)
+        .order('order_index');
+
+      if (error) {
+        console.error('Error fetching checklist templates:', error);
+        // Return signature room only if we can't load templates
+        return [{ id: 'signature', name: 'Signature', items: [] }];
+      }
+
+      const rooms: Room[] = [];
+      const roomMap = new Map<string, Room>();
+
+      // Process each template in the checklist
+      for (const checklistTemplate of checklistTemplates || []) {
+        const template = checklistTemplate.templates;
+        if (!template || !template.template_items) continue;
+
+        // Group items by section or use template name as room
+        for (const templateItem of template.template_items) {
+          const roomName = templateItem.section_name || template.name;
+          
+          if (!roomMap.has(roomName)) {
+            roomMap.set(roomName, {
+              id: roomName.toLowerCase().replace(/\s+/g, '-'),
+              name: roomName,
+              items: [],
+            });
+          }
+
+          const room = roomMap.get(roomName)!;
+          
+          // Find the corresponding inspection item
+          const inspectionItem = inspectionItems.find(
+            item => item.templateItemId === templateItem.id
+          );
+
+          // Convert template item to inspection item format
+          const item: InspectionItem = {
+            id: inspectionItem?.id || templateItem.id, // Use inspection item ID if available
+            type: templateItem.type as any,
+            label: templateItem.label,
+            value: inspectionItem?.value || getDefaultValue(templateItem.type),
+            photos: inspectionItem?.photoUrls || [],
+            notes: inspectionItem?.notes || '',
+            required: templateItem.required || false,
+            options: templateItem.options || undefined,
+          };
+
+          room.items.push(item);
+        }
+      }
+
+      // Convert map to array and sort items within each room
+      const sortedRooms = Array.from(roomMap.values()).map(room => ({
+        ...room,
+        items: room.items.sort((a, b) => {
+          // Find the template items to get their order
+          const templateA = checklistTemplates
+            ?.flatMap(ct => ct.templates?.template_items || [])
+            .find(ti => ti.id === a.id || inspectionItems.find(ii => ii.id === a.id)?.templateItemId === ti.id);
+          const templateB = checklistTemplates
+            ?.flatMap(ct => ct.templates?.template_items || [])
+            .find(ti => ti.id === b.id || inspectionItems.find(ii => ii.id === b.id)?.templateItemId === ti.id);
+          
+          return (templateA?.order || 0) - (templateB?.order || 0);
+        }),
+      }));
+
+      // Add signature room at the end
+      sortedRooms.push({
+        id: 'signature',
+        name: 'Signature',
+        items: [],
+      });
+
+      return sortedRooms;
+    } catch (error) {
+      console.error('Error building rooms from inspection data:', error);
+      // Return signature room only as fallback
+      return [{ id: 'signature', name: 'Signature', items: [] }];
+    }
+  };
+
+  const getDefaultValue = (type: string) => {
+    switch (type) {
+      case 'text':
+        return '';
+      case 'single_choice':
+        return null;
+      case 'multiple_choice':
+        return [];
+      case 'photo':
+        return null;
+      default:
+        return null;
     }
   };
 
@@ -282,7 +337,11 @@ const InspectionPage = () => {
 
     // Auto-save the change
     try {
-      await updateInspectionItem(itemId, value, field === 'notes' ? value : undefined);
+      if (field === 'value') {
+        await updateInspectionItem(itemId, value);
+      } else if (field === 'notes') {
+        await updateInspectionItem(itemId, null, value);
+      }
     } catch (error) {
       console.error('Error auto-saving item:', error);
     }
