@@ -378,7 +378,6 @@ const TemplateDetailPage = () => {
                                       </button>
                                     )}
                                     <span className="text-sm font-medium text-gray-900">
-                                      {isSection ? 'Section' : `Item ${index + 1}`} - {field.type.replace('_', ' ')}
                                       {isSection ? 'Section' : field.type === 'divider' ? 'Divider' : `Item ${index + 1}`} - {field.type.replace('_', ' ')}
                                       {isSection && ` (${sectionChildren.length} items)`}
                                     </span>
@@ -565,15 +564,6 @@ const TemplateDetailPage = () => {
                                         >
                                           Add Divider
                                         </Button>
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleAddItem('divider', index)}
-                                          leftIcon={<Plus size={16} />}
-                                        >
-                                          Add Divider
-                                        </Button>
                                       </div>
                                     </div>
 
@@ -605,44 +595,42 @@ const TemplateDetailPage = () => {
                                           </div>
 
                                           <div className="grid grid-cols-1 gap-4">
-                                            <Input
-                                              label="Label"
-                                              error={errors.items?.[childIndex]?.label?.message}
-                                              {...register(`items.${childIndex}.label` as const, {
-                                                required: childField.type !== 'divider' ? 'Label is required' : false,
-                                              })}
-                                            />
-
-                                            <div className="flex items-center space-x-4">
-                                            {childField.type !== 'divider' && (
-                                              <div className="flex items-center space-x-4">
-                                              <label className="flex items-center">
-                                                <input
-                                                  type="checkbox"
-                                                  {...register(`items.${childIndex}.required` as const)}
-                                                  className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                                />
-                                                <span className="ml-2 text-sm text-gray-900">Required</span>
-                                              </label>
-
-                                              <label className="flex items-center">
-                                                <input
-                                                  type="checkbox"
-                                                  {...register(`items.${childIndex}.reportEnabled` as const)}
-                                                  className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                                />
-                                                <span className="ml-2 text-sm text-gray-900">Enable Reporting</span>
-                                              </label>
-                                            </div>
-                                              </div>
-                                            )}
-
-                                            {childField.type === 'divider' && (
+                                            {childField.type !== 'divider' ? (
+                                              <Input
+                                                label="Label"
+                                                error={errors.items?.[childIndex]?.label?.message}
+                                                {...register(`items.${childIndex}.label` as const, {
+                                                  required: 'Label is required',
+                                                })}
+                                              />
+                                            ) : (
                                               <div className="py-4">
                                                 <div className="border-t border-gray-300"></div>
                                                 <p className="text-sm text-gray-500 text-center mt-2">
                                                   Visual divider - no configuration needed
                                                 </p>
+                                              </div>
+                                            )}
+
+                                            {childField.type !== 'divider' && (
+                                              <div className="flex items-center space-x-4">
+                                                <label className="flex items-center">
+                                                  <input
+                                                    type="checkbox"
+                                                    {...register(`items.${childIndex}.required` as const)}
+                                                    className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                                  />
+                                                  <span className="ml-2 text-sm text-gray-900">Required</span>
+                                                </label>
+
+                                                <label className="flex items-center">
+                                                  <input
+                                                    type="checkbox"
+                                                    {...register(`items.${childIndex}.reportEnabled` as const)}
+                                                    className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                                  />
+                                                  <span className="ml-2 text-sm text-gray-900">Enable Reporting</span>
+                                                </label>
                                               </div>
                                             )}
 
