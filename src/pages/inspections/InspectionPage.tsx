@@ -117,6 +117,13 @@ const InspectionPage = () => {
 
   const buildRoomsFromInspectionData = async (inspection: any, inspectionItems: any[]): Promise<Room[]> => {
     try {
+      // Check if propertyChecklistId exists before querying
+      if (!inspection.propertyChecklistId) {
+        console.warn('No property checklist ID found for inspection:', inspection.id);
+        // Return signature room only if no checklist is attached
+        return [{ id: 'signature', name: 'Signature', items: [] }];
+      }
+
       // Get the checklist templates to understand the structure
       const { data: checklistTemplates, error } = await supabase
         .from('property_checklist_templates')
