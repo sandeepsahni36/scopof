@@ -1,6 +1,10 @@
 ## [Unreleased]
 
 ### Fixed
+- **CRITICAL**: Fixed "TypeError: Failed to fetch" and "User session is invalid" errors
+- Ensured consistent handling of authentication errors across all Supabase calls
+- Modified `validateUserSession` to proactively call `handleAuthError` on invalid sessions
+- Updated `authStore.initialize` to catch and handle errors during initial session retrieval
 - **TEMPLATE ITEM COUNT DISPLAY**: Fixed template item count showing as "0 items" in property checklist view
 - Enhanced property checklist query to fetch actual count of template items from database
 - Updated data transformation logic to correctly display item counts next to template names

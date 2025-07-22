@@ -47,11 +47,13 @@ export async function validateUserSession() {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) {
       console.warn('Invalid user session:', error?.message);
+      await handleAuthError(error || new Error('User session is invalid. Please sign in again.'));
       return null;
     }
     return user;
   } catch (error) {
     console.error('Error validating user session:', error);
+    await handleAuthError(error);
     return null;
   }
 }

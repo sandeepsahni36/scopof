@@ -319,6 +319,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (error) {
       console.error('Error initializing auth state:', error);
+      await handleAuthError(error);
       set({ 
         loading: false, 
         isAuthenticated: false,
