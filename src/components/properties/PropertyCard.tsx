@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, MapPin, Bed, Bath, MoreVertical, Edit, Trash2, ClipboardCheck } from 'lucide-react';
 import { Property } from '../../types';
 import { Button } from '../ui/Button';
+import { getPropertyChecklist } from '../../lib/propertyChecklists';
+import { toast } from 'sonner';
 
 interface PropertyCardProps {
   property: Property;
@@ -12,7 +14,25 @@ interface PropertyCardProps {
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete, isAdmin }) => {
-  const [showMenu, setShowMenu] = React.useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [hasChecklist, setHasChecklist] = useState(false);
+  const [checklistLoading, setChecklistLoading] = useState(true);
+
+  useEffect(() => {
+    const checkChecklist = async () => {
+      setChecklistLoading(true);
+      try {
+        const checklist = await getPropertyChecklist(property.id);
+        setHasChecklist(!!checklist); // Set to true if checklist exists
+      } catch (error) {
+        console.error('Error checking property checklist:', error);
+        setHasChecklist(false); // Assume no checklist on error
+      } finally {
+        setChecklistLoading(false);
+      }
+    };
+    checkChecklist();
+  }, [property.id]); // Re-run when property ID changes
 
   const getPropertyTypeIcon = (type: string) => {
     switch (type) {
@@ -29,6 +49,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
 
   const formatBedrooms = (bedrooms: string) => {
     return bedrooms === 'studio' ? 'Studio' : `${bedrooms} Bed`;
+  };
+
+  const handleInspectClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!hasChecklist || checklistLoading) {
+      e.preventDefault(); // Prevent navigation if disabled
+      if (!checklistLoading) toast.info('Please create an inspection checklist for this property first.');
+    }
   };
 
   return (
@@ -124,8 +151,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
               <Building2 size={16} className="mr-2" />
               View Details
             </Button>
+          onClick={handleInspectClick}
           </Link>
-          <Button variant="default" size="sm" className="flex-1">
+          <Button variant="default" size="sm" className="flex-1"
+            disabled={!hasChecklist || checklistLoading}>
             <ClipboardCheck size={16} className="mr-2" />
             Inspect
           </Button>
