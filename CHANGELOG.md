@@ -1,6 +1,20 @@
 ## [Unreleased]
 
 ### Added
+- **ENHANCED START INSPECTION PAGE**: Added property usage type toggle between "Short Term Rental" and "Real Estate Property"
+- Created modern toggle switch to switch between property usage types with smooth animations
+- Added new inspection types: "Move-In" and "Move-Out" for real estate properties
+- Enhanced contact management with "Client Name" for real estate and "Guest Name" for short-term rentals
+- Added "Client is Present" checkbox for real estate inspections to control signature requirements
+- Implemented conditional signature requirements based on property type and client presence
+- Enhanced inspection form with dynamic labels and validation based on selected property usage type
+- Added property checklist validation to ensure inspections can only start with valid checklists
+- **DATABASE SCHEMA ENHANCEMENT**: Extended inspection system to support real estate property inspections
+- Renamed guest_name to primary_contact_name for broader use cases (guests for STR, clients for real estate)
+- Renamed signature_image_url to primary_contact_signature_url for clarity
+- Added client_present_for_signature boolean field for real estate inspection signature control
+- Extended inspection_type enum to include move_in and move_out for real estate properties
+- Enhanced inspection reports to dynamically label contacts as "Guest" or "Client" based on inspection type
 - **ACCESS RESTRICTED PAGE**: Added dedicated page for non-admin members when company subscription is inactive
 - Created AccessRestrictedPage component with clear messaging for members to contact their administrator
 - Enhanced user experience by providing role-specific messaging based on admin status
@@ -8,6 +22,15 @@
 - Implemented user-friendly interface with company information and support contact details
 
 ### Fixed
+- **INSPECTION WORKFLOW**: Enhanced inspection creation to require valid property checklists
+- **SIGNATURE VALIDATION**: Improved signature requirements based on inspection type and client presence
+- **CONTACT MANAGEMENT**: Unified contact name handling across short-term rental and real estate workflows
+- **FORM VALIDATION**: Enhanced form validation to handle different property usage types appropriately
+- **REPORT GENERATION**: Updated PDF report generation to use appropriate contact labels (Guest vs Client)
+- **DATABASE CONSISTENCY**: Ensured all inspection-related queries use updated column names
+- **TYPE SAFETY**: Updated TypeScript interfaces to reflect new inspection data structure
+- **UI RESPONSIVENESS**: Improved form layout and responsiveness for different property usage types
+- **SEARCH FUNCTIONALITY**: Updated search functionality to work with new contact name structure
 - **MEMBER ACCESS CONTROL**: Enhanced ProtectedRoute to handle different user roles during subscription restrictions
 - **ADMIN ROUTE PROTECTION**: Improved AdminRoute component with better authentication and role checking
 - **ROLE-BASED REDIRECTS**: Implemented different redirect paths for admins vs members when payment is required
@@ -57,6 +80,17 @@
 - Added proper access control checks that maintain security without causing recursion
 
 ### Fixed
+- **INSPECTION SCHEMA ENHANCEMENT**: Comprehensive updates to support real estate property inspections
+- **COLUMN RENAMING**: Renamed guest_name to primary_contact_name for broader use case support
+- **SIGNATURE FIELDS**: Renamed signature_image_url to primary_contact_signature_url for clarity
+- **NEW FIELDS**: Added client_present_for_signature boolean field for signature control
+- **ENUM EXTENSION**: Extended inspection_type enum to include move_in and move_out types
+- **DATA MIGRATION**: Proper handling of existing data during schema changes
+- **CONSTRAINTS**: Added appropriate constraints and comments for new fields
+- **BACKWARD COMPATIBILITY**: Ensured schema changes maintain backward compatibility
+- **INDEX OPTIMIZATION**: Maintained proper indexing for enhanced inspection queries
+- **TYPE SAFETY**: Enhanced database type safety with proper enum handling
+- **DOCUMENTATION**: Added comprehensive comments for new database fields and types
 - **STRIPE CHECKOUT DEBUGGING**: Added comprehensive logging to stripe-checkout function for existing customer troubleshooting
 - Enhanced error tracking for expired trial users attempting to resubscribe
 - Added detailed logging for customer verification and checkout session creation process
@@ -155,6 +189,18 @@
 - Added visual display of payment method information in the subscription page
 
 ### Changed
+- **INSPECTION DATA MODEL**: Renamed guest_name to primary_contact_name for broader applicability
+- **SIGNATURE HANDLING**: Renamed signature_image_url to primary_contact_signature_url for consistency
+- **INSPECTION TYPES**: Extended inspection types to support both short-term rental and real estate workflows
+- **FORM LABELS**: Dynamic form labels that change based on property usage type selection
+- **SIGNATURE REQUIREMENTS**: Conditional signature requirements based on inspection type and client presence
+- **REPORT LABELS**: Dynamic contact labels in PDF reports (Guest for STR, Client for real estate)
+- **VALIDATION LOGIC**: Enhanced form validation to handle different property usage scenarios
+- **DATABASE SCHEMA**: Updated inspection table structure to support enhanced property inspection workflows
+- **API INTERFACES**: Updated all inspection-related API functions to use new data structure
+- **MOCK DATA**: Updated development mock data to reflect new inspection data model
+- **SEARCH FUNCTIONALITY**: Enhanced search to work with unified contact name structure
+- **USER EXPERIENCE**: Improved inspection workflow with clearer property type distinction
 - **Report Management Enhancement**: Replaced manual email entry with structured team designation system
 - Template items with reporting enabled now reference specific team members instead of free-form email addresses
 - Enhanced data integrity by linking report recipients to validated company team members
@@ -280,6 +326,16 @@
 - Improved database schema for better Stripe integration
 
 ### Performance
+- **INSPECTION QUERIES**: Optimized inspection-related database queries for new schema
+- **FORM RENDERING**: Improved form rendering performance with efficient conditional rendering
+- **TOGGLE PERFORMANCE**: Smooth toggle animations without performance impact
+- **VALIDATION PERFORMANCE**: Efficient form validation for different property usage types
+- **SIGNATURE HANDLING**: Optimized signature canvas performance with appropriate sizing
+- **CHECKLIST LOADING**: Efficient property checklist loading and validation
+- **ENUM HANDLING**: Optimized enum value handling and validation
+- **CONDITIONAL LOGIC**: Efficient conditional rendering based on property usage type
+- **STATE MANAGEMENT**: Optimized state management for enhanced inspection forms
+- **API EFFICIENCY**: Improved API call efficiency for inspection-related operations
 - **Report Management Performance**: Optimized database queries for report service team lookups
 - Enhanced template creation performance by reducing redundant email validation operations
 - Improved report recipient selection with efficient dropdown population from database
@@ -299,6 +355,17 @@
 - Enhanced error handling to prevent performance degradation during failures
 
 ### UI/UX
+- **MODERN TOGGLE SWITCH**: Implemented sleek toggle switch with smooth animations and hover effects
+- **DYNAMIC FORM LABELS**: Form labels that automatically update based on property usage type
+- **CONDITIONAL FORM FIELDS**: Smart form fields that appear/disappear based on selections
+- **ENHANCED VALIDATION MESSAGES**: Context-aware validation messages for different property types
+- **IMPROVED SIGNATURE FLOW**: Better signature collection workflow with clear requirements
+- **VISUAL FEEDBACK**: Enhanced visual feedback for property type selection and form states
+- **RESPONSIVE DESIGN**: Improved responsive design for enhanced inspection forms
+- **ACCESSIBILITY**: Maintained accessibility standards with new form elements
+- **USER GUIDANCE**: Clear guidance text for different inspection scenarios
+- **FORM ORGANIZATION**: Better form organization with logical grouping of related fields
+- **ERROR HANDLING**: Improved error messaging and user guidance for inspection workflows
 - **Report Recipient Management**: Enhanced template creation with intuitive dropdown selection for report recipients
 - Improved data consistency by replacing free-form email entry with structured team member selection
 - Added clear visual indicators for report-enabled template items with designated recipients
@@ -421,6 +488,19 @@
 - Improved workflow efficiency for property management companies
 
 **Critical Trial Expiration Fix**: The user reported a critical security vulnerability where users could bypass trial expiration:
+- **INSPECTION DATA SECURITY**: Enhanced data validation for new inspection fields and types
+- **FORM VALIDATION**: Strengthened form validation to prevent invalid inspection data submission
+- **SIGNATURE SECURITY**: Maintained secure signature handling with new contact name structure
+- **DATABASE CONSTRAINTS**: Added proper constraints for new inspection fields and enum values
+- **TYPE SAFETY**: Enhanced TypeScript type safety for new inspection data structures
+- **ACCESS CONTROL**: Ensured proper access control for new inspection features
+- **DATA INTEGRITY**: Maintained data integrity during schema changes with proper migration scripts
+- **VALIDATION RULES**: Enhanced validation rules for different property usage types
+- **CONTACT PRIVACY**: Maintained privacy controls for contact information across different property types
+- **SIGNATURE VALIDATION**: Enhanced signature validation logic for different inspection scenarios
+- **CHECKLIST VALIDATION**: Added validation to ensure inspections can only start with valid checklists
+- **ENUM SECURITY**: Properly extended enum types with backward compatibility
+- **FIELD CONSTRAINTS**: Added appropriate constraints for new boolean and text fields
 
 1. **Security Vulnerability**: Users with expired trials could still access the dashboard and premium features
 2. **Database Issues**: RLS policy conflicts were causing 500 errors when fetching admin data

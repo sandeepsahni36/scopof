@@ -129,7 +129,7 @@ export type ReportServiceTeam = {
 };
 
 // Inspection types
-export type InspectionType = 'check_in' | 'check_out';
+export type InspectionType = 'check_in' | 'check_out' | 'move_in' | 'move_out';
 export type InspectionStatus = 'in_progress' | 'completed' | 'canceled';
 
 export type Inspection = {
@@ -138,13 +138,14 @@ export type Inspection = {
   propertyChecklistId?: string;
   inspectorId: string;
   inspectionType: InspectionType;
-  guestName?: string;
+  primaryContactName?: string;
   inspectorName?: string; // Added inspector name
   startTime: string;
   endTime?: string;
   durationSeconds?: number;
-  signatureImageUrl?: string; // Guest signature
+  primaryContactSignatureUrl?: string; // Primary contact signature
   inspectorSignatureImageUrl?: string; // Inspector signature
+  clientPresentForSignature?: boolean; // For real estate inspections
   status: InspectionStatus;
   createdAt: string;
   updatedAt: string;

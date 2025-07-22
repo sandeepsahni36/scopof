@@ -11,7 +11,7 @@ interface Report {
   inspectionId: string;
   propertyName: string;
   inspectionType: 'check_in' | 'check_out';
-  guestName: string;
+  primaryContactName: string;
   reportUrl: string;
   generatedAt: string;
   createdAt: string;
@@ -88,7 +88,7 @@ const ReportsPage = () => {
   const filteredReports = reports.filter(report => {
     const matchesSearch = searchTerm === '' || 
       report.propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.guestName.toLowerCase().includes(searchTerm.toLowerCase());
+      report.primaryContactName.toLowerCase().includes(searchTerm.toLowerCase());
     
     return matchesSearch;
   });
@@ -137,7 +137,7 @@ const ReportsPage = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Search by property name or guest name..."
+              placeholder="Search by property name or contact name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -250,7 +250,7 @@ const ReportsPage = () => {
                           </div>
                           <div className="text-sm text-gray-500 flex items-center">
                             <User className="h-4 w-4 text-gray-400 mr-1" />
-                            {report.guestName}
+                            {report.primaryContactName}
                           </div>
                         </div>
                       </div>

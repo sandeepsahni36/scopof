@@ -4,12 +4,12 @@ import jsPDF from 'jspdf';
 export async function generateInspectionReport(reportData: {
   inspection: any;
   rooms: any[];
-  guestName: string;
+  primaryContactName: string;
   inspectorName: string;
   startTime?: string;
   endTime?: string;
   duration?: number;
-  guestSignature?: string;
+  primaryContactSignature?: string;
   inspectorSignature?: string;
 }): Promise<string | null> {
   try {
@@ -66,12 +66,12 @@ export async function generateInspectionReport(reportData: {
 async function createPDFReport(reportData: {
   inspection: any;
   rooms: any[];
-  guestName: string;
+  primaryContactName: string;
   inspectorName: string;
   startTime?: string;
   endTime?: string;
   duration?: number;
-  guestSignature?: string;
+  primaryContactSignature?: string;
   inspectorSignature?: string;
 }): Promise<Blob> {
   const pdf = new jsPDF();
@@ -91,7 +91,7 @@ async function createPDFReport(reportData: {
     `Property: ${reportData.inspection.propertyName || 'Property Name'}`,
     `Inspection Type: ${reportData.inspection.inspectionType}`,
     `Inspector: ${reportData.inspectorName}`,
-    ...(reportData.guestName ? [`Guest: ${reportData.guestName}`] : []),
+    ...(reportData.primaryContactName ? [`Contact: ${reportData.primaryContactName}`] : []),
     `Date: ${new Date().toLocaleDateString()}`,
     `Start Time: ${reportData.startTime ? new Date(reportData.startTime).toLocaleTimeString() : 'N/A'}`,
     `End Time: ${reportData.endTime ? new Date(reportData.endTime).toLocaleTimeString() : 'N/A'}`,
@@ -161,7 +161,7 @@ async function createPDFReport(reportData: {
   });
   
   // Signature section
-  if (reportData.inspectorSignature || reportData.guestSignature) {
+  if (reportData.inspectorSignature || reportData.primaryContactSignature) {
     if (yPosition > 150) {
       pdf.addPage();
       yPosition = 20;
@@ -187,13 +187,14 @@ async function createPDFReport(reportData: {
       yPosition += 15;
     }
     
-    // Guest signature (if applicable)
-    if (reportData.guestSignature && reportData.guestName) {
-      pdf.text('Guest signature:', 20, yPosition);
+    // Primary contact signature (if applicable)
+    if (reportData.primaryContactSignature && reportData.primaryContactName) {
+      const contactLabel = reportData.inspection.inspectionType?.includes('check') ? 'Guest' : 'Client';
+      pdf.text(`${contactLabel} signature:`, 20, yPosition);
       yPosition += 10;
-      pdf.text('[Guest signature captured digitally]', 20, yPosition);
+      pdf.text(`[${contactLabel} signature captured digitally]`, 20, yPosition);
       yPosition += 7;
-      pdf.text(`Signed by: ${reportData.guestName}`, 20, yPosition);
+      pdf.text(`Signed by: ${reportData.primaryContactName}`, 20, yPosition);
       yPosition += 7;
       pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPosition);
     }
@@ -270,7 +271,7 @@ export async function getReports(filters?: {
           inspectionId: 'mock-inspection-1',
           propertyName: 'Oceanview Apartment 2B',
           inspectionType: 'check_in',
-          guestName: 'John Smith',
+          primaryContactName: 'John Smith',
           inspectorName: 'Jane Inspector',
           reportUrl: 'https://example.com/reports/mock-report-1.pdf',
           generatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
@@ -281,7 +282,7 @@ export async function getReports(filters?: {
           inspectionId: 'mock-inspection-2',
           propertyName: 'Downtown Loft 5A',
           inspectionType: 'check_out',
-          guestName: null,
+          primaryContactName: null,
           inspectorName: 'Mike Inspector',
           reportUrl: 'https://example.com/reports/mock-report-2.pdf',
           generatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
@@ -297,7 +298,7 @@ export async function getReports(filters?: {
         inspections (
           property_id,
           inspection_type,
-          guest_name,
+          primary_contact_name,
           inspector_name,
           properties (
             name

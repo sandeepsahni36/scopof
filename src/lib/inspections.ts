@@ -9,13 +9,14 @@ const MOCK_INSPECTIONS: Inspection[] = [
     propertyChecklistId: 'mock-checklist-1',
     inspectorId: 'dev-user-id',
     inspectionType: 'check_in',
-    guestName: 'John Smith',
+    primaryContactName: 'John Smith',
     inspectorName: 'Jane Inspector',
     startTime: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
     endTime: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
     durationSeconds: 3600, // 1 hour
-    signatureImageUrl: 'https://example.com/guest-signature.png',
+    primaryContactSignatureUrl: 'https://example.com/guest-signature.png',
     inspectorSignatureImageUrl: 'https://example.com/inspector-signature.png',
+    clientPresentForSignature: true,
     status: 'completed',
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
@@ -54,8 +55,9 @@ export async function createInspection(
   propertyId: string,
   propertyChecklistId: string,
   inspectionType: InspectionType,
-  guestName?: string,
-  inspectorName?: string
+  primaryContactName?: string,
+  inspectorName?: string,
+  clientPresentForSignature?: boolean
 ): Promise<Inspection | null> {
   try {
     const user = await validateUserSession();
@@ -72,8 +74,9 @@ export async function createInspection(
         propertyChecklistId,
         inspectorId: user.id,
         inspectionType,
-        guestName,
+        primaryContactName,
         inspectorName,
+        clientPresentForSignature: clientPresentForSignature || false,
         startTime: new Date().toISOString(),
         status: 'in_progress',
         createdAt: new Date().toISOString(),
@@ -91,8 +94,9 @@ export async function createInspection(
         property_checklist_id: propertyChecklistId,
         inspector_id: user.id,
         inspection_type: inspectionType,
-        guest_name: guestName,
+        primary_contact_name: primaryContactName,
         inspector_name: inspectorName,
+        client_present_for_signature: clientPresentForSignature || false,
         start_time: new Date().toISOString(),
         status: 'in_progress',
       }])
@@ -257,7 +261,7 @@ export async function updateInspectionItem(
 export async function updateInspectionStatus(
   inspectionId: string,
   status: InspectionStatus,
-  signatureImageUrl?: string,
+  primaryContactSignatureUrl?: string,
   inspectorSignatureImageUrl?: string,
   endTime?: string,
   durationSeconds?: number
@@ -279,7 +283,7 @@ export async function updateInspectionStatus(
       const updatedInspection = {
         ...mockInspectionsState[inspectionIndex],
         status,
-        signatureImageUrl,
+        primaryContactSignatureUrl,
         inspectorSignatureImageUrl,
         endTime,
         durationSeconds,
@@ -291,7 +295,7 @@ export async function updateInspectionStatus(
     }
 
     const updateData: any = { status };
-    if (signatureImageUrl !== undefined) updateData.signature_image_url = signatureImageUrl;
+    if (primaryContactSignatureUrl !== undefined) updateData.primary_contact_signature_url = primaryContactSignatureUrl;
     if (inspectorSignatureImageUrl !== undefined) updateData.inspector_signature_image_url = inspectorSignatureImageUrl;
     if (endTime !== undefined) updateData.end_time = endTime;
     if (durationSeconds !== undefined) updateData.duration_seconds = durationSeconds;

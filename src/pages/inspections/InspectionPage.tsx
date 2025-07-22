@@ -29,9 +29,9 @@ const InspectionPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
-  const [guestSignature, setGuestSignature] = useState<any>(null);
+  const [primaryContactSignature, setPrimaryContactSignature] = useState<any>(null);
   const [inspectorSignature, setInspectorSignature] = useState<any>(null);
-  const [guestName, setGuestName] = useState('');
+  const [primaryContactName, setPrimaryContactName] = useState('');
   const [inspectorName, setInspectorName] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -94,7 +94,7 @@ const InspectionPage = () => {
       
       if (data) {
         setInspection(data.inspection);
-        setGuestName(data.inspection.guestName || '');
+        setPrimaryContactName(data.inspection.primaryContactName || '');
         setInspectorName(data.inspection.inspectorName || '');
         
         // Mock room data based on templates - this would come from the actual checklist
@@ -318,17 +318,31 @@ const InspectionPage = () => {
   const handleCompleteInspection = async () => {
     if (!inspection) return;
 
-    // Validate signatures based on inspection type
+    // Validate signatures based on inspection type and client presence
     const isCheckIn = inspection.inspectionType === 'check_in';
     const isCheckOut = inspection.inspectionType === 'check_out';
+    const isMoveIn = inspection.inspectionType === 'move_in';
+    const isMoveOut = inspection.inspectionType === 'move_out';
+    const isRealEstate = isMoveIn || isMoveOut;
+    const clientPresentForSignature = inspection.clientPresentForSignature;
 
-    if (isCheckIn && (!guestSignature || !inspectorSignature)) {
+    if (isCheckIn && (!primaryContactSignature || !inspectorSignature)) {
       toast.error('Both guest and inspector signatures are required for check-in inspections');
       return;
     }
 
-    if (isCheckOut && !inspectorSignature) {
+    if ((isCheckOut || isMoveOut) && !inspectorSignature) {
       toast.error('Inspector signature is required to complete the inspection');
+      return;
+    }
+
+    if (isMoveIn && !inspectorSignature) {
+      toast.error('Inspector signature is required for move-in inspections');
+      return;
+    }
+
+    if (isRealEstate && clientPresentForSignature && !primaryContactSignature) {
+      toast.error('Client signature is required when client is present');
       return;
     }
 
@@ -341,14 +355,14 @@ const InspectionPage = () => {
       const totalDuration = Math.floor((endTime.getTime() - (startTime?.getTime() || 0)) / 1000);
       
       // Get signatures as data URLs
-      const guestSignatureDataUrl = guestSignature ? guestSignature.toDataURL() : null;
+      const primaryContactSignatureDataUrl = primaryContactSignature ? primaryContactSignature.toDataURL() : null;
       const inspectorSignatureDataUrl = inspectorSignature ? inspectorSignature.toDataURL() : null;
       
       // Update inspection status
       await updateInspectionStatus(
         inspection.id,
         'completed',
-        guestSignatureDataUrl,
+        primaryContactSignatureDataUrl,
         inspectorSignatureDataUrl,
         endTime.toISOString(),
         totalDuration
@@ -359,15 +373,15 @@ const InspectionPage = () => {
         inspection: {
           ...inspection,
           inspectorName,
-          guestName,
+          primaryContactName,
         },
         rooms: rooms.filter(room => room.name !== 'Signature'),
-        guestName,
+        primaryContactName,
         inspectorName,
         startTime: startTime?.toISOString(),
         endTime: endTime.toISOString(),
         duration: totalDuration,
-        guestSignature: guestSignatureDataUrl,
+        primaryContactSignature: primaryContactSignatureDataUrl,
         inspectorSignature: inspectorSignatureDataUrl,
       };
       
@@ -424,7 +438,15 @@ const InspectionPage = () => {
   const currentRoom = rooms[currentStep];
   const isLastStep = currentStep === rooms.length - 1;
   const isFirstStep = currentStep === 0;
+  const isShortTermRental = inspection?.inspectionType === 'check_in' || inspection?.inspectionType === 'check_out';
   const isCheckIn = inspection?.inspectionType === 'check_in';
+  const isMoveIn = inspection?.inspectionType === 'move_in';
+  const requiresPrimaryContactSignature = isCheckIn || (isMoveIn && inspection?.clientPresentForSignature);
+  
+  const getContactLabel = () => {
+    if (isShortTermRental) return 'Guest';
+    return 'Client';
+  };
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -481,7 +503,7 @@ const InspectionPage = () => {
             
             {/* Inspector Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Inspector Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Inspector Name *</label>
               <Input
                 type="text"
                 value={inspectorName}
@@ -491,17 +513,38 @@ const InspectionPage = () => {
               />
             </div>
 
-            {/* Guest Name (only for check-in) */}
-            {isCheckIn && (
+            {/* Primary Contact Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {getContactLabel()} Name {requiresPrimaryContactSignature ? '*' : ''}
+              </label>
+              <Input
+                type="text"
+                value={primaryContactName}
+                onChange={(e) => setPrimaryContactName(e.target.value)}
+                placeholder={`Enter ${getContactLabel().toLowerCase()} name`}
+                leftIcon={<User size={16} className="text-gray-400" />}
+              />
+            </div>
+
+            {/* Client Present Checkbox (Real Estate only) */}
+            {!isShortTermRental && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Guest Name</label>
-                <Input
-                  type="text"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="Enter guest name"
-                  leftIcon={<User size={16} className="text-gray-400" />}
-                />
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={inspection?.clientPresentForSignature || false}
+                    readOnly
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-900">Client is Present</span>
+                </label>
+                <p className="mt-1 text-xs text-gray-500">
+                  {inspection?.clientPresentForSignature 
+                    ? 'Client signature will be required' 
+                    : 'Client signature not required'
+                  }
+                </p>
               </div>
             )}
 
@@ -514,7 +557,7 @@ const InspectionPage = () => {
                 <SignatureCanvas
                   ref={(ref) => setInspectorSignature(ref)}
                   canvasProps={{
-                    className: 'w-full h-48',
+                    className: 'w-full h-40',
                     style: { background: 'white' }
                   }}
                 />
@@ -530,17 +573,17 @@ const InspectionPage = () => {
               </div>
             </div>
 
-            {/* Guest Signature (only for check-in) */}
-            {isCheckIn && (
+            {/* Primary Contact Signature (conditional) */}
+            {requiresPrimaryContactSignature && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Guest Signature *
+                  {getContactLabel()} Signature *
                 </label>
                 <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
                   <SignatureCanvas
-                    ref={(ref) => setGuestSignature(ref)}
+                    ref={(ref) => setPrimaryContactSignature(ref)}
                     canvasProps={{
-                      className: 'w-full h-48',
+                      className: 'w-full h-40',
                       style: { background: 'white' }
                     }}
                   />
@@ -549,9 +592,9 @@ const InspectionPage = () => {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => guestSignature?.clear()}
+                    onClick={() => primaryContactSignature?.clear()}
                   >
-                    Clear Guest Signature
+                    Clear {getContactLabel()} Signature
                   </Button>
                 </div>
               </div>
@@ -561,8 +604,17 @@ const InspectionPage = () => {
               <h4 className="text-sm font-medium text-gray-900 mb-2">Signature Requirements</h4>
               <ul className="text-sm text-gray-600 space-y-1">
                 <li>• Inspector signature is always required</li>
-                {isCheckIn && <li>• Guest signature is required for check-in inspections</li>}
-                {!isCheckIn && <li>• Guest signature is not required for check-out inspections</li>}
+                {isShortTermRental ? (
+                  <>
+                    {isCheckIn && <li>• Guest signature is required for check-in inspections</li>}
+                    {!isCheckIn && <li>• Guest signature is not required for check-out inspections</li>}
+                  </>
+                ) : (
+                  <>
+                    {isMoveIn && <li>• Client signature is required for move-in inspections if client is present</li>}
+                    {!isMoveIn && <li>• Client signature is optional for move-out inspections</li>}
+                  </>
+                )}
               </ul>
             </div>
           </div>
