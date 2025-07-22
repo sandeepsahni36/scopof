@@ -16,7 +16,7 @@ const getSiteUrl = () => {
   }
   
   // In production, use the configured URL or fallback to window.location.origin
-  let siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+  let siteUrl = import.redimeta.env.VITE_SITE_URL || window.location.origin;
   // Remove trailing slash if present
   siteUrl = siteUrl.replace(/\/$/, '');
   return siteUrl;
