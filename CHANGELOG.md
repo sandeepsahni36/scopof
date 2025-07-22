@@ -1,6 +1,13 @@
 ## [Unreleased]
 
 ### Added
+- **EMPTY CHECKLIST HANDLING**: Enhanced inspection workflow to handle empty checklists gracefully
+- Added detection for checklists that exist but contain no inspection items
+- Implemented "Empty Checklist" step to inform users when templates lack inspection items
+- Added user guidance with clear instructions on how to add items to templates
+- Enhanced inspection page with navigation options to edit templates or return to properties
+- Improved user experience by preventing confusion when checklists are empty
+- Added visual indicators and helpful messaging for empty checklist scenarios
 - **DASHBOARD DATA INTEGRATION**: Enhanced dashboard to display actual property and inspection data from database
 - Connected dashboard statistics to real data sources using checkPropertyLimit and Supabase queries
 - Added loading state for dashboard data fetching to improve user experience

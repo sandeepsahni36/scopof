@@ -216,6 +216,25 @@ const InspectionPage = () => {
         }),
       }));
 
+      // Check if we have any actual inspection items
+      const totalItems = sortedRooms.reduce((total, room) => total + room.items.length, 0);
+      
+      if (totalItems === 0) {
+        console.warn('No inspection items found in checklist templates');
+        // Add an empty checklist room to inform the user
+        return [
+          {
+            id: 'empty-checklist',
+            name: 'Empty Checklist',
+            items: [],
+          },
+          {
+            id: 'signature',
+            name: 'Signature',
+            items: [],
+          }
+        ];
+      }
       // Add signature room at the end
       sortedRooms.push({
         id: 'signature',
@@ -563,7 +582,40 @@ const InspectionPage = () => {
 
       {/* Room content */}
       <div className="space-y-6">
-        {currentRoom?.name === 'Signature' ? (
+        {currentRoom?.name === 'Empty Checklist' ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="text-center py-8">
+              <AlertTriangle className="mx-auto h-16 w-16 text-amber-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Empty Checklist</h3>
+              <p className="text-gray-600 mb-4">
+                The checklist for this property doesn't contain any inspection items. 
+                You'll need to add items to your templates before conducting inspections.
+              </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                <h4 className="text-sm font-medium text-amber-800 mb-2">What you can do:</h4>
+                <ul className="text-sm text-amber-700 space-y-1 text-left">
+                  <li>• Go to Templates and edit your existing templates</li>
+                  <li>• Add inspection items like text fields, photo uploads, or choice questions</li>
+                  <li>• Save the template and return to start a new inspection</li>
+                </ul>
+              </div>
+              <div className="flex justify-center space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/dashboard/templates')}
+                >
+                  Edit Templates
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/dashboard/properties')}
+                >
+                  Back to Properties
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : currentRoom?.name === 'Signature' ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
             <h2 className="text-xl font-semibold text-gray-900">Complete Inspection</h2>
             
