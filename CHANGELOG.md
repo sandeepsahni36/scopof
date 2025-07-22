@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- Fixed StartTrialPage redirect logic to prevent trial users from being immediately redirected to dashboard
+- Modified redirect condition in StartTrialPage to only redirect users with active paid subscriptions (`subscription_status === 'active'`)
+- Trial users (`subscription_status === 'trialing'`) now remain on StartTrialPage to complete plan selection
+- This resolves the regression where new users were bypassing the plan selection flow after email confirmation
+
+### Fixed
 - Fixed authentication flow to properly redirect new users to start-trial page after email confirmation
 - Simplified subscription status logic in authStore to correctly identify new users vs. users requiring payment
 - Removed overly restrictive `requiresPayment` logic that was blocking new users from accessing start-trial page

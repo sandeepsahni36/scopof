@@ -18,8 +18,8 @@ const StartTrialPage = () => {
   const [validatingAuth, setValidatingAuth] = useState(true);
 
   useEffect(() => {
-    // Redirect users who already have active subscriptions
-    if (hasActiveSubscription) {
+    // Redirect users who already have active paid subscriptions (not trial users)
+    if (hasActiveSubscription && company?.subscription_status === 'active') {
       navigate('/dashboard');
       return;
     }
