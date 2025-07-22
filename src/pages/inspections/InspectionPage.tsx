@@ -117,6 +117,11 @@ const InspectionPage = () => {
 
   const buildRoomsFromInspectionData = async (inspection: any, inspectionItems: any[]): Promise<Room[]> => {
     try {
+      // Debug logging
+      console.log('Building rooms from inspection data:', inspection);
+      console.log('Inspection propertyChecklistId:', inspection.propertyChecklistId);
+      console.log('Inspection items count:', inspectionItems.length);
+      
       // Check if propertyChecklistId exists before querying
       if (!inspection.propertyChecklistId) {
         console.warn('No property checklist ID found for inspection:', inspection.id);

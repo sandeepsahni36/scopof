@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+### Added
+- **INSPECTION DEBUGGING**: Added comprehensive debugging for inspection checklist ID validation
+- Added UUID validation for property checklist IDs before creating inspections
+- Enhanced logging in StartInspectionPage to track checklist ID values during inspection creation
+- Added detailed logging in InspectionPage to debug inspection data loading and room building
+- Implemented validation to prevent inspections with invalid or missing checklist IDs
+- Enhanced error messaging for checklist configuration issues
+- Added console logging to track inspection object properties and checklist ID values
+- Improved debugging capabilities for troubleshooting inspection workflow issues
+
 ### Fixed
 - **CRITICAL**: Resolved RLS policy issues preventing property checklist templates from being accessed
 - **CRITICAL**: Simplified complex RLS policies for property_checklist_templates table

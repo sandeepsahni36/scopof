@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { validate as isValidUUID } from 'uuid';
 import { ArrowLeft, Camera, ClipboardCheck, User, Calendar, UserCheck, Building2, Home } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -103,6 +104,15 @@ const StartInspectionPage = () => {
 
     try {
       setSubmitting(true);
+
+      // Debug logging and validation
+      console.log('Starting inspection with propertyChecklist:', propertyChecklist);
+      console.log('Property checklist ID:', propertyChecklist?.id);
+      
+      if (!propertyChecklist?.id || !isValidUUID(propertyChecklist.id)) {
+        toast.error('Invalid property checklist ID. Please ensure the checklist is properly configured.');
+        return;
+      }
 
       const inspection = await createInspection(
         property.id,
