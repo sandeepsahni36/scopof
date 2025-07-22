@@ -151,6 +151,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
               <Building2 size={16} className="mr-2" />
               View Details
             </Button>
+          </Link>
           <Link 
             to={`/start-inspection/${property.id}`} 
             className="flex-1"
@@ -166,12 +167,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
               Inspect
             </Button>
           </Link>
-          </Link>
-          <Button variant="default" size="sm" className="flex-1"
-            disabled={!hasChecklist || checklistLoading}>
-            <ClipboardCheck size={16} className="mr-2" />
-            Inspect
-          </Button>
         </div>
 
         {/* Created Date */}
