@@ -313,6 +313,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isTrialExpired,
         requiresPayment,
         needsPaymentSetup
+        needsPaymentSetup
       });
       console.log('Auth store initialized with:', {
         user: userData?.email,
