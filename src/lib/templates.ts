@@ -385,7 +385,7 @@ function buildItemHierarchy(flatItems: any[]): TemplateItem[] {
       id: item.id,
       templateId: item.template_id,
       parentId: item.parent_id,
-      type: item.item_type,
+      type: item.type,
       label: item.label,
       sectionName: item.section_name,
       required: item.required,
@@ -525,7 +525,7 @@ export async function createTemplate(
           items.map((item) => ({
             template_id: template.id,
             parent_id: item.parentId || null,
-            item_type: item.type,
+            type: item.type,
             label: item.label,
             section_name: item.sectionName || null,
             required: item.required,
@@ -669,7 +669,7 @@ export async function updateTemplate(
           items.map((item) => ({
             template_id: id,
             parent_id: item.parentId || null,
-            item_type: item.type,
+            type: item.type,
             label: item.label,
             section_name: item.sectionName || null,
             required: item.required,

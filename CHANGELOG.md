@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Added
+- **DATABASE SCHEMA FIX**: Added missing `type` column to `template_items` table
+- Created database migration to add `type` column using `template_item_type` enum
+- Added proper indexing for efficient querying by template item type
+- Enhanced template item data structure with explicit type column for better data integrity
+- Added database comments for improved schema documentation
 - **DIVIDER TEMPLATE ITEM**: Added new "Divider" item type for template organization
 - Implemented visual separator option in template builder to create clear sections between template items
 - Added divider buttons to both main template area and within sections for flexible organization
