@@ -30,6 +30,7 @@ const StartInspectionPage = () => {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<StartInspectionFormData>({
     defaultValues: {
@@ -233,8 +234,8 @@ const StartInspectionPage = () => {
                   <>
                     <label className={`relative flex cursor-pointer rounded-lg border p-4 focus:outline-none ${
                       inspectionType === 'check_in'
-                        ? 'border-primary-500 bg-primary-500'
-                        : 'border-gray-300'
+                        ? 'border-primary-500 bg-primary-50'
+                        : 'border-gray-300 bg-white hover:bg-gray-50'
                     }`}>
                       <input
                         type="radio"
@@ -470,115 +471,6 @@ const StartInspectionPage = () => {
                   A checklist is required to start an inspection. Please create one first.
                 </p>
               )}
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default StartInspectionPage;
-                        ? 'border-primary-500 bg-primary-500'
-                        : 'border-gray-300'
-                    }`}>
-                      {inspectionType === 'check_out' && (
-                        <div className="h-2 w-2 rounded-full bg-white"></div>
-                      )}
-                    </div>
-                    <div className="ml-3">
-                      <div className="flex items-center">
-                        <Calendar className="h-5 w-5 text-gray-400 mr-2" />
-                        <span className="font-medium text-gray-900">Check-Out</span>
-                      </div>
-                      <p className="text-sm text-gray-500">Guest departure inspection</p>
-                    </div>
-                  </div>
-                </label>
-              </div>
-              {errors.inspectionType && (
-                <p className="mt-2 text-sm text-red-600">{errors.inspectionType.message}</p>
-              )}
-            </div>
-
-            {/* Inspector Name (always required) */}
-            <div>
-              <Input
-                label="Inspector Name"
-                error={errors.inspectorName?.message}
-                {...register('inspectorName', {
-                  required: 'Inspector name is required',
-                  minLength: {
-                    value: 2,
-                    message: 'Inspector name must be at least 2 characters',
-                  },
-                })}
-                placeholder="Enter the inspector's full name"
-                leftIcon={<UserCheck size={16} className="text-gray-400" />}
-              />
-              <p className="mt-2 text-sm text-gray-500">
-                This name will appear on the inspection report and signature page.
-              </p>
-            </div>
-
-            {/* Guest Name (required for check-in) */}
-            {inspectionType === 'check_in' && (
-              <div>
-                <Input
-                  label="Guest Name"
-                  error={errors.guestName?.message}
-                  {...register('guestName', {
-                    required: inspectionType === 'check_in' ? 'Guest name is required for check-in inspections' : false,
-                    minLength: {
-                      value: 2,
-                      message: 'Guest name must be at least 2 characters',
-                    },
-                  })}
-                  placeholder="Enter the guest's full name"
-                  leftIcon={<User size={16} className="text-gray-400" />}
-                />
-                <p className="mt-2 text-sm text-gray-500">
-                  This name will appear on the inspection report and signature page.
-                </p>
-              </div>
-            )}
-
-            {/* Inspection Info */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">What happens next?</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start">
-                  <ClipboardCheck className="h-4 w-4 text-primary-500 mt-0.5 mr-2 flex-shrink-0" />
-                  <span>Follow the inspection checklist step by step</span>
-                </li>
-                <li className="flex items-start">
-                  <Camera className="h-4 w-4 text-primary-500 mt-0.5 mr-2 flex-shrink-0" />
-                  <span>Take photos and document any issues found</span>
-                </li>
-                <li className="flex items-start">
-                  <UserCheck className="h-4 w-4 text-primary-500 mt-0.5 mr-2 flex-shrink-0" />
-                  <span>
-                    {inspectionType === 'check_in' 
-                      ? 'Get both guest and inspector signatures to confirm property condition'
-                      : 'Complete final inspection with inspector signature'
-                    }
-                  </span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Start Button */}
-            <div className="pt-6">
-              <Button
-                type="submit"
-                size="lg"
-                fullWidth
-                isLoading={submitting}
-                leftIcon={<Camera size={20} />}
-                className="bg-primary-600 hover:bg-primary-700"
-              >
-                {submitting ? 'Starting Inspection...' : 'START INSPECTION'}
-              </Button>
             </div>
           </form>
         </div>
