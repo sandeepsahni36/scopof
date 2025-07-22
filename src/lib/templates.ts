@@ -486,10 +486,22 @@ export async function createTemplate(
       return { template: newTemplate, items: newItems };
     }
 
+    // Get the admin_id for the current user
+    const { data: adminData, error: adminError } = await supabase
+      .from('admin')
+      .select('id')
+      .eq('owner_id', user.id)
+      .single();
+
+    if (adminError || !adminData) {
+      throw new Error('Admin account not found for current user');
+    }
+
     // Create template
     const { data: template, error: templateError } = await supabase
       .from('templates')
       .insert([{
+        admin_id: adminData.id,
         name: templateData.name,
         category_id: null, // No longer using categories
         description: templateData.description,
