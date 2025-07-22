@@ -16,6 +16,8 @@ import { useAuthStore } from '../../store/authStore';
 import { TIER_LIMITS } from '../../types';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
+import { checkPropertyLimit } from '../../lib/properties';
+import { supabase, devModeEnabled } from '../../lib/supabase';
 
 // Register ChartJS components
 ChartJS.register(
@@ -32,7 +34,7 @@ const DashboardPage = () => {
   const { company, hasActiveSubscription, isTrialExpired, requiresPayment } = useAuthStore();
   const navigate = useNavigate();
   
-  // Real data state (starts empty for new users)
+  // Dashboard data state
   const [stats, setStats] = useState({
     properties: 0,
     completedInspections: 0,
@@ -40,38 +42,67 @@ const DashboardPage = () => {
     issuesDetected: 0,
   });
   
-  // Real activities data (starts empty for new users)
+  // Activities data (placeholder for future implementation)
   const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // Load real data from database
+  // Load dashboard data from database
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        // TODO: Replace with actual API calls to fetch user's real data
-        // For now, keeping empty state for new users
+        setLoading(true);
         
-        // Example of what the API calls would look like:
-        // const propertiesResponse = await supabase.from('properties').select('*');
-        // const inspectionsResponse = await supabase.from('inspections').select('*');
-        // const activitiesResponse = await supabase.from('activities').select('*');
+        // Get property count and limits
+        const propertyLimits = await checkPropertyLimit();
+        const propertyCount = propertyLimits?.currentCount || 0;
         
-        // setStats({
-        //   properties: propertiesResponse.data?.length || 0,
-        //   completedInspections: inspectionsResponse.data?.filter(i => i.status === 'completed').length || 0,
-        //   pendingInspections: inspectionsResponse.data?.filter(i => i.status === 'pending').length || 0,
-        //   issuesDetected: inspectionsResponse.data?.filter(i => i.issues_count > 0).length || 0,
-        // });
+        let completedInspections = 0;
+        let pendingInspections = 0;
         
-        // setActivities(activitiesResponse.data || []);
+        // Get inspection counts (skip in dev mode to avoid errors)
+        if (!devModeEnabled()) {
+          const [completedResponse, pendingResponse] = await Promise.all([
+            supabase
+              .from('inspections')
+              .select('id', { count: 'exact' })
+              .eq('status', 'completed'),
+            supabase
+              .from('inspections')
+              .select('id', { count: 'exact' })
+              .eq('status', 'in_progress')
+          ]);
+          
+          completedInspections = completedResponse.count || 0;
+          pendingInspections = pendingResponse.count || 0;
+        }
+        
+        setStats({
+          properties: propertyCount,
+          completedInspections,
+          pendingInspections,
+          issuesDetected: 0, // TODO: Implement when issue tracking is added
+        });
+        
+        // TODO: Load activities when activity tracking is implemented
+        setActivities([]);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+        // Set fallback values on error
+        setStats({
+          properties: 0,
+          completedInspections: 0,
+          pendingInspections: 0,
+          issuesDetected: 0,
+        });
+      } finally {
+        setLoading(false);
       }
     };
 
     loadDashboardData();
   }, []);
   
-  // Chart data - only show if there's actual data
+  // Chart data
   const hasInspectionData = stats.completedInspections > 0;
   const hasIssueData = stats.issuesDetected > 0;
   
@@ -80,14 +111,14 @@ const DashboardPage = () => {
     datasets: [
       {
         label: 'Check-in Inspections',
-        data: [0, 0, 0, 0], // Empty data for new users
+        data: [0, 0, 0, 0], // TODO: Implement monthly breakdown
         backgroundColor: 'rgba(59, 130, 246, 0.5)',
         borderColor: 'rgba(59, 130, 246, 1)',
         borderWidth: 1,
       },
       {
         label: 'Check-out Inspections',
-        data: [0, 0, 0, 0], // Empty data for new users
+        data: [0, 0, 0, 0], // TODO: Implement monthly breakdown
         backgroundColor: 'rgba(249, 115, 22, 0.5)',
         borderColor: 'rgba(249, 115, 22, 1)',
         borderWidth: 1,
@@ -100,7 +131,7 @@ const DashboardPage = () => {
     datasets: [
       {
         label: 'Issues by Type',
-        data: [0, 0, 0, 0], // Empty data for new users
+        data: [0, 0, 0, 0], // TODO: Implement when issue tracking is added
         backgroundColor: [
           'rgba(239, 68, 68, 0.7)',
           'rgba(249, 115, 22, 0.7)',
@@ -136,6 +167,17 @@ const DashboardPage = () => {
   // Check if user has any data
   const hasAnyData = stats.properties > 0 || stats.completedInspections > 0 || activities.length > 0;
   
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="py-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
@@ -441,7 +483,7 @@ const DashboardPage = () => {
               <div className="mt-6">
                 <Link to="/dashboard/properties">
                   <Button leftIcon={<Plus size={16} />}>
-                    Add Your First Property
+                    {stats.properties === 0 ? 'Add Your First Property' : 'Manage Properties'}
                   </Button>
                 </Link>
               </div>
@@ -519,13 +561,18 @@ const DashboardPage = () => {
         <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-primary-50 rounded-lg p-6 border border-primary-100">
-            <h3 className="text-base font-medium text-primary-800 mb-2">Add a New Property</h3>
+            <h3 className="text-base font-medium text-primary-800 mb-2">
+              {stats.properties === 0 ? 'Add Your First Property' : 'Add a New Property'}
+            </h3>
             <p className="text-sm text-primary-600 mb-4">
-              Create a new property and set up its inspection templates.
+              {stats.properties === 0 
+                ? 'Get started by creating your first property and setting up inspection templates.'
+                : 'Create a new property and set up its inspection templates.'
+              }
             </p>
             <Link to="/dashboard/properties">
               <Button size="sm">
-                Add Property
+                {stats.properties === 0 ? 'Add First Property' : 'Add Property'}
               </Button>
             </Link>
           </div>
@@ -548,14 +595,17 @@ const DashboardPage = () => {
           <div className="bg-accent-50 rounded-lg p-6 border border-accent-100">
             <h3 className="text-base font-medium text-accent-800 mb-2">View Reports</h3>
             <p className="text-sm text-accent-600 mb-4">
-              Access all inspection reports and download as PDF.
+              {stats.completedInspections === 0 
+                ? 'Complete inspections to generate and view reports.'
+                : 'Access all inspection reports and download as PDF.'
+              }
             </p>
             <Link to="/dashboard/reports">
               <Button 
                 size="sm"
                 className="bg-accent-600 hover:bg-accent-700 focus-visible:ring-accent-500"
               >
-                View Reports
+                {stats.completedInspections === 0 ? 'No Reports Yet' : 'View Reports'}
               </Button>
             </Link>
           </div>
