@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### Fixed
+- **TEMPLATE ITEM COUNT DISPLAY**: Fixed template item count showing as "0 items" in property checklist view
+- Enhanced property checklist query to fetch actual count of template items from database
+- Updated data transformation logic to correctly display item counts next to template names
+- Fixed property detail page to show accurate template statistics (e.g., "5 items" instead of "0 items")
+- Improved user experience by providing accurate information about checklist complexity
+- Enhanced template item counting with proper Supabase count aggregation
+
 ### Added
 - **EMPTY CHECKLIST HANDLING**: Enhanced inspection workflow to handle empty checklists gracefully
 - Added detection for checklists that exist but contain no inspection items
