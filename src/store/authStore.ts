@@ -228,50 +228,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // CRITICAL FIX: Completely revised subscription status determination
           hasActiveSubscription = false;
           isTrialExpired = false;
-          requiresPayment = false;
+          requiresPayment = false; // Default to false, only set to true for specific cases
 
           // First, check for active Stripe subscription
           if (subscription?.subscription_status === 'active') {
             hasActiveSubscription = true;
             console.log('Active subscription found via Stripe');
           } 
-          // Then, check for active trial from admin table (if no active Stripe sub)
+          // Check for active trial from admin table (if no active Stripe sub)
           else if (admin.subscription_status === 'trialing') {
             if (trialEnd && now < trialEnd) {
-              hasActiveSubscription = true; // Trial is active
+              hasActiveSubscription = true; // Trial is active, no payment required
               console.log('Active trial found via admin table');
             } else {
-              // Trial has ended - CRITICAL FIX: Always set requiresPayment to true
+              // Trial has ended
               isTrialExpired = true;
               requiresPayment = true;
               console.log('Trial expired, payment required');
             }
           } 
-          // If not active and not an active trial, determine if payment is required
-          else if (admin.subscription_status === 'not_started') {
-            // User hasn't started trial yet, needs to select a plan
-            requiresPayment = true;
-            console.log('Trial not started, payment required');
+          // NEW USER CASE: If subscription_status is null/undefined or 'not_started', 
+          // this is a new user who should go to start-trial page
+          else if (!admin.subscription_status || admin.subscription_status === 'not_started') {
+            // New user - should go to start-trial page, not payment required
+            hasActiveSubscription = false;
+            isTrialExpired = false;
+            requiresPayment = false; // CRITICAL: Allow access to start-trial page
+            console.log('New user detected, should go to start-trial page');
           } else {
-            // Other statuses (canceled, past_due, etc.)
+            // Other statuses (canceled, past_due, etc.) - payment required
             requiresPayment = true;
             console.log('Other status, payment required:', admin.subscription_status);
-          }
-
-          // Additional check: if no active subscription and no customer_id, payment is required
-          // This handles cases where admin.customer_id might be null but subscription_status is 'trialing'
-          // and trial has not started yet (e.g. after email confirmation, before start-trial page)
-          if (!hasActiveSubscription && !admin.customer_id) {
-            requiresPayment = true;
-            console.log('No customer ID, payment required');
-          }
-
-          // CRITICAL FIX: If trial has 0 days remaining, always require payment
-          if (trialEnd && now >= trialEnd && admin.subscription_status === 'trialing') {
-            isTrialExpired = true;
-            requiresPayment = true;
-            hasActiveSubscription = false;
-            console.log('CRITICAL FIX: Trial has 0 days remaining, enforcing payment requirement');
           }
 
           console.log('Final subscription state:', {
@@ -280,16 +267,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             requiresPayment
           });
         } else {
-          // If no admin data, it means the user is not fully set up (e.g., new user before handle_new_user trigger completes, or RLS issue)
-          // In this case, they should be redirected to start-trial or login.
-          // For now, assume requiresPayment is true to block dashboard access.
-          requiresPayment = true;
-          console.log('No admin data found, payment required');
+          // If no admin data, this is likely a new user whose admin record hasn't been created yet
+          // Allow them to proceed (they'll be handled by the signup flow)
+          hasActiveSubscription = false;
+          isTrialExpired = false;
+          requiresPayment = false;
+          console.log('No admin data found - likely new user, allowing access to start-trial');
         }
       } else {
-        // If no admin status, it means the user is not fully set up
-        requiresPayment = true;
-        console.log('No admin status found, payment required');
+        // If no admin status, this is likely a new user
+        hasActiveSubscription = false;
+        isTrialExpired = false;
+        requiresPayment = false;
+        console.log('No admin status found - likely new user, allowing access to start-trial');
       }
 
       // Final override for dev mode
