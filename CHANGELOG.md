@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- Fixed `needsPaymentSetup` flag not being included in authStore state updates
+- Ensured trialing users with NULL customer_id are properly identified and redirected to StartTrialPage
+- Added missing `needsPaymentSetup` property to all authStore `set()` calls
+- This resolves the issue where new users were still being redirected to dashboard instead of start-trial page
+
+### Fixed
 - Fixed redirect logic for trialing users with NULL customer_id to properly route to StartTrialPage
 - Added `needsPaymentSetup` state to distinguish between users who need to complete Stripe checkout vs. users who need to upgrade expired subscriptions
 - Enhanced `ProtectedRoute` and `AdminRoute` components to check current path before redirecting to prevent redirect loops

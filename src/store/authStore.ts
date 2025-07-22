@@ -14,6 +14,7 @@ type AuthState = {
   hasActiveSubscription: boolean;
   isTrialExpired: boolean;
   requiresPayment: boolean;
+  needsPaymentSetup: boolean;
   initialize: () => Promise<void>;
   setUser: (user: User | null) => void;
   setCompany: (company: Company | null) => void;
@@ -30,6 +31,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   hasActiveSubscription: false,
   isTrialExpired: false,
   requiresPayment: false,
+  needsPaymentSetup: false,
 
   initialize: async () => {
     try {
@@ -67,6 +69,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           hasActiveSubscription: true,
           isTrialExpired: false,
           requiresPayment: false,
+          needsPaymentSetup: false,
         });
         return;
       }
@@ -81,7 +84,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: false,
           hasActiveSubscription: false,
           isTrialExpired: false,
-          requiresPayment: false
+          requiresPayment: false,
+          needsPaymentSetup: false
         });
         return;
       }
@@ -288,6 +292,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log('Dev mode override: payment not required');
       }
 
+      // Calculate needsPaymentSetup
+      let needsPaymentSetup = false;
+      if (companyData?.subscription_status === 'trialing' && !companyData?.customerId) {
+        needsPaymentSetup = true;
+        console.log('User is trialing and needs payment setup (customer_id is NULL)');
+      }
+      // If already requiresPayment (e.g., trial expired), it should also need payment setup
+      if (requiresPayment) {
+        needsPaymentSetup = true;
+      }
+
       set({
         user: userData,
         company: companyData,
@@ -296,7 +311,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAdmin,
         hasActiveSubscription,
         isTrialExpired,
-        requiresPayment
+        requiresPayment,
+        needsPaymentSetup
       });
       console.log('Auth store initialized with:', {
         user: userData?.email,
@@ -305,7 +321,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAdmin,
         hasActiveSubscription,
         isTrialExpired,
-        requiresPayment
+        requiresPayment,
+        needsPaymentSetup
       });
     } catch (error) {
       console.error('Error initializing auth state:', error);
@@ -315,7 +332,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: false,
         hasActiveSubscription: false,
         isTrialExpired: false,
-        requiresPayment: false
+        requiresPayment: false,
+        needsPaymentSetup: false
       });
     }
   },
@@ -345,7 +363,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       hasActiveSubscription: false,
       isTrialExpired: false,
       requiresPayment: false,
-      needsPaymentSetup: false
+      needsPaymentSetup: false,
     });
   }
 }));
