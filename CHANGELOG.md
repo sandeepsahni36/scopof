@@ -1,6 +1,13 @@
 ## [Unreleased]
 
 ### Added
+- **INSPECT BUTTON FIX**: Fixed non-functional "Inspect" button on properties page
+- Enhanced PropertyCard component to properly check for property checklists before enabling inspection
+- Added dynamic checklist validation that disables inspect button when no checklist is attached
+- Implemented proper navigation to start-inspection page when checklist is available
+- Added loading state handling for checklist validation to prevent premature button interactions
+- Enhanced user experience with toast notifications when attempting to inspect properties without checklists
+- Fixed button styling to visually indicate disabled state when no checklist is present
 - **DATABASE SCHEMA FIX**: Added 'divider' value to template_item_type enum
 - Extended template_item_type enum to support divider items for visual organization
 - Created database migration to safely add new enum value without affecting existing data
