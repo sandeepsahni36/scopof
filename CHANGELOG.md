@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- Fixed email confirmation redirect URL to properly route to `/auth/callback` instead of root path
+- Ensured both `signUp` and `resendConfirmationEmail` functions use the correct `emailRedirectTo` URL
+- This resolves the issue where clicking email confirmation links would redirect to the landing page instead of the AuthCallbackPage
+
+### Fixed
 - Fixed AuthCallbackPage error handling to prevent premature session clearing during PKCE flow
 - Improved error handling for `flow_state_expired` errors during email confirmation
 - Prevented `supabase.auth.signOut()` from being called when `getSession()` fails during callback, which was clearing necessary PKCE state from localStorage
