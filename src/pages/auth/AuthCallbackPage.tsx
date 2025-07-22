@@ -38,7 +38,13 @@ const AuthCallbackPage = () => {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
-          throw sessionError;
+          console.error('Supabase getSession error during callback:', sessionError);
+          // Do NOT call handleAuthError from lib/supabase directly here,
+          // as it performs a signOut which might clear necessary PKCE state.
+          // Instead, set the error state for the current page.
+          setError(sessionError.message || 'Failed to retrieve session during callback.');
+          // The retry logic will handle further attempts or redirection.
+          return; // Exit to prevent further processing in this attempt
         }
 
         if (session && !hasProcessedRef.current) {
@@ -99,7 +105,7 @@ const AuthCallbackPage = () => {
           }
         };
       } catch (error: any) {
-        console.error('Auth callback error:', error);
+        console.error('Auth callback outer error:', error);
         setError(error.message || 'Authentication failed');
       }
     };
