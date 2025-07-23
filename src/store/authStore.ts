@@ -341,7 +341,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isTrialExpired: false,
         requiresPayment: false,
         needsPaymentSetup: false
-        needsPaymentSetup: false
       });
     }
   },
