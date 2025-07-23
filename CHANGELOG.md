@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Database Schema**: Added `reports` table to store inspection report metadata
+  - Table includes `id`, `inspection_id`, `report_url`, `report_type`, `generated_at`, `created_at`, `updated_at` columns
+  - Added proper indexes for `inspection_id` and `generated_at` for efficient querying
+  - Enabled Row Level Security (RLS) with policy for team member access
+  - Added `updated_at` trigger for automatic timestamp updates
+  - This resolves the 400 error when accessing the Reports page and enables PDF report storage/retrieval
+
 ### Fixed
 - **CRITICAL**: Fixed hasActiveSubscription logic to correctly return false for trial users without customer_id
 - Trial users without payment setup (customer_id is null) now have hasActiveSubscription set to false
