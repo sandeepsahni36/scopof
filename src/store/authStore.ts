@@ -27,7 +27,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loading: true,
   isDevMode: devModeEnabled(),
   isAuthenticated: false,
-          customerId: admin.customer_id,
   isAdmin: false,
   hasActiveSubscription: false,
   isTrialExpired: false,
@@ -38,6 +37,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       console.log("Initializing auth store...");
       
+      if (devModeEnabled()) {
         const mockUser: User = {
           id: 'dev-user-id',
           email: 'dev@example.com',
@@ -209,6 +209,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             tier: actualTier as any,
             trialEndsAt: admin.trial_ends_at,
             subscription_status: admin.subscription_status,
+            customerId: admin.customer_id,
             createdAt: admin.created_at,
             updatedAt: admin.updated_at,
           };
@@ -224,24 +225,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             now: now.toISOString(),
             trialEnd: trialEnd?.toISOString(),
             customer_id: admin.customer_id
-        // Determine if the user has an active paid subscription
-        // This should only be true if Stripe reports an 'active' subscription status.
-        hasActiveSubscription = (subscription?.subscription_status === 'active');
-        console.log(`Determined hasActiveSubscription: ${hasActiveSubscription} (from Stripe status: ${subscription?.subscription_status})`);
+          });
 
-        // Determine if the trial has expired
-        const now = new Date();
-        const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
-        isTrialExpired = (admin.subscription_status === 'trialing' && trialEnd && now >= trialEnd);
-        console.log(`Determined isTrialExpired: ${isTrialExpired} (Trial ends: ${trialEnd?.toISOString()}, Now: ${now.toISOString()})`);
+          // Determine if the user has an active paid subscription
+          // This should only be true if Stripe reports an 'active' subscription status.
+          hasActiveSubscription = (subscription?.subscription_status === 'active');
+          console.log(`Determined hasActiveSubscription: ${hasActiveSubscription} (from Stripe status: ${subscription?.subscription_status})`);
 
-        // Determine if payment is required (trial expired, or other non-active/non-trialing status)
-        requiresPayment = isTrialExpired || (admin.subscription_status !== 'active' && admin.subscription_status !== 'trialing' && admin.subscription_status !== 'not_started');
-        console.log(`Determined requiresPayment: ${requiresPayment} (Admin status: ${admin.subscription_status})`);
+          // Determine if the trial has expired
+          isTrialExpired = (admin.subscription_status === 'trialing' && trialEnd && now >= trialEnd);
+          console.log(`Determined isTrialExpired: ${isTrialExpired} (Trial ends: ${trialEnd?.toISOString()}, Now: ${now.toISOString()})`);
 
-        // Determine if payment setup is needed (trialing without customer_id, or payment required)
-        const needsPaymentSetup = (admin.subscription_status === 'trialing' && !admin.customer_id) || requiresPayment;
-        console.log(`Determined needsPaymentSetup: ${needsPaymentSetup} (Admin status: ${admin.subscription_status}, Customer ID: ${admin.customer_id})`);
+          // Determine if payment is required (trial expired, or other non-active/non-trialing status)
+          requiresPayment = isTrialExpired || (admin.subscription_status !== 'active' && admin.subscription_status !== 'trialing' && admin.subscription_status !== 'not_started');
+          console.log(`Determined requiresPayment: ${requiresPayment} (Admin status: ${admin.subscription_status})`);
+
+          // Determine if payment setup is needed (trialing without customer_id, or payment required)
+          const needsPaymentSetup = (admin.subscription_status === 'trialing' && !admin.customer_id) || requiresPayment;
+          console.log(`Determined needsPaymentSetup: ${needsPaymentSetup} (Admin status: ${admin.subscription_status}, Customer ID: ${admin.customer_id})`);
         }
       } else {
         // If no admin status, this is likely a new user
@@ -264,16 +265,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log('User is trialing and needs payment setup (customer_id is NULL)');
       }
       // If already requiresPayment (e.g., trial expired), it should also need payment setup
-    // Calculate needsPaymentSetup - this should be calculated after admin data processing
-    let needsPaymentSetup = false;
-    if (companyData) {
-      needsPaymentSetup = (companyData.subscription_status === 'trialing' && !companyData.customerId) || requiresPayment;
-      console.log('Calculated needsPaymentSetup:', needsPaymentSetup, {
-        subscriptionStatus: companyData.subscription_status,
-        hasCustomerId: !!companyData.customerId,
-        requiresPayment
-      });
-    }
+      // Calculate needsPaymentSetup - this should be calculated after admin data processing
+      if (companyData) {
+        needsPaymentSetup = (companyData.subscription_status === 'trialing' && !companyData.customerId) || requiresPayment;
+        console.log('Calculated needsPaymentSetup:', needsPaymentSetup, {
+          subscriptionStatus: companyData.subscription_status,
+          hasCustomerId: !!companyData.customerId,
+          requiresPayment
+        });
+      }
+
+      set({
+        user: userData,
+        company: companyData,
+        loading: false,
+        isAuthenticated: true,
+        isAdmin,
         hasActiveSubscription,
         isTrialExpired,
         requiresPayment,
