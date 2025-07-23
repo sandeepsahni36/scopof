@@ -242,10 +242,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // Check for active trial from admin table (if no active Stripe sub)
           else if (admin.subscription_status === 'trialing') {
             if (trialEnd && now < trialEnd) {
-              // CRITICAL: Only consider trial as "active subscription" if payment details are provided
+              // CRITICAL: Trial users with payment setup (customer_id) have active subscription access
               if (admin.customer_id) {
-                hasActiveSubscription = false; // Trial without payment setup - needs to go to start-trial
-                console.log('Active trial found but no payment setup (customer_id is null)');
+                hasActiveSubscription = true; // Trial with payment setup - full access
+                console.log('Active trial found with payment setup (customer_id present)');
               } else {
                 hasActiveSubscription = false; // Trial without payment setup - needs to go to start-trial
                 console.log('Active trial found but no payment setup (customer_id is null)');

@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **CRITICAL**: Fixed hasActiveSubscription logic for trialing users with payment setup
+- Trial users who have provided payment details (customer_id present) now correctly have hasActiveSubscription set to true
+- This resolves authentication flow issues where users with active trials and payment setup were incorrectly blocked from dashboard access
+- Prevents infinite redirect loops and ensures proper access control for trial users who have completed payment setup
+
 ### Added
 - **Database Schema**: Added `reports` table to store inspection report metadata
   - Table includes `id`, `inspection_id`, `report_url`, `report_type`, `generated_at`, `created_at`, `updated_at` columns
