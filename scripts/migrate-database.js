@@ -32,7 +32,7 @@ async function runMigration() {
     console.log('🚀 Starting database migration...\n');
     
     // Read the consolidated schema file
-    const schemaPath = path.join(__dirname, '..', 'supabase', 'migrations', '20250722133852_orange_glade.sql');
+    const schemaPath = path.join(__dirname, '..', 'supabase', 'migrations', '20250723090515_lingering_cloud.sql');
     
     if (!fs.existsSync(schemaPath)) {
       console.error('❌ Schema file not found at:', schemaPath);
@@ -115,7 +115,7 @@ async function runMigrationDirect() {
   try {
     console.log('🚀 Starting direct SQL migration...\n');
     
-    const schemaPath = path.join(__dirname, '..', 'supabase', 'migrations', '20250722133852_orange_glade.sql');
+    const schemaPath = path.join(__dirname, '..', 'supabase', 'migrations', '20250723090515_lingering_cloud.sql');
     const sqlContent = fs.readFileSync(schemaPath, 'utf8');
     
     console.log('📄 Executing consolidated schema directly...');
@@ -134,7 +134,7 @@ async function runMigrationDirect() {
     console.log('\n⚠️  Note: You may need to run this SQL manually in your Supabase SQL editor:');
     console.log('   1. Go to your Supabase dashboard');
     console.log('   2. Navigate to SQL Editor');
-    console.log('   3. Copy and paste the contents of supabase/migrations/20250722133852_orange_glade.sql');
+    console.log('   3. Copy and paste the contents of supabase/migrations/20250723090515_lingering_cloud.sql');
     console.log('   4. Click "Run" to execute the migration');
     
   } catch (error) {
