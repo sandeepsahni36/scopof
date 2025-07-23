@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **CRITICAL**: Fixed hasActiveSubscription logic to correctly return false for trial users without customer_id
+- Trial users without payment setup (customer_id is null) now have hasActiveSubscription set to false
+- Added needsPaymentSetup property to all set() calls in authStore to ensure proper redirection logic
+- Enhanced console logging to track needsPaymentSetup calculation and inclusion in store state
+- Removed handleAuthError call from initialize() catch block to prevent infinite redirect loops
+- This ensures new users are properly redirected to /start-trial page instead of accessing dashboard
+
+### Fixed
 - Fixed hasActiveSubscription logic to require customer_id for trial users
 - Trial users without payment setup (customer_id is null) now correctly have hasActiveSubscription set to false
 - This ensures new users are properly redirected to /start-trial page instead of accessing dashboard
