@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- Fixed hasActiveSubscription logic to require customer_id for trial users
+- Trial users without payment setup (customer_id is null) now correctly have hasActiveSubscription set to false
+- This ensures new users are properly redirected to /start-trial page instead of accessing dashboard
+- Added needsPaymentSetup property to authStore set() call to enable proper redirection logic
+- Moved /start-trial route outside of AuthLayout to prevent authenticated user redirect issues
+- Enhanced debug logging to track subscription status determination and route guard behavior
+
+### Fixed
 ### Fixed
 - Fixed redirect logic for trialing users with NULL customer_id to properly route to StartTrialPage
 - This ensures new users complete the payment setup flow before accessing the main application
