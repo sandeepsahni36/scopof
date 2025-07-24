@@ -26,7 +26,8 @@ console.log(`- URL format valid: ${supabaseUrl.includes('supabase.co') ? 'Yes' :
 console.log('');
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
- 
+  global: {
+    fetch: globalThis.fetch
   }
 });
 
