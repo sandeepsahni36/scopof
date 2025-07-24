@@ -213,20 +213,9 @@ const SubscriptionPage = () => {
                   : 'border border-gray-200 bg-white'
               }`}
             >
-              {company?.subscription_status === 'trialing' ? 'Upgrade Now' : 'Start Free Trial'}
+              {product.popular && (
                 <div className="absolute top-0 right-0 bg-primary-500 text-white px-4 py-1 text-sm font-medium rounded-bl-lg rounded-tr-lg">
                   Popular
-          {company?.subscription_status === 'trialing' && (
-            <div className="mt-4 p-3 bg-white/50 rounded-lg">
-              <h4 className="text-sm font-semibold text-primary-800 mb-2">Trial Benefits</h4>
-              <ul className="text-sm text-primary-700 space-y-1">
-                <li>• Full access to all {company?.tier} features</li>
-                <li>• No charges until trial expires</li>
-                <li>• Automatic billing starts after trial period</li>
-                <li>• Cancel anytime before trial ends</li>
-              </ul>
-            </div>
-          )}
                 </div>
               )}
               <div className="p-6">
@@ -236,6 +225,17 @@ const SubscriptionPage = () => {
                   <span className="text-3xl font-bold text-gray-900">${product.price}</span>
                   <span className="text-base font-medium text-gray-500">/month</span>
                 </p>
+                {company?.subscription_status === 'trialing' && (
+                  <div className="mt-4 p-3 bg-white/50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-primary-800 mb-2">Trial Benefits</h4>
+                    <ul className="text-sm text-primary-700 space-y-1">
+                      <li>• Full access to all {company?.tier} features</li>
+                      <li>• No charges until trial expires</li>
+                      <li>• Automatic billing starts after trial period</li>
+                      <li>• Cancel anytime before trial ends</li>
+                    </ul>
+                  </div>
+                )}
                 <Button
                   className="mt-6 w-full"
                   variant={currentPlan && currentPlan[0] === key ? 'secondary' : 'default'}
@@ -247,8 +247,8 @@ const SubscriptionPage = () => {
                   {currentPlan && currentPlan[0] === key
                     ? 'Current Plan' 
                     : isTrialActive || isTrialExpired 
-                      ? 'Select Plan' 
-                      : 'Upgrade'
+                      ? company?.subscription_status === 'trialing' ? 'Upgrade Now' : 'Start Free Trial'
+                      : 'Select Plan'
                   }
                 </Button>
               </div>
