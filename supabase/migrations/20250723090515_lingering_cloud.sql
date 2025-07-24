@@ -504,40 +504,40 @@ ALTER TABLE public.reports ADD CONSTRAINT reports_inspection_id_fkey FOREIGN KEY
 
 -- Add RLS policies
 ALTER TABLE public.templates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY templates_manage_admins ON public.templates TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY templates_manage_admins ON public.templates FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.admin a
   WHERE (a.id = templates.admin_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
            FROM public.team_members tm
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY templates_postgres_all ON public.templates TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY templates_select_members ON public.templates TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY templates_postgres_all ON public.templates FOR INSERT TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY templates_select_members ON public.templates FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.admin a
   WHERE (a.id = templates.admin_id AND EXISTS ( SELECT 1
            FROM public.team_members tm
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
 
 ALTER TABLE public.report_service_teams ENABLE ROW LEVEL SECURITY;
-CREATE POLICY report_service_teams_manage_admins ON public.report_service_teams TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY report_service_teams_manage_admins ON public.report_service_teams FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.admin a
   WHERE (a.id = report_service_teams.admin_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
            FROM public.team_members tm
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY report_service_teams_postgres_all ON public.report_service_teams TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY report_service_teams_select_members ON public.report_service_teams TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY report_service_teams_postgres_all ON public.report_service_teams FOR INSERT TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY report_service_teams_select_members ON public.report_service_teams FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.admin a
   WHERE (a.id = report_service_teams.admin_id AND EXISTS ( SELECT 1
            FROM public.team_members tm
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
 
 ALTER TABLE public.template_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY template_items_manage_admins ON public.template_items TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY template_items_manage_admins ON public.template_items FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.templates t
    JOIN public.admin a ON t.admin_id = a.id
   WHERE (t.id = template_items.template_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
            FROM public.team_members tm
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY template_items_postgres_all ON public.template_items TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY template_items_select_members ON public.template_items TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY template_items_postgres_all ON public.template_items FOR INSERT TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY template_items_select_members ON public.template_items FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.templates t
    JOIN public.admin a ON t.admin_id = a.id
   WHERE (t.id = template_items.template_id AND EXISTS ( SELECT 1
@@ -545,40 +545,40 @@ CREATE POLICY template_items_select_members ON public.template_items TO authenti
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
 
 ALTER TABLE public.properties ENABLE ROW LEVEL SECURITY;
-CREATE POLICY properties_manage_admins ON public.properties TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY properties_manage_admins ON public.properties FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.admin a
   WHERE (a.id = properties.admin_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
            FROM public.team_members tm
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY properties_postgres_all ON public.properties TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY properties_select_members ON public.properties TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY properties_postgres_all ON public.properties FOR INSERT TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY properties_select_members ON public.properties FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.admin a
   WHERE (a.id = properties.admin_id AND EXISTS ( SELECT 1
            FROM public.team_members tm
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
 
 ALTER TABLE public.template_categories ENABLE ROW LEVEL SECURITY;
-CREATE POLICY template_categories_manage_admins ON public.template_categories TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY template_categories_manage_admins ON public.template_categories FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.admin a
   WHERE (a.id = template_categories.admin_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
            FROM public.team_members tm
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY template_categories_postgres_all ON public.template_categories TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY template_categories_select_members ON public.template_categories TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY template_categories_postgres_all ON public.template_categories FOR INSERT TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY template_categories_select_members ON public.template_categories FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.admin a
   WHERE (a.id = template_categories.admin_id AND EXISTS ( SELECT 1
            FROM public.team_members tm
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
 
 ALTER TABLE public.property_checklists ENABLE ROW LEVEL SECURITY;
-CREATE POLICY property_checklists_manage_admins ON public.property_checklists TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY property_checklists_manage_admins ON public.property_checklists FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.properties p
    JOIN public.admin a ON p.admin_id = a.id
   WHERE (p.id = property_checklists.property_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
            FROM public.team_members tm
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY property_checklists_postgres_all ON public.property_checklists TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY property_checklists_select_members ON public.property_checklists TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY property_checklists_postgres_all ON public.property_checklists FOR INSERT TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY property_checklists_select_members ON public.property_checklists FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.properties p
    JOIN public.admin a ON p.admin_id = a.id
   WHERE (p.id = property_checklists.property_id AND EXISTS ( SELECT 1
@@ -586,58 +586,58 @@ CREATE POLICY property_checklists_select_members ON public.property_checklists T
           WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
 
 ALTER TABLE public.property_checklist_templates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY property_checklist_templates_access_for_members ON public.property_checklist_templates TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY property_checklist_templates_access_for_members ON public.property_checklist_templates FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.property_checklists pc
    JOIN public.properties p ON pc.property_id = p.id
    JOIN public.team_members tm ON tm.admin_id = p.admin_id
   WHERE (pc.id = property_checklist_templates.property_checklist_id AND tm.profile_id = auth.uid())
 ));
-CREATE POLICY property_checklist_templates_postgres_all ON public.property_checklist_templates TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY property_checklist_templates_postgres_all ON public.property_checklist_templates FOR INSERT TO postgres USING (true) WITH CHECK (true);
 
 ALTER TABLE public.inspections ENABLE ROW LEVEL SECURITY;
-CREATE POLICY inspections_access_for_members ON public.inspections TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY inspections_access_for_members ON public.inspections FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.properties p
    JOIN public.admin a ON p.admin_id = a.id
    JOIN public.team_members tm ON tm.admin_id = a.id
   WHERE (p.id = inspections.property_id AND tm.profile_id = auth.uid())
 ));
-CREATE POLICY inspections_postgres_all ON public.inspections TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY inspections_postgres_all ON public.inspections FOR INSERT TO postgres USING (true) WITH CHECK (true);
 
 ALTER TABLE public.stripe_subscriptions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY stripe_subscriptions_postgres_all ON public.stripe_subscriptions TO postgres USING (true);
+CREATE POLICY stripe_subscriptions_postgres_all ON public.stripe_subscriptions FOR INSERT TO postgres USING (true);
 
 ALTER TABLE public.stripe_orders ENABLE ROW LEVEL SECURITY;
-CREATE POLICY stripe_orders_postgres_all ON public.stripe_orders TO postgres USING (true);
+CREATE POLICY stripe_orders_postgres_all ON public.stripe_orders FOR INSERT TO postgres USING (true);
 
 ALTER TABLE public.inspection_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY inspection_items_access_for_members ON public.inspection_items TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY inspection_items_access_for_members ON public.inspection_items FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
    FROM public.inspections i
    JOIN public.properties p ON i.property_id = p.id
    JOIN public.admin a ON p.admin_id = a.id
    JOIN public.team_members tm ON tm.admin_id = a.id
   WHERE (i.id = inspection_items.inspection_id AND tm.profile_id = auth.uid())
 ));
-CREATE POLICY inspection_items_postgres_all ON public.inspection_items TO postgres USING (true);
+CREATE POLICY inspection_items_postgres_all ON public.inspection_items FOR INSERT TO postgres USING (true);
 
 ALTER TABLE public.stripe_customers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY stripe_customers_postgres_all ON public.stripe_customers TO postgres USING (true);
+CREATE POLICY stripe_customers_postgres_all ON public.stripe_customers FOR INSERT TO postgres USING (true);
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY profiles_insert_own ON public.profiles TO authenticated FOR INSERT WITH CHECK ((auth.uid() = id));
-CREATE POLICY profiles_postgres_all ON public.profiles TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY profiles_select_own ON public.profiles TO authenticated USING ((auth.uid() = id));
-CREATE POLICY profiles_update_own ON public.profiles TO authenticated FOR UPDATE USING ((auth.uid() = id)) WITH CHECK ((auth.uid() = id));
+CREATE POLICY profiles_insert_own ON public.profiles FOR INSERT TO authenticated WITH CHECK ((auth.uid() = id));
+CREATE POLICY profiles_postgres_all ON public.profiles FOR INSERT TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY profiles_select_own ON public.profiles FOR INSERT TO authenticated USING ((auth.uid() = id));
+CREATE POLICY profiles_update_own ON public.profiles FOR UPDATE TO authenticated USING ((auth.uid() = id)) WITH CHECK ((auth.uid() = id));
 
 ALTER TABLE public.admin ENABLE ROW LEVEL SECURITY;
-CREATE POLICY admin_owner_full_access ON public.admin TO authenticated USING ((owner_id = auth.uid()));
-CREATE POLICY admin_postgres_access ON public.admin TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY admin_owner_full_access ON public.admin FOR INSERT TO authenticated USING ((owner_id = auth.uid()));
+CREATE POLICY admin_postgres_access ON public.admin FOR INSERT TO postgres USING (true) WITH CHECK (true);
 
 ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
-CREATE POLICY team_members_admin_manage ON public.team_members TO authenticated USING ((admin_id IN ( SELECT admin.id
+CREATE POLICY team_members_admin_manage ON public.team_members FOR INSERT TO authenticated USING ((admin_id IN ( SELECT admin.id
    FROM public.admin
   WHERE (admin.owner_id = auth.uid()))));
-CREATE POLICY team_members_own_record ON public.team_members TO authenticated USING ((profile_id = auth.uid()));
-CREATE POLICY team_members_postgres_access ON public.team_members TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY team_members_own_record ON public.team_members FOR INSERT TO authenticated USING ((profile_id = auth.uid()));
+CREATE POLICY team_members_postgres_access ON public.team_members FOR INSERT TO postgres USING (true) WITH CHECK (true);
 
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 CREATE POLICY reports_access_for_members ON public.reports
