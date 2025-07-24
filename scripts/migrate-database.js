@@ -25,7 +25,11 @@ if (!supabaseUrl || !supabaseServiceKey) {
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  global: {
+    fetch: globalThis.fetch
+  }
+});
 
 async function runMigration() {
   try {
