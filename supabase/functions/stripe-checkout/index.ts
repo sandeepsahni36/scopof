@@ -213,7 +213,7 @@ serve(async (req) => {
     const tier = getTierFromPriceId(price_id);
     console.log(`Determined tier from price ID: ${tier}`);
 
-    // Create checkout session
+    // Create checkout session with subscription trial
     console.log("Creating Stripe checkout session");
     console.log("Checkout session parameters:", {
       customer: customerId,
@@ -223,29 +223,44 @@ serve(async (req) => {
       cancelUrl: cancel_url,
       userId: user.id,
       adminId: adminData.id,
-      tier: tier
+      tier: tier,
+      trialPeriodDays: 14
     });
     
     console.log("Calling Stripe API to create checkout session...");
-    const session = await stripe.checkout.sessions.create({
+    
+    // Create subscription checkout session with trial
+    const sessionParams: any = {
       customer: customerId,
+      mode: mode,
+      success_url: `${success_url}`,
+      cancel_url: `${cancel_url}`,
+      allow_promotion_codes: true,
+      billing_address_collection: "auto",
+      payment_method_collection: "always",
+      subscription_data: {
+        trial_period_days: 14,
+        metadata: {
+          user_id: user.id,
+          admin_id: adminData.id,
+          tier: tier,
+        },
+      },
       line_items: [
         {
           price: price_id,
           quantity: 1,
         },
       ],
-      mode: mode,
-      success_url: `${success_url}`,
-      cancel_url: `${cancel_url}`,
-      allow_promotion_codes: true,
-      billing_address_collection: "auto",
       metadata: {
         user_id: user.id,
         admin_id: adminData.id,
         tier: tier, // Add tier to metadata
       },
-    });
+    };
+
+    console.log("Creating subscription checkout session with trial period");
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     console.log("Checkout session created successfully:", {
       sessionId: session.id,
@@ -255,8 +270,6 @@ serve(async (req) => {
     // Return the session URL
     return new Response(
       JSON.stringify({ session_url: session.url }),
-    console.log("=== STRIPE CHECKOUT SESSION SUCCESS ===");
-    
       {
         status: 200,
         headers: {
@@ -265,13 +278,15 @@ serve(async (req) => {
         },
       }
     );
+    
+    console.log("=== STRIPE CHECKOUT SESSION SUCCESS ===");
   } catch (error) {
     console.error("Error creating checkout session:", {
       message: error.message,
-      stack: error.stack
-    });
+      stack: error.stack,
       name: error.name,
       cause: error.cause
+    });
     
     return new Response(
       JSON.stringify({ error: error.message }),

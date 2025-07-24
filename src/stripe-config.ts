@@ -1,11 +1,12 @@
 export const STRIPE_PRODUCTS = {
   enterprise: {
     id: 'prod_SDzjYH1yYqyelf',
-    priceId: 'price_1RJXjjCDShtAyWWlL0WQc0I8',
+    priceId: 'price_1RJXjjCDShtAyWWlL0WQc0I8', // This should be updated to a subscription price ID
     name: 'Enterprise',
     description: 'For large property management companies',
     price: 199,
     mode: 'subscription' as const,
+    trialDays: 14,
     features: [
       'Unlimited properties',
       'Unlimited storage',
@@ -18,11 +19,12 @@ export const STRIPE_PRODUCTS = {
   },
   professional: {
     id: 'prod_SDzibjNuFbr5rA',
-    priceId: 'price_1RJXjHCDShtAyWWllZtomnFA',
+    priceId: 'price_1RJXjHCDShtAyWWllZtomnFA', // This should be updated to a subscription price ID
     name: 'Professional',
     description: 'For growing businesses with multiple properties',
     price: 79,
     mode: 'subscription' as const,
+    trialDays: 14,
     features: [
       'Up to 45 properties',
       '5 GB Storage',
@@ -36,11 +38,12 @@ export const STRIPE_PRODUCTS = {
   },
   starter: {
     id: 'prod_SDzhlYzTvZRsL1',
-    priceId: 'price_1RJXhuCDShtAyWWl8VhTAtNj',
+    priceId: 'price_1RJXhuCDShtAyWWl8VhTAtNj', // This should be updated to a subscription price ID
     name: 'Starter',
     description: 'Perfect for individuals or small rental businesses',
     price: 29,
     mode: 'subscription' as const,
+    trialDays: 14,
     features: [
       'Up to 10 properties',
       '2 GB Storage',
