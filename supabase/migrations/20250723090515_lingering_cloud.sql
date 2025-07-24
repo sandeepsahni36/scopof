@@ -431,7 +431,6 @@ CREATE INDEX idx_property_checklists_active ON public.property_checklists USING 
 CREATE INDEX idx_property_checklists_property_id ON public.property_checklists USING btree (property_id);
 CREATE INDEX idx_property_checklist_templates_checklist_id ON public.property_checklist_templates USING btree (property_checklist_id);
 CREATE INDEX idx_property_checklist_templates_order ON public.property_checklist_templates USING btree (order_index);
-public.property_checklist_templates USING btree (id);
 CREATE UNIQUE INDEX property_checklist_templates_property_checklist_id_template_key ON public.property_checklist_templates USING btree (property_checklist_id, template_id);
 CREATE INDEX idx_report_service_teams_admin_id ON public.report_service_teams USING btree (admin_id);
 CREATE UNIQUE INDEX report_service_teams_admin_id_designation_key ON public.report_service_teams USING btree (admin_id, designation);
