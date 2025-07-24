@@ -416,7 +416,6 @@ CREATE OR REPLACE VIEW public.stripe_user_orders AS
 -- Add indexes
 CREATE UNIQUE INDEX admin_customer_id_key ON public.admin USING btree (customer_id);
 CREATE UNIQUE INDEX admin_owner_id_key ON public.admin USING btree (owner_id);
-CREATE UNIQUE INDEX admin_pkey ON public.admin USING btree (id);
 CREATE INDEX idx_admin_owner_id ON public.admin USING btree (owner_id);
 CREATE INDEX idx_inspection_items_inspection_id ON public.inspection_items USING btree (inspection_id);
 CREATE INDEX idx_inspection_items_order ON public.inspection_items USING btree (order_index);
@@ -494,7 +493,6 @@ ALTER TABLE public.stripe_customers ADD CONSTRAINT stripe_customers_user_id_key 
 ALTER TABLE public.profiles ADD CONSTRAINT profiles_pkey PRIMARY KEY (id);
 ALTER TABLE public.admin ADD CONSTRAINT admin_customer_id_key UNIQUE (customer_id);
 ALTER TABLE public.admin ADD CONSTRAINT admin_owner_id_key UNIQUE (owner_id);
-ALTER TABLE public.admin ADD CONSTRAINT admin_pkey PRIMARY KEY (id);
 ALTER TABLE public.team_members ADD CONSTRAINT team_members_admin_id_profile_id_key UNIQUE (admin_id, profile_id);
 ALTER TABLE public.team_members ADD CONSTRAINT team_members_pkey PRIMARY KEY (id);
 ALTER TABLE public.report_service_teams ADD CONSTRAINT report_service_teams_admin_id_designation_key UNIQUE (admin_id, designation);
