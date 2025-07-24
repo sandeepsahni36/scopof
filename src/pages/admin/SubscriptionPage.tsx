@@ -122,10 +122,13 @@ const SubscriptionPage = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Clock className="h-5 w-5 text-primary-500 mr-2" />
-              <div>
+                  {company?.subscription_status === 'trialing' ? 'Free Trial Active' : 'Trial Available'}
                 <h3 className="text-sm font-medium text-primary-800">Trial Period Active</h3>
                 <p className="text-sm text-primary-600">
-                  {trialDaysRemaining} days remaining in your trial period
+                  {company?.subscription_status === 'trialing' 
+                    ? `${trialDaysRemaining} days remaining • Ends ${company?.trialEndsAt ? new Date(company.trialEndsAt).toLocaleDateString() : 'soon'}`
+                    : 'Start your 14-day free trial with full access to all features'
+                  }
                 </p>
               </div>
             </div>
@@ -210,9 +213,20 @@ const SubscriptionPage = () => {
                   : 'border border-gray-200 bg-white'
               }`}
             >
-              {product.popular && (
+              {company?.subscription_status === 'trialing' ? 'Upgrade Now' : 'Start Free Trial'}
                 <div className="absolute top-0 right-0 bg-primary-500 text-white px-4 py-1 text-sm font-medium rounded-bl-lg rounded-tr-lg">
                   Popular
+          {company?.subscription_status === 'trialing' && (
+            <div className="mt-4 p-3 bg-white/50 rounded-lg">
+              <h4 className="text-sm font-semibold text-primary-800 mb-2">Trial Benefits</h4>
+              <ul className="text-sm text-primary-700 space-y-1">
+                <li>• Full access to all {company?.tier} features</li>
+                <li>• No charges until trial expires</li>
+                <li>• Automatic billing starts after trial period</li>
+                <li>• Cancel anytime before trial ends</li>
+              </ul>
+            </div>
+          )}
                 </div>
               )}
               <div className="p-6">

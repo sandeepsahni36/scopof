@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Stripe Subscription Trial**: Implemented proper Stripe subscription model with 14-day free trial
+  - Updated checkout flow to create subscriptions instead of one-time payments
+  - Added `trial_period_days: 14` to checkout session creation
+  - Enhanced webhook handling for subscription lifecycle events
+  - Added support for `customer.subscription.trial_will_end`, `customer.subscription.created`, `customer.subscription.deleted`, and `invoice.payment_failed` webhooks
+  - Updated frontend UI to clearly display trial status and benefits
+  - Improved subscription status logic in authStore to handle trial periods correctly
+  - Added `trialDays` property to Stripe product configuration
+  - Enhanced trial status display in StartTrialPage and SubscriptionPage
+
+### Technical Details
+- Modified `supabase/functions/stripe-checkout/index.ts` to create subscription checkout sessions with trial periods
+- Enhanced `supabase/functions/stripe-webhook/index.ts` with comprehensive subscription event handling
+- Updated `src/store/authStore.ts` subscription status determination logic for trial periods
+- Improved UI components to better communicate trial benefits and status
+- Added proper handling for subscription status transitions (trialing → active → past_due → canceled)
+
+### Benefits
+- Users can now start using the platform immediately with a true 14-day free trial
+- Payment method is authorized (not charged) during signup for seamless trial-to-paid conversion
+- Automatic billing occurs after trial expires unless cancelled
+- Better user experience with clear trial status communication
+- Robust webhook handling ensures accurate subscription state synchronization
+
 ### Fixed
 - **CRITICAL**: Fixed hasActiveSubscription logic for trialing users with payment setup
 - Trial users who have provided payment details (customer_id present) now correctly have hasActiveSubscription set to true

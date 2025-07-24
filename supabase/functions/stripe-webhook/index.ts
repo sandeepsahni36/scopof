@@ -99,7 +99,9 @@ serve(async (req) => {
           adminId: session.metadata?.admin_id,
           paymentStatus: session.payment_status,
           amountTotal: session.amount_total,
-          currency: session.currency
+          currency: session.currency,
+          mode: session.mode,
+          subscriptionId: session.subscription
         });
         
         // Ensure we have the necessary data
@@ -122,36 +124,126 @@ serve(async (req) => {
         const tier = session.metadata?.tier || 'starter';
         console.log(`Using tier from metadata: ${tier}`);
 
-        console.log("Updating admin record with trial information:", {
-          adminId: session.metadata.admin_id,
-          status: "trialing",
-          tier: tier,
-          trialStarted: new Date().toISOString(),
-          trialEnds: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
-        });
+        // Handle subscription checkout completion
+        if (session.mode === 'subscription' && session.subscription) {
+          console.log("Processing subscription checkout completion");
+          
+          // Get the subscription details to determine trial status
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          
+          console.log("Subscription details:", {
+            subscriptionId: subscription.id,
+            status: subscription.status,
+            trialStart: subscription.trial_start,
+            trialEnd: subscription.trial_end,
+            currentPeriodStart: subscription.current_period_start,
+            currentPeriodEnd: subscription.current_period_end
+          });
+          
+          // Calculate trial dates
+          const trialStartedAt = subscription.trial_start 
+            ? new Date(subscription.trial_start * 1000).toISOString()
+            : new Date().toISOString();
+          const trialEndsAt = subscription.trial_end 
+            ? new Date(subscription.trial_end * 1000).toISOString()
+            : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+          
+          console.log("Updating admin record with subscription trial information:", {
+            adminId: session.metadata.admin_id,
+            status: subscription.status,
+            tier: tier,
+            trialStarted: trialStartedAt,
+            trialEnds: trialEndsAt,
+            subscriptionId: subscription.id
+          });
 
-        // Update admin record with subscription status
-        const { data: adminUpdateData, error: adminUpdateError } = await supabase
-          .from("admin")
-          .update({
-            subscription_status: "trialing",
-            subscription_tier: tier,
-            trial_started_at: new Date().toISOString(),
-            trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          })
-          .eq("id", session.metadata.admin_id)
-          .select();
+          // Update admin record with subscription status
+          const { data: adminUpdateData, error: adminUpdateError } = await supabase
+            .from("admin")
+            .update({
+              subscription_status: subscription.status,
+              subscription_tier: tier,
+              trial_started_at: trialStartedAt,
+              trial_ends_at: trialEndsAt,
+            })
+            .eq("id", session.metadata.admin_id)
+            .select();
 
-        if (adminUpdateError) {
-          console.error("Error updating admin record:", adminUpdateError);
-          throw adminUpdateError;
+          if (adminUpdateError) {
+            console.error("Error updating admin record:", adminUpdateError);
+            throw adminUpdateError;
+          }
+
+          console.log("Admin record updated successfully:", {
+            adminId: session.metadata.admin_id,
+            updatedData: adminUpdateData
+          });
+          
+          // Create/update subscription record
+          console.log("Creating/updating subscription record:", {
+            customerId: session.customer,
+            subscriptionId: subscription.id,
+            priceId: subscription.items.data[0]?.price.id,
+            status: subscription.status
+          });
+
+          const { data: subscriptionData, error: subscriptionError } = await supabase
+            .from("stripe_subscriptions")
+            .upsert({
+              customer_id: session.customer as string,
+              subscription_id: subscription.id,
+              price_id: subscription.items.data[0]?.price.id,
+              current_period_start: subscription.current_period_start,
+              current_period_end: subscription.current_period_end,
+              cancel_at_period_end: subscription.cancel_at_period_end,
+              status: subscription.status,
+            }, {
+              onConflict: "customer_id",
+            })
+            .select();
+
+          if (subscriptionError) {
+            console.error("Error creating/updating subscription record:", subscriptionError);
+            throw subscriptionError;
+          }
+
+          console.log("Subscription record created/updated successfully:", {
+            subscriptionId: subscriptionData[0]?.id
+          });
+        } else {
+          // Fallback for non-subscription checkouts (legacy support)
+          console.log("Processing non-subscription checkout completion (legacy)");
+          console.log("Updating admin record with trial information:", {
+            adminId: session.metadata.admin_id,
+            status: "trialing",
+            tier: tier,
+            trialStarted: new Date().toISOString(),
+            trialEnds: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+          });
+
+          // Update admin record with subscription status
+          const { data: adminUpdateData, error: adminUpdateError } = await supabase
+            .from("admin")
+            .update({
+              subscription_status: "trialing",
+              subscription_tier: tier,
+              trial_started_at: new Date().toISOString(),
+              trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+            })
+            .eq("id", session.metadata.admin_id)
+            .select();
+
+          if (adminUpdateError) {
+            console.error("Error updating admin record:", adminUpdateError);
+            throw adminUpdateError;
+          }
+
+          console.log("Admin record updated successfully:", {
+            adminId: session.metadata.admin_id,
+            updatedData: adminUpdateData
+          });
         }
-
-        console.log("Admin record updated successfully:", {
-          adminId: session.metadata.admin_id,
-          updatedData: adminUpdateData
-        });
-
+        
         console.log("Creating order record:", {
           sessionId: session.id,
           customerId: session.customer,
@@ -185,6 +277,247 @@ serve(async (req) => {
           orderId: orderData[0]?.id
         });
 
+        break;
+      }
+
+      case "customer.subscription.trial_will_end": {
+        const subscription = event.data.object;
+        
+        console.log("Subscription trial will end:", {
+          subscriptionId: subscription.id,
+          customerId: subscription.customer,
+          trialEnd: new Date(subscription.trial_end * 1000).toISOString()
+        });
+        
+        // Get customer data from our database
+        const { data: customerData, error: customerError } = await supabase
+          .from("stripe_customers")
+          .select("user_id")
+          .eq("customer_id", subscription.customer)
+          .single();
+
+        if (customerError || !customerData) {
+          console.error(`Customer not found in database:`, {
+            stripeCustomerId: subscription.customer,
+            error: customerError
+          });
+          throw new Error(`Customer not found: ${subscription.customer}`);
+        }
+
+        // Get admin data
+        const { data: adminData, error: adminError } = await supabase
+          .from("admin")
+          .select("id")
+          .eq("owner_id", customerData.user_id)
+          .single();
+
+        if (adminError || !adminData) {
+          console.error(`Admin not found for user:`, {
+            userId: customerData.user_id,
+            error: adminError
+          });
+          throw new Error(`Admin not found for user: ${customerData.user_id}`);
+        }
+
+        console.log("Trial ending soon - could send notification email here");
+        // TODO: Implement trial ending notification email
+        
+        break;
+      }
+
+      case "customer.subscription.created": {
+        const subscription = event.data.object;
+        
+        console.log("New subscription created:", {
+          subscriptionId: subscription.id,
+          customerId: subscription.customer,
+          status: subscription.status,
+          trialStart: subscription.trial_start,
+          trialEnd: subscription.trial_end
+        });
+        
+        // Get tier from price ID
+        const priceId = subscription.items.data[0]?.price.id;
+        const tier = priceId ? getTierFromPriceId(priceId) : 'starter';
+        
+        // Update subscription record
+        const { data: subscriptionData, error: subscriptionError } = await supabase
+          .from("stripe_subscriptions")
+          .upsert({
+            customer_id: subscription.customer as string,
+            subscription_id: subscription.id,
+            price_id: subscription.items.data[0]?.price.id,
+            current_period_start: subscription.current_period_start,
+            current_period_end: subscription.current_period_end,
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            status: subscription.status,
+          }, {
+            onConflict: "customer_id",
+          })
+          .select();
+
+        if (subscriptionError) {
+          console.error("Error creating subscription record:", subscriptionError);
+          throw subscriptionError;
+        }
+
+        console.log("Subscription record created successfully:", {
+          subscriptionId: subscriptionData[0]?.id
+        });
+        
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object;
+        
+        console.log("Subscription deleted/cancelled:", {
+          subscriptionId: subscription.id,
+          customerId: subscription.customer,
+          status: subscription.status
+        });
+        
+        // Get customer data from our database
+        const { data: customerData, error: customerError } = await supabase
+          .from("stripe_customers")
+          .select("user_id")
+          .eq("customer_id", subscription.customer)
+          .single();
+
+        if (customerError || !customerData) {
+          console.error(`Customer not found in database:`, {
+            stripeCustomerId: subscription.customer,
+            error: customerError
+          });
+          throw new Error(`Customer not found: ${subscription.customer}`);
+        }
+
+        // Get admin data
+        const { data: adminData, error: adminError } = await supabase
+          .from("admin")
+          .select("id")
+          .eq("owner_id", customerData.user_id)
+          .single();
+
+        if (adminError || !adminData) {
+          console.error(`Admin not found for user:`, {
+            userId: customerData.user_id,
+            error: adminError
+          });
+          throw new Error(`Admin not found for user: ${customerData.user_id}`);
+        }
+
+        console.log("Updating admin record with cancelled status:", {
+          adminId: adminData.id,
+          status: "canceled"
+        });
+
+        // Update admin record with subscription status
+        const { data: adminUpdateData, error: adminUpdateError } = await supabase
+          .from("admin")
+          .update({
+            subscription_status: "canceled",
+          })
+          .eq("id", adminData.id)
+          .select();
+
+        if (adminUpdateError) {
+          console.error("Error updating admin record:", adminUpdateError);
+          throw adminUpdateError;
+        }
+
+        console.log("Admin record updated successfully:", {
+          adminId: adminData.id,
+          updatedData: adminUpdateData
+        });
+
+        // Update subscription record to mark as deleted
+        const { error: subscriptionUpdateError } = await supabase
+          .from("stripe_subscriptions")
+          .update({
+            status: "canceled",
+            deleted_at: new Date().toISOString()
+          })
+          .eq("customer_id", subscription.customer);
+
+        if (subscriptionUpdateError) {
+          console.error("Error updating subscription record:", subscriptionUpdateError);
+          throw subscriptionUpdateError;
+        }
+
+        console.log("Subscription record updated to cancelled status");
+        
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object;
+        
+        console.log("Invoice payment failed:", {
+          invoiceId: invoice.id,
+          customerId: invoice.customer,
+          subscriptionId: invoice.subscription,
+          amount: invoice.amount_due,
+          attemptCount: invoice.attempt_count
+        });
+        
+        // Only process subscription invoices
+        if (invoice.subscription) {
+          // Get customer data from our database
+          const { data: customerData, error: customerError } = await supabase
+            .from("stripe_customers")
+            .select("user_id")
+            .eq("customer_id", invoice.customer)
+            .single();
+
+          if (customerError || !customerData) {
+            console.error(`Customer not found in database:`, {
+              stripeCustomerId: invoice.customer,
+              error: customerError
+            });
+            throw new Error(`Customer not found: ${invoice.customer}`);
+          }
+
+          // Get admin data
+          const { data: adminData, error: adminError } = await supabase
+            .from("admin")
+            .select("id")
+            .eq("owner_id", customerData.user_id)
+            .single();
+
+          if (adminError || !adminData) {
+            console.error(`Admin not found for user:`, {
+              userId: customerData.user_id,
+              error: adminError
+            });
+            throw new Error(`Admin not found for user: ${customerData.user_id}`);
+          }
+
+          console.log("Updating admin record with past_due status:", {
+            adminId: adminData.id,
+            status: "past_due"
+          });
+
+          // Update admin record with past_due status
+          const { data: adminUpdateData, error: adminUpdateError } = await supabase
+            .from("admin")
+            .update({
+              subscription_status: "past_due",
+            })
+            .eq("id", adminData.id)
+            .select();
+
+          if (adminUpdateError) {
+            console.error("Error updating admin record:", adminUpdateError);
+            throw adminUpdateError;
+          }
+
+          console.log("Admin record updated successfully:", {
+            adminId: adminData.id,
+            updatedData: adminUpdateData
+          });
+        }
+        
         break;
       }
 
@@ -521,22 +854,6 @@ serve(async (req) => {
       }
 
       // Add logging for other event types
-      case "customer.subscription.created":
-        console.log("New subscription created:", {
-          subscriptionId: event.data.object.id,
-          customerId: event.data.object.customer,
-          status: event.data.object.status
-        });
-        break;
-
-      case "customer.subscription.deleted":
-        console.log("Subscription deleted:", {
-          subscriptionId: event.data.object.id,
-          customerId: event.data.object.customer,
-          status: event.data.object.status
-        });
-        break;
-
       case "customer.created":
         console.log("Customer created:", {
           customerId: event.data.object.id,

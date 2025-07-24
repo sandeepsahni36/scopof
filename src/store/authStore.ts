@@ -239,6 +239,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             hasActiveSubscription = true;
             console.log('Active subscription found via Stripe');
           } 
+          // Check for trialing subscription status
+          else if (subscription?.subscription_status === 'trialing' || admin.subscription_status === 'trialing') {
+            if (trialEnd && now < trialEnd) {
+              // Active trial period
+              hasActiveSubscription = true;
+              console.log('Active trial period found');
+            } else {
+              // Trial has ended
+              isTrialExpired = true;
+              requiresPayment = true;
+              console.log('Trial expired, payment required');
+            }
+          }
           // Check for active trial from admin table (if no active Stripe sub)
           else if (admin.subscription_status === 'trialing') {
             if (trialEnd && now < trialEnd) {
@@ -257,6 +270,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               console.log('Trial expired, payment required');
             }
           } 
+          // Handle past_due status
+          else if (admin.subscription_status === 'past_due' || subscription?.subscription_status === 'past_due') {
+            requiresPayment = true;
+            console.log('Subscription past due, payment required');
+          }
+          // Handle canceled status
+          else if (admin.subscription_status === 'canceled' || subscription?.subscription_status === 'canceled') {
+            requiresPayment = true;
+            console.log('Subscription canceled, payment required');
+          }
           // NEW USER CASE: If subscription_status is null/undefined or 'not_started', 
           // this is a new user who should go to start-trial page
           else if (!admin.subscription_status || admin.subscription_status === 'not_started') {

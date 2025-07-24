@@ -248,6 +248,16 @@ const StartTrialPage = () => {
               <h4 className="text-lg font-semibold text-gray-900 mb-4">
                 What happens next?
               </h4>
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <h5 className="text-sm font-semibold text-blue-800 mb-2">🎉 14-Day Free Trial</h5>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Start using all features immediately</li>
+                  <li>• No charges during the 14-day trial period</li>
+                  <li>• Payment method secured for seamless transition</li>
+                  <li>• Cancel anytime before trial ends</li>
+                  <li>• Automatic billing starts after trial expires</li>
+                </ul>
+              </div>
               <ul className="space-y-3 text-gray-600">
                 <li className="flex items-start">
                   <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
