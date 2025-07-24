@@ -14,7 +14,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 -- Create ENUM types
-CREATE TYPE public.inspection_type AS ENUM (
+-- CREATE TYPE public.inspection_type AS ENUM (
     'check_in',
     'check_out',
     'move_in',
