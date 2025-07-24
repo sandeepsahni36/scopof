@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { createClient } from '@supabase/supabase-js';
-import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -27,8 +26,7 @@ console.log(`- URL format valid: ${supabaseUrl.includes('supabase.co') ? 'Yes' :
 console.log('');
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  global: {
-    fetch: fetch
+ 
   }
 });
 
