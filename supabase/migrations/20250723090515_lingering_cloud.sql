@@ -26,7 +26,6 @@ DROP TABLE IF EXISTS public.template_categories CASCADE;
 DROP TABLE IF EXISTS public.admin CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 
-
 -- Set up the "public" schema
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -45,7 +44,6 @@ CREATE TYPE public.inspection_type AS ENUM (   'check_in',
   'move_out'
 );
 COMMENT ON TYPE public.inspection_type IS 'Inspection types: check_in/check_out for STR, move_in/move_out for real estate';
-
 
 CREATE TYPE public.stripe_order_status AS ENUM (
     'canceled',
@@ -290,7 +288,6 @@ CREATE TABLE public.stripe_subscriptions (
     deleted_at timestamp with time zone
 );
 
-
 CREATE TABLE public.stripe_orders (
     id bigint NOT NULL,
     checkout_session_id text NOT NULL,
@@ -414,8 +411,6 @@ CREATE OR REPLACE VIEW public.stripe_user_orders AS
      JOIN public.stripe_orders so ON sc.customer_id = so.customer_id;
 
 -- Add indexes
-CREATE UNIQUE INDEX admin_customer_id_key ON public.admin USING btree (customer_id);
-CREATE UNIQUE INDEX admin_owner_id_key ON public.admin USING btree (owner_id);
 CREATE INDEX idx_admin_owner_id ON public.admin USING btree (owner_id);
 CREATE INDEX idx_inspection_items_inspection_id ON public.inspection_items USING btree (inspection_id);
 CREATE INDEX idx_inspection_items_order ON public.inspection_items USING btree (order_index);
@@ -431,19 +426,8 @@ CREATE INDEX idx_property_checklists_active ON public.property_checklists USING 
 CREATE INDEX idx_property_checklists_property_id ON public.property_checklists USING btree (property_id);
 CREATE INDEX idx_property_checklist_templates_checklist_id ON public.property_checklist_templates USING btree (property_checklist_id);
 CREATE INDEX idx_property_checklist_templates_order ON public.property_checklist_templates USING btree (order_index);
-CREATE UNIQUE INDEX property_checklist_templates_property_checklist_id_template_key ON public.property_checklist_templates USING btree (property_checklist_id, template_id);
 CREATE INDEX idx_report_service_teams_admin_id ON public.report_service_teams USING btree (admin_id);
-CREATE UNIQUE INDEX report_service_teams_admin_id_designation_key ON public.report_service_teams USING btree (admin_id, designation);
-CREATE UNIQUE INDEX report_service_teams_pkey ON public.report_service_teams USING btree (id);
-CREATE UNIQUE INDEX stripe_customers_customer_id_key ON public.stripe_customers USING btree (customer_id);
-CREATE UNIQUE INDEX stripe_customers_pkey ON public.stripe_customers USING btree (id);
-CREATE UNIQUE INDEX stripe_customers_user_id_key ON public.stripe_customers USING btree (user_id);
-CREATE UNIQUE INDEX stripe_orders_checkout_session_id_key ON public.stripe_orders USING btree (checkout_session_id);
-CREATE UNIQUE INDEX stripe_orders_pkey ON public.stripe_orders USING btree (id);
-CREATE UNIQUE INDEX stripe_subscriptions_customer_id_key ON public.stripe_subscriptions USING btree (customer_id);
-CREATE UNIQUE INDEX stripe_subscriptions_pkey ON public.stripe_subscriptions USING btree (id);
 CREATE INDEX idx_template_categories_admin_id ON public.template_categories USING btree (admin_id);
-CREATE UNIQUE INDEX template_categories_pkey ON public.template_categories USING btree (id);
 CREATE INDEX idx_template_items_hierarchy ON public.template_items USING btree (template_id, parent_id, "order");
 CREATE INDEX idx_template_items_order ON public.template_items USING btree ("order");
 CREATE INDEX idx_template_items_order_fallback ON public.template_items USING btree ("order") WHERE (parent_id IS NULL);
@@ -452,44 +436,19 @@ CREATE INDEX idx_template_items_parent_id ON public.template_items USING btree (
 CREATE INDEX idx_template_items_report_recipient_id ON public.template_items USING btree (report_recipient_id);
 CREATE INDEX idx_template_items_template_id ON public.template_items USING btree (template_id);
 CREATE INDEX idx_template_items_type ON public.template_items USING btree (type);
-CREATE UNIQUE INDEX template_items_pkey ON public.template_items USING btree (id);
 CREATE INDEX idx_templates_admin_id ON public.templates USING btree (admin_id);
 CREATE INDEX idx_templates_category_id ON public.templates USING btree (category_id);
-CREATE UNIQUE INDEX templates_pkey ON public.templates USING btree (id);
 CREATE INDEX idx_user_admin_status_admin_id ON public.team_members USING btree (admin_id);
 CREATE INDEX idx_user_admin_status_profile_id ON public.team_members USING btree (profile_id);
-CREATE UNIQUE INDEX team_members_admin_id_profile_id_key ON public.team_members USING btree (admin_id, profile_id);
-CREATE UNIQUE INDEX team_members_pkey ON public.team_members USING btree (id);
 CREATE INDEX idx_profiles_id ON public.profiles USING btree (id);
-CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id);
 CREATE INDEX idx_reports_inspection_id ON public.reports USING btree (inspection_id);
 CREATE INDEX idx_reports_generated_at ON public.reports USING btree (generated_at DESC);
-CREATE UNIQUE INDEX reports_pkey ON public.reports USING btree (id);
 
 -- Add constraints
 ALTER TABLE public.properties ADD CONSTRAINT properties_bathrooms_check CHECK ((bathrooms = ANY (ARRAY['1'::text, '2'::text, '3'::text, '4'::text, '5'::text, '6+'::text])));
 ALTER TABLE public.properties ADD CONSTRAINT properties_bedrooms_check CHECK ((bedrooms = ANY (ARRAY['studio'::text, '1'::text, '2'::text, '3'::text, '4'::text, '5+'::text])));
 ALTER TABLE public.properties ADD CONSTRAINT properties_type_check CHECK ((type = ANY (ARRAY['apartment'::text, 'house'::text, 'villa'::text, 'condo'::text])));
 ALTER TABLE public.template_items ADD CONSTRAINT template_items_check CHECK ((id <> parent_id));
-ALTER TABLE public.template_items ADD CONSTRAINT template_items_pkey PRIMARY KEY (id);
-ALTER TABLE public.property_checklist_templates ADD CONSTRAINT property_checklist_templates_property_checklist_id_template_key UNIQUE (property_checklist_id, template_id);
-ALTER TABLE public.stripe_subscriptions ADD CONSTRAINT stripe_subscriptions_customer_id_key UNIQUE (customer_id);
-ALTER TABLE public.stripe_subscriptions ADD CONSTRAINT stripe_subscriptions_pkey PRIMARY KEY (id);
-ALTER TABLE public.stripe_orders ADD CONSTRAINT stripe_orders_checkout_session_id_key UNIQUE (checkout_session_id);
-ALTER TABLE public.stripe_orders ADD CONSTRAINT stripe_orders_pkey PRIMARY KEY (id);
-ALTER TABLE public.stripe_customers ADD CONSTRAINT stripe_customers_customer_id_key UNIQUE (customer_id);
-ALTER TABLE public.stripe_customers ADD CONSTRAINT stripe_customers_pkey PRIMARY KEY (id);
-ALTER TABLE public.stripe_customers ADD CONSTRAINT stripe_customers_user_id_key UNIQUE (user_id);
-ALTER TABLE public.profiles ADD CONSTRAINT profiles_pkey PRIMARY KEY (id);
-ALTER TABLE public.admin ADD CONSTRAINT admin_customer_id_key UNIQUE (customer_id);
-ALTER TABLE public.admin ADD CONSTRAINT admin_owner_id_key UNIQUE (owner_id);
-ALTER TABLE public.team_members ADD CONSTRAINT team_members_admin_id_profile_id_key UNIQUE (admin_id, profile_id);
-ALTER TABLE public.team_members ADD CONSTRAINT team_members_pkey PRIMARY KEY (id);
-ALTER TABLE public.report_service_teams ADD CONSTRAINT report_service_teams_admin_id_designation_key UNIQUE (admin_id, designation);
-ALTER TABLE public.report_service_teams ADD CONSTRAINT report_service_teams_pkey PRIMARY KEY (id);
-ALTER TABLE public.template_categories ADD CONSTRAINT template_categories_pkey PRIMARY KEY (id);
-ALTER TABLE public.templates ADD CONSTRAINT templates_pkey PRIMARY KEY (id);
-ALTER TABLE public.reports ADD CONSTRAINT reports_pkey PRIMARY KEY (id);
 
 -- Add foreign keys
 ALTER TABLE public.templates ADD CONSTRAINT templates_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.admin(id);
@@ -514,157 +473,346 @@ ALTER TABLE public.admin ADD CONSTRAINT admin_billing_manager_id_fkey FOREIGN KE
 ALTER TABLE public.admin ADD CONSTRAINT admin_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES auth.users(id);
 ALTER TABLE public.team_members ADD CONSTRAINT team_members_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.admin(id);
 ALTER TABLE public.team_members ADD CONSTRAINT team_members_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id);
-ALTER TABLE public.reports ADD CONSTRAINT reports_inspection_id_fkey FOREIGN KEY (inspection_id) REFERENCES public.inspections(id) ON DELETE CASCADE;
 
 -- Add RLS policies
 ALTER TABLE public.templates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY templates_manage_admins ON public.templates FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY "templates_manage_admins" ON "public"."templates"
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
    FROM public.admin a
-  WHERE (a.id = templates.admin_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
+  WHERE ((a.id = templates.admin_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
            FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY templates_postgres_all ON public.templates FOR INSERT TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY templates_select_members ON public.templates FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))))
+WITH CHECK (EXISTS ( SELECT 1
    FROM public.admin a
-  WHERE (a.id = templates.admin_id AND EXISTS ( SELECT 1
+  WHERE ((a.id = templates.admin_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
            FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
-
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))));
 ALTER TABLE public.report_service_teams ENABLE ROW LEVEL SECURITY;
-CREATE POLICY report_service_teams_manage_admins ON public.report_service_teams FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY report_service_teams_manage_admins ON public.report_service_teams
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
    FROM public.admin a
-  WHERE (a.id = report_service_teams.admin_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
+  WHERE ((a.id = report_service_teams.admin_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
            FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY report_service_teams_postgres_all ON public.report_service_teams FOR INSERT TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY report_service_teams_select_members ON public.report_service_teams FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))))
+WITH CHECK (EXISTS ( SELECT 1
    FROM public.admin a
-  WHERE (a.id = report_service_teams.admin_id AND EXISTS ( SELECT 1
+  WHERE ((a.id = report_service_teams.admin_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
            FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
-
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))));
+CREATE POLICY report_service_teams_postgres_all ON public.report_service_teams
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
+CREATE POLICY report_service_teams_select_members ON public.report_service_teams
+AS PERMISSIVE FOR SELECT
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM public.admin a
+  WHERE ((a.id = report_service_teams.admin_id) AND (EXISTS ( SELECT 1
+           FROM public.team_members tm
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid())))))));
 ALTER TABLE public.template_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY template_items_manage_admins ON public.template_items FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
-   FROM public.templates t
-   JOIN public.admin a ON t.admin_id = a.id
-  WHERE (t.id = template_items.template_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
+CREATE POLICY template_items_manage_admins ON public.template_items
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM ((public.templates t
+     JOIN public.admin a ON ((t.admin_id = a.id))))
+  WHERE ((t.id = template_items.template_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
            FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY template_items_postgres_all ON public.template_items FOR INSERT TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY template_items_select_members ON public.template_items FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
-   FROM public.templates t
-   JOIN public.admin a ON t.admin_id = a.id
-  WHERE (t.id = template_items.template_id AND EXISTS ( SELECT 1
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))))
+WITH CHECK (EXISTS ( SELECT 1
+   FROM ((public.templates t
+     JOIN public.admin a ON ((t.admin_id = a.id))))
+  WHERE ((t.id = template_items.template_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
            FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))));
+CREATE POLICY template_items_postgres_all ON public.template_items
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
+CREATE POLICY template_items_select_members ON public.template_items
+AS PERMISSIVE FOR SELECT
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM ((public.templates t
+     JOIN public.admin a ON ((t.admin_id = a.id))))
+  WHERE ((t.id = template_items.template_id) AND (EXISTS ( SELECT 1
+           FROM public.team_members tm
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid())))))));
 
 ALTER TABLE public.properties ENABLE ROW LEVEL SECURITY;
-CREATE POLICY properties_manage_admins ON public.properties FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
+CREATE POLICY properties_manage_admins ON public.properties
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
    FROM public.admin a
-  WHERE (a.id = properties.admin_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
+  WHERE ((a.id = properties.admin_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
            FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY properties_postgres_all ON public.properties FOR INSERT TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY properties_select_members ON public.properties FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))))
+WITH CHECK (EXISTS ( SELECT 1
    FROM public.admin a
-  WHERE (a.id = properties.admin_id AND EXISTS ( SELECT 1
+  WHERE ((a.id = properties.admin_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
            FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
-
-ALTER TABLE public.template_categories ENABLE ROW LEVEL SECURITY;
-CREATE POLICY template_categories_manage_admins ON public.template_categories FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))));
+CREATE POLICY properties_postgres_all ON public.properties
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
+CREATE POLICY properties_select_members ON public.properties
+AS PERMISSIVE FOR SELECT
+TO authenticated
+USING (EXISTS ( SELECT 1
    FROM public.admin a
-  WHERE (a.id = template_categories.admin_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
+  WHERE ((a.id = properties.admin_id) AND (EXISTS ( SELECT 1
            FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY template_categories_postgres_all ON public.template_categories FOR INSERT TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY template_categories_select_members ON public.template_categories FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
-   FROM public.admin a
-  WHERE (a.id = template_categories.admin_id AND EXISTS ( SELECT 1
-           FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid())))))));
 
 ALTER TABLE public.property_checklists ENABLE ROW LEVEL SECURITY;
-CREATE POLICY property_checklists_manage_admins ON public.property_checklists FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
-   FROM public.properties p
-   JOIN public.admin a ON p.admin_id = a.id
-  WHERE (p.id = property_checklists.property_id AND (a.owner_id = auth.uid() OR EXISTS ( SELECT 1
+CREATE POLICY property_checklists_manage_admins ON public.property_checklists
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM (public.properties p
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+  WHERE ((p.id = property_checklists.property_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
            FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid() AND tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))));
-CREATE POLICY property_checklists_postgres_all ON public.property_checklists FOR INSERT TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY property_checklists_select_members ON public.property_checklists FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
-   FROM public.properties p
-   JOIN public.admin a ON p.admin_id = a.id
-  WHERE (p.id = property_checklists.property_id AND EXISTS ( SELECT 1
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))))
+WITH CHECK (EXISTS ( SELECT 1
+   FROM (public.properties p
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+  WHERE ((p.id = property_checklists.property_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
            FROM public.team_members tm
-          WHERE (tm.admin_id = a.id AND tm.profile_id = auth.uid())))));
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))));
+CREATE POLICY property_checklists_postgres_all ON public.property_checklists
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
+CREATE POLICY property_checklists_select_members ON public.property_checklists
+AS PERMISSIVE FOR SELECT
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM (public.properties p
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+  WHERE ((p.id = property_checklists.property_id) AND (EXISTS ( SELECT 1
+           FROM public.team_members tm
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid())))))));
 
 ALTER TABLE public.property_checklist_templates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY property_checklist_templates_access_for_members ON public.property_checklist_templates FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
-   FROM public.property_checklists pc
-   JOIN public.properties p ON pc.property_id = p.id
-   JOIN public.team_members tm ON tm.admin_id = p.admin_id
-  WHERE (pc.id = property_checklist_templates.property_checklist_id AND tm.profile_id = auth.uid())
-));
-CREATE POLICY property_checklist_templates_postgres_all ON public.property_checklist_templates FOR INSERT TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY property_checklist_templates_access_for_members ON public.property_checklist_templates
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM ((public.property_checklists pc
+     JOIN public.properties p ON ((pc.property_id = p.id)))
+     JOIN public.team_members tm ON ((tm.admin_id = p.admin_id)))
+  WHERE ((pc.id = property_checklist_templates.property_checklist_id) AND (tm.profile_id = auth.uid()))))
+WITH CHECK (EXISTS ( SELECT 1
+   FROM ((public.property_checklists pc
+     JOIN public.properties p ON ((pc.property_id = p.id)))
+     JOIN public.team_members tm ON ((tm.admin_id = p.admin_id)))
+  WHERE ((pc.id = property_checklist_templates.property_checklist_id) AND (tm.profile_id = auth.uid()))));
+CREATE POLICY property_checklist_templates_manage_admins ON public.property_checklist_templates
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM ((public.property_checklists pc
+     JOIN public.properties p ON ((pc.property_id = p.id)))
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+  WHERE ((pc.id = property_checklist_templates.property_checklist_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
+           FROM public.team_members tm
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))))
+WITH CHECK (EXISTS ( SELECT 1
+   FROM ((public.property_checklists pc
+     JOIN public.properties p ON ((pc.property_id = p.id)))
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+  WHERE ((pc.id = property_checklist_templates.property_checklist_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
+           FROM public.team_members tm
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))));
+CREATE POLICY property_checklist_templates_postgres_all ON public.property_checklist_templates
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
 
 ALTER TABLE public.inspections ENABLE ROW LEVEL SECURITY;
-CREATE POLICY inspections_access_for_members ON public.inspections FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
-   FROM public.properties p
-   JOIN public.admin a ON p.admin_id = a.id
-   JOIN public.team_members tm ON tm.admin_id = a.id
-  WHERE (p.id = inspections.property_id AND tm.profile_id = auth.uid())
-));
-CREATE POLICY inspections_postgres_all ON public.inspections FOR INSERT TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY inspections_access_for_members ON public.inspections
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM ((public.properties p
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+     JOIN public.team_members tm ON ((tm.admin_id = a.id)))
+  WHERE ((p.id = inspections.property_id) AND (tm.profile_id = auth.uid()))))
+WITH CHECK (EXISTS ( SELECT 1
+   FROM ((public.properties p
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+     JOIN public.team_members tm ON ((tm.admin_id = a.id)))
+  WHERE ((p.id = inspections.property_id) AND (tm.profile_id = auth.uid()))));
+CREATE POLICY inspections_manage_admins ON public.inspections
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM (public.properties p
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+  WHERE ((p.id = inspections.property_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
+           FROM public.team_members tm
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))))
+WITH CHECK (EXISTS ( SELECT 1
+   FROM (public.properties p
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+  WHERE ((p.id = inspections.property_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
+           FROM public.team_members tm
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))));
+CREATE POLICY inspections_postgres_all ON public.inspections
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
 
 ALTER TABLE public.stripe_subscriptions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY stripe_subscriptions_postgres_all ON public.stripe_subscriptions FOR INSERT TO postgres USING (true);
+CREATE POLICY stripe_subscriptions_postgres_all ON public.stripe_subscriptions
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
 
 ALTER TABLE public.stripe_orders ENABLE ROW LEVEL SECURITY;
-CREATE POLICY stripe_orders_postgres_all ON public.stripe_orders FOR INSERT TO postgres USING (true);
+CREATE POLICY stripe_orders_postgres_all ON public.stripe_orders
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
 
 ALTER TABLE public.inspection_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY inspection_items_access_for_members ON public.inspection_items FOR INSERT TO authenticated USING (EXISTS ( SELECT 1
-   FROM public.inspections i
-   JOIN public.properties p ON i.property_id = p.id
-   JOIN public.admin a ON p.admin_id = a.id
-   JOIN public.team_members tm ON tm.admin_id = a.id
-  WHERE (i.id = inspection_items.inspection_id AND tm.profile_id = auth.uid())
-));
-CREATE POLICY inspection_items_postgres_all ON public.inspection_items FOR INSERT TO postgres USING (true);
+CREATE POLICY inspection_items_access_for_members ON public.inspection_items
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM (((public.inspections i
+     JOIN public.properties p ON ((i.property_id = p.id)))
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+     JOIN public.team_members tm ON ((tm.admin_id = a.id)))
+  WHERE ((i.id = inspection_items.inspection_id) AND (tm.profile_id = auth.uid()))))
+WITH CHECK (EXISTS ( SELECT 1
+   FROM (((public.inspections i
+     JOIN public.properties p ON ((i.property_id = p.id)))
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+     JOIN public.team_members tm ON ((tm.admin_id = a.id)))
+  WHERE ((i.id = inspection_items.inspection_id) AND (tm.profile_id = auth.uid()))));CREATE POLICY inspection_items_manage_admins ON public.inspection_items
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM ((public.inspections i
+     JOIN public.properties p ON ((i.property_id = p.id)))
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+  WHERE ((i.id = inspection_items.inspection_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
+           FROM public.team_members tm
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))))
+WITH CHECK (EXISTS ( SELECT 1
+   FROM ((public.inspections i
+     JOIN public.properties p ON ((i.property_id = p.id)))
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+  WHERE ((i.id = inspection_items.inspection_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
+           FROM public.team_members tm
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))));
+CREATE POLICY inspection_items_postgres_all ON public.inspection_items
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
 
 ALTER TABLE public.stripe_customers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY stripe_customers_postgres_all ON public.stripe_customers FOR INSERT TO postgres USING (true);
+CREATE POLICY stripe_customers_postgres_all ON public.stripe_customers
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY profiles_insert_own ON public.profiles FOR INSERT TO authenticated WITH CHECK ((auth.uid() = id));
-CREATE POLICY profiles_postgres_all ON public.profiles FOR INSERT TO postgres USING (true) WITH CHECK (true);
-CREATE POLICY profiles_select_own ON public.profiles FOR INSERT TO authenticated USING ((auth.uid() = id));
-CREATE POLICY profiles_update_own ON public.profiles FOR UPDATE TO authenticated USING ((auth.uid() = id)) WITH CHECK ((auth.uid() = id));
+CREATE POLICY profiles_insert_own ON public.profiles
+AS PERMISSIVE FOR INSERT
+TO authenticated
+WITH CHECK ((auth.uid() = id));
+CREATE POLICY profiles_postgres_all ON public.profiles
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
+CREATE POLICY profiles_select_own ON public.profiles
+AS PERMISSIVE FOR SELECT
+TO authenticated
+USING ((auth.uid() = id));
+CREATE POLICY profiles_update_own ON public.profiles
+AS PERMISSIVE FOR UPDATE
+TO authenticated
+USING ((auth.uid() = id))
+WITH CHECK ((auth.uid() = id));
 
 ALTER TABLE public.admin ENABLE ROW LEVEL SECURITY;
-CREATE POLICY admin_owner_full_access ON public.admin FOR INSERT TO authenticated USING ((owner_id = auth.uid()));
-CREATE POLICY admin_postgres_access ON public.admin FOR INSERT TO postgres USING (true) WITH CHECK (true);
+CREATE POLICY admin_owner_full_access ON public.admin
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING ((owner_id = auth.uid()))
+WITH CHECK ((owner_id = auth.uid()));
+CREATE POLICY admin_postgres_access ON public.admin
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
 
 ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
-CREATE POLICY team_members_admin_manage ON public.team_members FOR INSERT TO authenticated USING ((admin_id IN ( SELECT admin.id
+CREATE POLICY team_members_admin_manage ON public.team_members
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (admin_id IN ( SELECT admin.id
    FROM public.admin
-  WHERE (admin.owner_id = auth.uid()))));
-CREATE POLICY team_members_own_record ON public.team_members FOR INSERT TO authenticated USING ((profile_id = auth.uid()));
-CREATE POLICY team_members_postgres_access ON public.team_members FOR INSERT TO postgres USING (true) WITH CHECK (true);
+  WHERE (admin.owner_id = auth.uid())))
+WITH CHECK (admin_id IN ( SELECT admin.id
+   FROM public.admin
+  WHERE (admin.owner_id = auth.uid())));
+CREATE POLICY team_members_own_record ON public.team_members
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING ((profile_id = auth.uid()))
+WITH CHECK ((profile_id = auth.uid()));
+CREATE POLICY team_members_postgres_access ON public.team_members
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
 
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
-CREATE POLICY reports_access_for_members ON public.reports
-  FOR ALL
-  TO authenticated
-  USING (EXISTS ( SELECT 1
-           FROM public.inspections i
-           JOIN public.properties p ON i.property_id = p.id
-           JOIN public.admin a ON p.admin_id = a.id
-           JOIN public.team_members tm ON tm.admin_id = a.id
-          WHERE (i.id = reports.inspection_id AND tm.profile_id = auth.uid())
-        ));
-
+CREATE POLICY reports_manage_admins ON public.reports
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (EXISTS ( SELECT 1
+   FROM ((public.inspections i
+     JOIN public.properties p ON ((i.property_id = p.id)))
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+  WHERE ((i.id = reports.inspection_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
+           FROM public.team_members tm
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))))
+WITH CHECK (EXISTS ( SELECT 1
+   FROM ((public.inspections i
+     JOIN public.properties p ON ((i.property_id = p.id)))
+     JOIN public.admin a ON ((p.admin_id = a.id)))
+  WHERE ((i.id = reports.inspection_id) AND ((a.owner_id = auth.uid()) OR (EXISTS ( SELECT 1
+           FROM public.team_members tm
+          WHERE ((tm.admin_id = a.id) AND (tm.profile_id = auth.uid()) AND (tm.role = ANY (ARRAY['owner'::public.team_member_role, 'admin'::public.team_member_role])))))))));
+CREATE POLICY reports_postgres_all ON public.reports
+AS PERMISSIVE FOR ALL
+TO postgres
+USING (true)
+WITH CHECK (true);
 -- Add triggers
 CREATE TRIGGER update_templates_updated_at BEFORE UPDATE ON public.templates FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 CREATE TRIGGER update_report_service_teams_updated_at BEFORE UPDATE ON public.report_service_teams FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -691,3 +839,8 @@ CREATE TRIGGER on_auth_user_verified
 CREATE TRIGGER on_auth_user_updated
   AFTER UPDATE ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_auth_user_changes();
+
+
+
+
+
