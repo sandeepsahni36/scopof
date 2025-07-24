@@ -8,6 +8,25 @@ DROP TYPE IF EXISTS public.team_member_role CASCADE;
 DROP TYPE IF EXISTS public.template_item_type CASCADE;
 DROP TYPE IF EXISTS public.inspection_status CASCADE;
 
+-- Drop tables that might exist (order matters for foreign keys, but CASCADE helps)
+DROP TABLE IF EXISTS public.inspection_items CASCADE;
+DROP TABLE IF EXISTS public.inspections CASCADE;
+DROP TABLE IF EXISTS public.property_checklist_templates CASCADE;
+DROP TABLE IF EXISTS public.property_checklists CASCADE;
+DROP TABLE IF EXISTS public.reports CASCADE;
+DROP TABLE IF EXISTS public.report_service_teams CASCADE;
+DROP TABLE IF EXISTS public.stripe_customers CASCADE;
+DROP TABLE IF EXISTS public.stripe_orders CASCADE;
+DROP TABLE IF EXISTS public.stripe_subscriptions CASCADE;
+DROP TABLE IF EXISTS public.template_items CASCADE;
+DROP TABLE IF EXISTS public.templates CASCADE;
+DROP TABLE IF EXISTS public.team_members CASCADE;
+DROP TABLE IF EXISTS public.properties CASCADE;
+DROP TABLE IF EXISTS public.template_categories CASCADE;
+DROP TABLE IF EXISTS public.admin CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+
+
 -- Set up the "public" schema
 SET statement_timeout = 0;
 SET lock_timeout = 0;
