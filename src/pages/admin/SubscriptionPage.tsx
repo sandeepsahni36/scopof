@@ -122,15 +122,15 @@ const SubscriptionPage = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Clock className="h-5 w-5 text-primary-500 mr-2" />
-                  {company?.subscription_status === 'trialing' ? 'Free Trial Active' : 'Trial Available'}
-                <h3 className="text-sm font-medium text-primary-800">Trial Period Active</h3>
-                <p className="text-sm text-primary-600">
-                  {company?.subscription_status === 'trialing' 
-                    ? `${trialDaysRemaining} days remaining • Ends ${company?.trialEndsAt ? new Date(company.trialEndsAt).toLocaleDateString() : 'soon'}`
-                    : 'Start your 14-day free trial with full access to all features'
-                  }
-                </p>
-              </div>
+               <div>
+                 <h3 className="text-sm font-medium text-primary-800">Trial Period Active</h3>
+                 <p className="text-sm text-primary-600">
+                   {company?.subscription_status === 'trialing' 
+                     ? `${trialDaysRemaining} days remaining • Ends ${company?.trialEndsAt ? new Date(company.trialEndsAt).toLocaleDateString() : 'soon'}`
+                     : 'Start your 14-day free trial with full access to all features'
+                   }
+                 </p>
+               </div>
             </div>
             <div>
               <p className="text-xs text-primary-600">
