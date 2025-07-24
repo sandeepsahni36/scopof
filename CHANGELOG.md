@@ -34,6 +34,35 @@ All notable changes to this project will be documented in this file.
 - Zero impact on existing subscription functionality
 
 ### Added
+- **Email Automation System**: Implemented scheduled trial expiration reminder emails using Amazon SES
+  - Created `send-trial-reminder` Supabase Edge Function for automated email delivery
+  - Added `trial_reminder_7day_sent` tracking column to `admin` table to prevent duplicate emails
+  - Integrated Amazon SES SDK for reliable transactional email delivery
+  - Implemented comprehensive email template with HTML and text versions
+  - Added external scheduler support (cron-job.org, GitHub Actions, Vercel Cron)
+  - Built-in error handling, retry logic, and comprehensive logging
+  - Supports both development and production environments with proper email verification
+
+### Technical Details
+- New Edge Function: `supabase/functions/send-trial-reminder/index.ts`
+- Database migration: `add_trial_reminder_tracking.sql` adds tracking column and index
+- AWS SES integration with proper IAM permissions and security best practices
+- Scheduled execution via external cron services (daily at 9 AM UTC)
+- Comprehensive setup documentation in `SCHEDULED_FUNCTION_SETUP.md`
+- Email templates include company branding and clear call-to-action buttons
+- Function processes users whose trial ends in exactly 7 days and haven't received reminder yet
+- Automatic database flag updates to prevent duplicate email sends
+- Built-in rate limiting and delays to respect SES sending limits
+
+### Benefits
+- Proactive customer engagement 7 days before trial expiration
+- Reduces involuntary churn by giving users advance notice
+- Professional HTML email templates with responsive design
+- Scalable architecture that can be extended for other email automations
+- Comprehensive error handling and monitoring capabilities
+- Zero impact on existing subscription functionality
+
+### Added
 - **Stripe Subscription Trial**: Implemented proper Stripe subscription model with 14-day free trial
   - Updated checkout flow to create subscriptions instead of one-time payments
   - Added `trial_period_days: 14` to checkout session creation
