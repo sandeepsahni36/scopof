@@ -420,7 +420,6 @@ CREATE INDEX idx_admin_owner_id ON public.admin USING btree (owner_id);
 CREATE INDEX idx_inspection_items_inspection_id ON public.inspection_items USING btree (inspection_id);
 CREATE INDEX idx_inspection_items_order ON public.inspection_items USING btree (order_index);
 CREATE INDEX idx_inspection_items_template_item_id ON public.inspection_items USING btree (template_item_id);
-CREATE UNIQUE INDEX inspection_items_pkey ON public.inspection_items USING btree (id);
 CREATE INDEX idx_inspections_created_at ON public.inspections USING btree (created_at DESC);
 CREATE INDEX idx_inspections_inspector_id ON public.inspections USING btree (inspector_id);
 CREATE INDEX idx_inspections_property_id ON public.inspections USING btree (property_id);
@@ -486,7 +485,6 @@ ALTER TABLE public.stripe_subscriptions ADD CONSTRAINT stripe_subscriptions_cust
 ALTER TABLE public.stripe_subscriptions ADD CONSTRAINT stripe_subscriptions_pkey PRIMARY KEY (id);
 ALTER TABLE public.stripe_orders ADD CONSTRAINT stripe_orders_checkout_session_id_key UNIQUE (checkout_session_id);
 ALTER TABLE public.stripe_orders ADD CONSTRAINT stripe_orders_pkey PRIMARY KEY (id);
-ALTER TABLE public.inspection_items ADD CONSTRAINT inspection_items_pkey PRIMARY KEY (id);
 ALTER TABLE public.stripe_customers ADD CONSTRAINT stripe_customers_customer_id_key UNIQUE (customer_id);
 ALTER TABLE public.stripe_customers ADD CONSTRAINT stripe_customers_pkey PRIMARY KEY (id);
 ALTER TABLE public.stripe_customers ADD CONSTRAINT stripe_customers_user_id_key UNIQUE (user_id);
