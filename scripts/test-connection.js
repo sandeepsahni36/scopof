@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createClient } from '@supabase/supabase-js';
+import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -25,7 +26,11 @@ console.log(`- Supabase URL: ${supabaseUrl}`);
 console.log(`- URL format valid: ${supabaseUrl.includes('supabase.co') ? 'Yes' : 'No'}`);
 console.log('');
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  global: {
+    fetch: fetch
+  }
+});
 
 console.log('Testing basic connection...');
 
