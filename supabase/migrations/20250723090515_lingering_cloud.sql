@@ -20,16 +20,16 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
--- Create ENUM types
--- CREATE TYPE public.inspection_type AS ENUM (
---    'check_in',
---   'check_out',
---   'move_in',
---   'move_out'
--- );
+CREATE TYPE public.inspection_type IF NOT EXISTS AS ENUM (
+   'check_in',
+  'check_out',
+  'move_in',
+  'move_out'
+);
 COMMENT ON TYPE public.inspection_type IS 'Inspection types: check_in/check_out for STR, move_in/move_out for real estate';
 
-CREATE TYPE public.stripe_order_status AS ENUM (
+
+CREATE TYPE public.stripe_order_status IF NOT EXISTS AS ENUM (
     'canceled',
     'completed',
     'pending'
