@@ -237,15 +237,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // Enhanced trial logic
           if (subscription_status === 'trialing') {
             if (trialEnd && now < trialEnd) {
-              // CRITICAL: Trial users without customer_id need to complete payment setup
-              if (admin.customer_id) {
+              // CRITICAL FIX: Trial users without customer_id MUST complete payment setup
+              if (!admin.customer_id) {
+                hasActiveSubscription = false;
+                needsPaymentSetup = true;
+                console.log('REDIRECT NEEDED: Trial user without customer_id - redirecting to start-trial');
+              } else {
                 hasActiveSubscription = true;
                 needsPaymentSetup = false;
                 console.log('Active trial with payment setup complete');
-              } else {
-                hasActiveSubscription = false;
-                needsPaymentSetup = true;
-                console.log('REDIRECT NEEDED: Trial without payment setup - should go to start-trial');
               }
             } else {
               isTrialExpired = true;
