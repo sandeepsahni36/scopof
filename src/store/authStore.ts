@@ -166,6 +166,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           let subscriptionError = null;
           
           if (admin.customer_id) {
+            console.log("Fetching subscription data for customer:", admin.customer_id);
             const result = await supabase
               .from('subscriptions')
               .select('*')
@@ -179,10 +180,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const admin_subscription_status = admin.subscription_status;
             const stripe_subscription_status = subscription?.subscription_status;
 
+            const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
+            const now = new Date();
+
             if (admin_subscription_status === 'trialing') {
-              const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
-              const now = new Date();
-              
               if (trialEnd && now < trialEnd) { // Trial is active
                 if (!admin.customer_id || admin.customer_id === '') { // No customer_id means payment setup needed
                   hasActiveSubscription = false; // Not truly active until payment setup
@@ -221,9 +222,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
             // --- END REVISED LOGIC FOR SUBSCRIPTION STATUS ---
           }
-          
           if (subscriptionError) {
-            console.error("Error fetching subscription:", subscriptionError);
+            console.error("Error fetching subscription data:", subscriptionError);
             console.log('DEBUG: Final subscription state for user (before set):', {
               hasActiveSubscription,
               isTrialExpired,
