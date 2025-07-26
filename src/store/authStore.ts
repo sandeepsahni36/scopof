@@ -229,7 +229,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               isTrialExpired,
               requiresPayment,
               needsPaymentSetup
-          } else if (subscription) {
+                      } else if (subscription) {
             console.log("Subscription data fetched:", { 
               subscriptionId: subscription.subscription_id,
               status: subscription.subscription_status,
@@ -238,6 +238,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
           } else {
             console.log("No subscription data found for customer:", admin.customer_id);
+          }
+            )
           }
 
           // Determine the actual subscription tier based on Stripe data
