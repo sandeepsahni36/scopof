@@ -1,3 +1,4 @@
+```typescript
 import { create } from 'zustand';
 import { User, Company } from '../types';
 import { supabase, getCurrentUser } from '../lib/supabase';
@@ -141,6 +142,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       let hasActiveSubscription = false;
       let isTrialExpired = false;
       let requiresPayment = false;
+      let needsPaymentSetup = false; // Initialize here
 
       if (adminStatus?.admin_id) {
         console.log("Fetching admin record...");
@@ -218,7 +220,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           // Check subscription status with improved logic
           const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
-          
+          const now = new Date(); // This is the correct declaration
+
           console.log('Subscription status check:', {
             subscription_status: admin.subscription_status,
             stripe_status: subscription?.subscription_status,
@@ -231,23 +234,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // CRITICAL FIX: Check customer_id for trialing users
           const subscription_status = admin.subscription_status;
           const stripe_status = subscription?.subscription_status;
-          const trial_end = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
-          const now = new Date();
-
+          
           // Enhanced trial logic
           if (subscription_status === 'trialing') {
-            if (trial_end && now < trial_end) {
+            if (trialEnd && now < trialEnd) {
               // Check if payment method is set up (customer_id exists)
               if (admin.customer_id) {
                 hasActiveSubscription = true;
                 console.log('*** FIXED *** Active trial period with payment authorization');
               } else {
                 hasActiveSubscription = false;
+                needsPaymentSetup = true;
                 console.log('*** FIXED *** Active trial period but no payment setup (customer_id is null)');
               }
             } else {
               isTrialExpired = true;
               requiresPayment = true;
+              needsPaymentSetup = true;
               console.log('*** FIXED *** Trial expired, payment required');
             }
           } else if (stripe_status === 'active' || subscription_status === 'active') {
@@ -255,6 +258,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             console.log('*** FIXED *** Active paid subscription');
           } else if (subscription_status === 'past_due' || subscription_status === 'canceled') {
             requiresPayment = true;
+            needsPaymentSetup = true;
             console.log('*** FIXED *** Subscription requires payment');
           }
 
@@ -262,6 +266,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             hasActiveSubscription,
             isTrialExpired,
             requiresPayment,
+            needsPaymentSetup,
             customer_id: admin.customer_id
           });
         } else {
@@ -270,6 +275,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           hasActiveSubscription = false;
           isTrialExpired = false;
           requiresPayment = false;
+          needsPaymentSetup = true;
           console.log('No admin data found - likely new user, allowing access to start-trial');
         }
       } else {
@@ -277,26 +283,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         hasActiveSubscription = false;
         isTrialExpired = false;
         requiresPayment = false;
+        needsPaymentSetup = true;
         console.log('No admin status found - likely new user, allowing access to start-trial');
       }
 
       // Final override for dev mode
       if (devModeEnabled()) {
         requiresPayment = false;
+        needsPaymentSetup = false;
         console.log('Dev mode override: payment not required');
-      }
-
-      // Calculate needsPaymentSetup
-      let needsPaymentSetup = false;
-      if (companyData?.subscription_status === 'trialing' && !admin?.customer_id) {
-        needsPaymentSetup = true;
-        console.log('*** FIXED *** User is trialing and needs payment setup (customer_id is NULL)');
-      }
-      // If already requiresPayment (e.g., trial expired), it should also need payment setup
-      if (requiresPayment) {
-        needsPaymentSetup = true;
-        console.log('*** FIXED *** requiresPayment is true, setting needsPaymentSetup');
-        console.log('*** NEEDS PAYMENT SETUP *** requiresPayment is true');
       }
 
       console.log('*** FIXED *** Calculated needsPaymentSetup:', needsPaymentSetup);
@@ -364,3 +359,4 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   }
 }));
+```
