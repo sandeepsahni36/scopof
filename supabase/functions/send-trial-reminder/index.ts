@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.39.6";
-import { SESClient, SendEmailCommand } from "npm:@aws-sdk/client-ses@3.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,17 +22,14 @@ serve(async (req) => {
     // Get environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const awsAccessKeyId = Deno.env.get("AWS_ACCESS_KEY_ID") || "";
-    const awsSecretAccessKey = Deno.env.get("AWS_SECRET_ACCESS_KEY") || "";
-    const awsRegion = Deno.env.get("AWS_REGION") || "us-east-1";
+    const resendApiKey = Deno.env.get("RESEND_API_KEY") || "";
     const fromEmail = Deno.env.get("FROM_EMAIL") || "noreply@scopostay.com";
 
-    if (!supabaseUrl || !supabaseServiceKey || !awsAccessKeyId || !awsSecretAccessKey) {
+    if (!supabaseUrl || !supabaseServiceKey || !resendApiKey) {
       console.error("Missing environment variables:", {
         hasSupabaseUrl: !!supabaseUrl,
         hasSupabaseKey: !!supabaseServiceKey,
-        hasAwsAccessKey: !!awsAccessKeyId,
-        hasAwsSecretKey: !!awsSecretAccessKey
+        hasResendApiKey: !!resendApiKey
       });
       throw new Error("Missing required environment variables");
     }
@@ -43,16 +39,7 @@ serve(async (req) => {
     // Initialize Supabase client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Initialize AWS SES client
-    const sesClient = new SESClient({
-      region: awsRegion,
-      credentials: {
-        accessKeyId: awsAccessKeyId,
-        secretAccessKey: awsSecretAccessKey,
-      },
-    });
-
-    console.log("AWS SES and Supabase clients initialized");
+    console.log("Supabase client initialized");
 
     // Calculate the target date (7 days from now)
     const targetDate = new Date();
@@ -135,7 +122,7 @@ serve(async (req) => {
 
         // Construct email content
         const emailSubject = `Your Free Trial Ends Soon! – ${daysRemaining} Days Left`;
-        const emailBody = `
+        const emailHtml = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -243,7 +230,7 @@ serve(async (req) => {
             <p>If you're ready to continue with scopoStay, no action is needed – your subscription will activate automatically. If you'd like to make any changes to your plan or billing information, you can do so in your account settings.</p>
 
             <div style="text-align: center; margin: 30px 0;">
-                <a href="${supabaseUrl.replace('supabase.co', 'vercel.app') || 'https://app.scopostay.com'}/dashboard/admin/subscription" class="cta-button">
+                <a href="https://app.scopostay.com/dashboard/admin/subscription" class="cta-button">
                     Manage Your Subscription
                 </a>
             </div>
@@ -263,36 +250,74 @@ serve(async (req) => {
 </html>
         `;
 
-        // Send email using AWS SES
-        const sendEmailCommand = new SendEmailCommand({
-          Source: fromEmail,
-          Destination: {
-            ToAddresses: [user.profiles.email],
-          },
-          Message: {
-            Subject: {
-              Data: emailSubject,
-              Charset: "UTF-8",
-            },
-            Body: {
-              Html: {
-                Data: emailBody,
-                Charset: "UTF-8",
-              },
-              Text: {
-                Data: `Your Free Trial Ends in ${daysRemaining} Days\n\nHi ${user.profiles.full_name || 'there'},\n\nYour 14-day free trial for ${user.company_name} will end on ${trialEndDate.toLocaleDateString()}.\n\nWhat happens next?\n- Your trial will automatically convert to a paid ${user.subscription_tier} subscription\n- You'll be charged monthly starting ${trialEndDate.toLocaleDateString()}\n- You can cancel anytime before then to avoid charges\n\nManage your subscription: ${supabaseUrl.replace('supabase.co', 'vercel.app') || 'https://app.scopostay.com'}/dashboard/admin/subscription\n\nBest regards,\nThe scopoStay Team`,
-                Charset: "UTF-8",
-              },
-            },
-          },
-        });
+        const emailText = `Your Free Trial Ends in ${daysRemaining} Days
 
+Hi ${user.profiles.full_name || 'there'},
+
+We hope you've been enjoying your free trial of scopoStay! This is a friendly reminder that your 14-day free trial for ${user.company_name} will end on ${trialEndDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
+
+What happens next?
+- Your trial will automatically convert to a paid ${user.subscription_tier} subscription
+- You'll be charged monthly starting ${trialEndDate.toLocaleDateString()}
+- You can cancel anytime before then to avoid charges
+- All your data and settings will be preserved
+
+If you're ready to continue with scopoStay, no action is needed – your subscription will activate automatically. If you'd like to make any changes to your plan or billing information, you can do so in your account settings.
+
+Manage your subscription: https://app.scopostay.com/dashboard/admin/subscription
+
+If you have any questions or need assistance, our support team is here to help. Simply reply to this email or contact us through your dashboard.
+
+Thank you for choosing scopoStay!
+
+Best regards,
+The scopoStay Team
+
+© 2025 scopoStay. All rights reserved.
+If you no longer wish to receive these emails, you can unsubscribe here.`;
+
+        // Send email using Resend API
         console.log(`Sending trial reminder email to: ${user.profiles.email}`);
         
-        const result = await sesClient.send(sendEmailCommand);
+        const resendResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: [user.profiles.email],
+            subject: emailSubject,
+            html: emailHtml,
+            text: emailText,
+            tags: [
+              {
+                name: 'category',
+                value: 'trial-reminder'
+              },
+              {
+                name: 'user_id',
+                value: user.id
+              }
+            ]
+          }),
+        });
+
+        if (!resendResponse.ok) {
+          const errorData = await resendResponse.text();
+          console.error(`Resend API error for ${user.profiles.email}:`, {
+            status: resendResponse.status,
+            statusText: resendResponse.statusText,
+            error: errorData
+          });
+          throw new Error(`Resend API error: ${resendResponse.status} - ${errorData}`);
+        }
+
+        const result = await resendResponse.json();
         
         console.log(`Email sent successfully to ${user.profiles.email}:`, {
-          messageId: result.MessageId
+          emailId: result.id
         });
 
         // Update the database to mark reminder as sent
@@ -310,7 +335,7 @@ serve(async (req) => {
 
         successCount++;
         
-        // Add a small delay to avoid overwhelming SES
+        // Add a small delay to avoid overwhelming Resend API
         await new Promise(resolve => setTimeout(resolve, 100));
 
       } catch (error) {

@@ -32,6 +32,31 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- **Email Service Migration**: Migrated trial reminder emails from AWS SES to Resend.com
+  - Updated `send-trial-reminder` Supabase Edge Function to use Resend.com API instead of AWS SES
+  - Simplified environment variable requirements (now only needs `RESEND_API_KEY` and `FROM_EMAIL`)
+  - Enhanced email delivery with Resend's tagging system for better tracking
+  - Updated `SCHEDULED_FUNCTION_SETUP.md` documentation to reflect Resend.com integration
+  - Removed AWS SDK dependencies from Edge Function for improved performance
+  - Maintained all existing functionality while improving reliability and ease of setup
+
+### Technical Details
+- Modified `supabase/functions/send-trial-reminder/index.ts` to use Resend API endpoints
+- Updated `supabase/functions/send-trial-reminder/deno.json` to remove AWS SDK imports
+- Replaced AWS SES client with native fetch API calls to Resend.com
+- Added email tagging for better analytics and tracking
+- Improved error handling and logging for Resend API responses
+- Maintained backward compatibility with existing database schema and scheduler setup
+
+### Benefits
+- Simplified setup process (no AWS account or IAM configuration required)
+- Better email deliverability with Resend's infrastructure
+- Enhanced email analytics and tracking capabilities
+- Reduced function cold start times by removing heavy AWS SDK dependencies
+- More developer-friendly API and documentation
+- Cost-effective email delivery for transactional emails
+
 ### Added
 - **Storage Infrastructure**: Created Supabase storage buckets for file management
   - `inspection-photos` bucket for storing inspection images (5MB limit, public access)

@@ -1,45 +1,28 @@
 # Scheduled Function Setup Guide
 
 ## Overview
-This guide explains how to set up the scheduled trial reminder function using Amazon SES for email delivery.
+This guide explains how to set up the scheduled trial reminder function using Resend.com for email delivery.
 
 ## Prerequisites
-- Amazon SES account configured and verified
+- Resend.com account configured and verified
 - Supabase project with Edge Functions enabled
-- Domain verification in Amazon SES (for production)
+- Domain verification in Resend.com (for production)
 
 ## Environment Variables Setup
 
-### 1. Add AWS Credentials to Supabase
+### 1. Add Resend Credentials to Supabase
 In your Supabase dashboard, go to **Settings** → **Environment Variables** and add:
 
 ```
-AWS_ACCESS_KEY_ID=your_aws_access_key_id
-AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
-AWS_REGION=us-east-1
-FROM_EMAIL=noreply@scopostay.com
-```
+RESEND_API_KEY=your_resend_api_key
 
-**Security Note**: Use IAM credentials with minimal permissions (only SES send permissions).
+**Security Note**: Use a Resend API key with minimal permissions (only send permissions).
 
-### 2. Recommended IAM Policy for SES
-Create an IAM user with this policy:
+### 2. Resend API Key Setup
+Create a Resend API key with these permissions:
 
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ses:SendEmail",
-                "ses:SendRawEmail"
-            ],
-            "Resource": "*"
-        }
-    ]
-}
-```
+- **Send emails**: Required for sending trial reminder emails
+- **Domain verification**: Ensure your sending domain is verified in Resend
 
 ## Database Migration
 
@@ -127,21 +110,8 @@ export default async function handler(req, res) {
     res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
-  }
-}
-```
-
-Then add to `vercel.json`:
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/trial-reminders",
-      "schedule": "0 9 * * *"
-    }
-  ]
-}
-```
+- **Send emails**: Required for sending trial reminder emails
+- **Domain verification**: Ensure your sending domain is verified in Resend
 
 ## Testing the Function
 
@@ -187,12 +157,12 @@ In Supabase dashboard:
 
 ### Common Issues
 
-1. **AWS SES Sandbox Mode**
-   - In sandbox mode, you can only send to verified email addresses
-   - Request production access from AWS SES console
+1. **Resend Domain Verification**
+   - Ensure your sending domain is verified in Resend
+   - Check DNS records are properly configured
 
-2. **Missing Environment Variables**
-   - Verify all AWS credentials are set in Supabase
+2. **Missing API Key**
+   - Verify RESEND_API_KEY is set in Supabase environment variables
    - Check that `FROM_EMAIL` is verified in SES
 
 3. **Database Query Errors**
@@ -200,8 +170,8 @@ In Supabase dashboard:
    - Verify RLS policies allow the service role to read admin and profiles tables
 
 4. **Email Delivery Issues**
-   - Check AWS SES sending statistics
-   - Verify sender email is verified in SES
+   - Check Resend dashboard for delivery statistics
+   - Verify sender email is verified in Resend
    - Check recipient email addresses are valid
 
 ### Debug Mode
@@ -212,19 +182,19 @@ https://your-project-id.supabase.co/functions/v1/send-trial-reminder?debug=true
 
 ## Security Considerations
 
-1. **IAM Permissions**: Use minimal IAM permissions (SES send only)
-2. **Environment Variables**: Never commit AWS credentials to code
-3. **Rate Limiting**: The function includes built-in delays to respect SES limits
+1. **API Key Permissions**: Use minimal Resend API permissions (send only)
+2. **Environment Variables**: Never commit Resend API keys to code
+3. **Rate Limiting**: The function includes built-in delays to respect Resend limits
 4. **Email Validation**: Validate email addresses before sending
 5. **Unsubscribe Links**: Consider adding unsubscribe functionality for compliance
 
 ## Next Steps
 
-After setting up the trial reminder function, you can extend this pattern for other email automations:
+After setting up the trial reminder function with Resend, you can extend this pattern for other email automations:
 - Failed payment alerts
 - Expiring card notifications  
 - Invoice distribution
 - Welcome emails
 - Subscription cancellation confirmations
 
-Each would follow the same pattern: Edge Function + External Scheduler + Amazon SES.
+Each would follow the same pattern: Edge Function + External Scheduler + Resend.com.

@@ -2,7 +2,5 @@
   "tasks": {
     "start": "deno run --allow-net --allow-env --allow-read index.ts"
   },
-  "imports": {
-    "@aws-sdk/client-ses": "npm:@aws-sdk/client-ses@3.0.0"
-  }
+  "imports": {}
 }
