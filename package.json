@@ -7,9 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "migrate": "node scripts/migrate-database.js",
-    "migrate:direct": "node scripts/migrate-database.js --direct"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
