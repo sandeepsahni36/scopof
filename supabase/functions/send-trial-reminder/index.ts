@@ -273,7 +273,7 @@ Thank you for choosing scopoStay!
 Best regards,
 The scopoStay Team
 
-© 2025 scopoStay. All rights reserved.
+© scopoStay. All rights reserved.
 If you no longer wish to receive these emails, you can unsubscribe here.`;
 
         // Send email using Resend API
