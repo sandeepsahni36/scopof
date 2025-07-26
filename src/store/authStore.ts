@@ -241,11 +241,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               // Check if payment method is set up (customer_id exists)
               if (admin.customer_id) {
                 hasActiveSubscription = true;
-                console.log(\`Found matching plan for price_id ${subscription.price_id}: ${actualTier}`);
+                console.log(`Found matching plan for price_id ${subscription.price_id}: ${actualTier}`);
               } else {
                 hasActiveSubscription = false; // This is the key change
                 needsPaymentSetup = true; // This is the key change
-                console.warn(\`No matching plan found for price_id: ${subscription.price_id}`);
+                console.warn(`No matching plan found for price_id: ${subscription.price_id}`);
               }
             } else {
               isTrialExpired = true;
