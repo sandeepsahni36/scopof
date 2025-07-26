@@ -289,7 +289,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Final override for dev mode
       if (devModeEnabled()) {
         requiresPayment = false;
-        needsPaymentSetup = false;
         console.log('Dev mode override: payment not required');
       }
 

@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **CRITICAL**: Fixed new user redirect flow to properly route to start-trial page after email confirmation
+- Removed dev mode override that was incorrectly setting needsPaymentSetup to false for all users
+- New users who confirm their email will now be correctly redirected to /start-trial instead of dashboard
+- This ensures proper subscription setup flow for all new signups regardless of environment
+
 ### Added
 - **Email Automation System**: Implemented scheduled trial expiration reminder emails using Amazon SES
   - Created `send-trial-reminder` Supabase Edge Function for automated email delivery
