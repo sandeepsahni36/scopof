@@ -1,3 +1,4 @@
+```typescript
 import { create } from 'zustand';
 import { User, Company } from '../types';
 import { supabase, getCurrentUser } from '../lib/supabase';
@@ -250,7 +251,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               } else {
                 // Trialing but no customer_id means payment setup is NOT done
                 hasActiveSubscription = false; // User needs to complete payment setup
-                console.log('Active trial found but no payment setup (customer_id is null)');
+                console.log('*** NEW AUTH LOGIC ACTIVE *** Active trial found but no payment setup (customer_id is null)');
               }
             } else {
               // Trial has ended
@@ -382,3 +383,4 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   }
 }));
+```
