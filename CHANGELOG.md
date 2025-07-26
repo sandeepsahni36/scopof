@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **CRITICAL**: Fixed trial user redirect logic to properly route new users to start-trial page
+- Trial users with NULL customer_id (haven't completed payment setup) now correctly have needsPaymentSetup=true
+- This ensures new users are redirected to /start-trial instead of accessing dashboard prematurely
+- Enhanced logging to track subscription state determination for better debugging
+- Fixed edge case where trialing users without payment setup were incorrectly granted dashboard access
+
+### Fixed
 - **CRITICAL**: Fixed new user redirect flow to properly route to start-trial page after email confirmation
 - Removed dev mode override that was incorrectly setting needsPaymentSetup to false for all users
 - New users who confirm their email will now be correctly redirected to /start-trial instead of dashboard

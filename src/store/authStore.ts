@@ -237,14 +237,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // Enhanced trial logic
           if (subscription_status === 'trialing') {
             if (trialEnd && now < trialEnd) {
-              // Check if payment method is set up (customer_id exists)
+              // CRITICAL FIX: Trial users without customer_id need to complete payment setup
               if (admin.customer_id) {
                 hasActiveSubscription = true;
+                needsPaymentSetup = false;
                 console.log('*** FIXED *** Active trial with payment setup');
               } else {
                 hasActiveSubscription = false;
                 needsPaymentSetup = true;
-                console.log('*** FIXED *** Trial without payment setup');
+                console.log('*** FIXED *** Trial without payment setup - redirecting to start-trial');
               }
             } else {
               isTrialExpired = true;
@@ -254,11 +255,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
           } else if (stripe_status === 'active' || subscription_status === 'active') {
             hasActiveSubscription = true;
+            needsPaymentSetup = false;
             console.log('*** FIXED *** Active paid subscription');
           } else if (subscription_status === 'past_due' || subscription_status === 'canceled') {
             requiresPayment = true;
             needsPaymentSetup = true;
             console.log('*** FIXED *** Subscription requires payment');
+          } else {
+            // Default case for new users or unknown states
+            hasActiveSubscription = false;
+            needsPaymentSetup = true;
+            console.log('*** FIXED *** Default case - needs payment setup');
           }
 
           console.log('*** FIXED *** Final subscription state:', {
@@ -292,8 +299,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log('Dev mode override: payment not required');
       }
 
-      console.log('*** FIXED *** Calculated needsPaymentSetup: ' + needsPaymentSetup);
-
       set({
         user: userData,
         company: companyData,
@@ -305,7 +310,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         requiresPayment,
         needsPaymentSetup
       });
-      console.log('*** FIXED *** Auth store initialized with:', {
+      console.log('*** FINAL AUTH STATE ***', {
         user: userData?.email,
         company: companyData?.name,
         isAuthenticated: true,
