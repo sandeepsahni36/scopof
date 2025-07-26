@@ -199,9 +199,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             
             if (matchingPlan) {
               actualTier = matchingPlan[0]; // Use the key (starter, professional, enterprise)
-              console.log(\`Found matching plan for price_id ${subscription.price_id}: ${actualTier}`);
+              console.log(`Found matching plan for price_id ${subscription.price_id}: ${actualTier}`);
             } else {
-              console.warn(\`No matching plan found for price_id: ${subscription.price_id}`);
+              console.warn(`No matching plan found for price_id: ${subscription.price_id}`);
             }
           }
 
