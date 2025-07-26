@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **CRITICAL**: Fixed email confirmation redirect URLs to consistently use production URL (app.scopostay.com)
+- Updated signUp and resendConfirmationEmail functions to use getSiteUrl() instead of window.location.origin
+- This ensures email confirmation links always point to the correct production domain regardless of environment
+- Resolves issues where email confirmation links might point to localhost during development
+
+### Fixed
 - **CRITICAL**: Fixed email confirmation redirect flow to properly route new users to start-trial page
 - Updated email confirmation URLs to use current site origin instead of hardcoded production URL
 - Enhanced AuthCallbackPage navigation with replace: true to prevent back button issues

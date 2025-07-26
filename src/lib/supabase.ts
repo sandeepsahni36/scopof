@@ -80,8 +80,8 @@ export async function handleAuthError(error: any) {
 
 export async function signUp(email: string, password: string, metadata?: { full_name?: string; company_name?: string }) {
   try {
-    // Use current site URL for email confirmation redirects
-    const redirectUrl = `${window.location.origin}/auth/callback`;
+    // Use getSiteUrl() to ensure consistent production URL for email redirects
+    const redirectUrl = `${getSiteUrl()}/auth/callback`;
     console.log('SignUp: Using redirect URL:', redirectUrl);
     
     // Create the auth user with metadata included
@@ -152,8 +152,8 @@ export async function getCurrentUser() {
 }
 
 export async function resendConfirmationEmail(email: string) {
-  // Use current site URL for email confirmation redirects
-  const redirectUrl = `${window.location.origin}/auth/callback`;
+  // Use getSiteUrl() to ensure consistent production URL for email redirects
+  const redirectUrl = `${getSiteUrl()}/auth/callback`;
   console.log('ResendConfirmation: Using redirect URL:', redirectUrl);
   
   return supabase.auth.resend({
