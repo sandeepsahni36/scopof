@@ -217,7 +217,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           };
 
           // Check subscription status with improved logic
-          const now = new Date();
           const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
           
           console.log('Subscription status check:', {
