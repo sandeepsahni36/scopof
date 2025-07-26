@@ -186,8 +186,8 @@ const AuthCallbackPage = () => {
                   try {
                     await initialize();
                     toast.success('Email confirmed successfully');
-                    console.log('Email confirmed via manual refresh, redirecting to start-trial');
-                    navigate('/start-trial', { replace: true });
+                    console.log('Email confirmed via manual refresh, redirecting to dashboard');
+                    navigate('/dashboard', { replace: true });
                   } catch (error: any) {
                     addDebugInfo(`Auth initialization failed after manual refresh: ${error.message}`);
                     setError(error.message || 'Failed to initialize user session');
