@@ -124,6 +124,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log("Admin status fetched:", adminStatus);
       }
 
+      const isAdmin = adminStatus?.is_admin || false;
       console.log("User is admin:", isAdmin);
 
       // Transform data to match our types
@@ -136,11 +137,52 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         createdAt: profile?.created_at || user.created_at,
       };
 
+      let companyData: Company | null = null;
+      let hasActiveSubscription = false;
+      let isTrialExpired = false;
+      let requiresPayment = false;
+      let needsPaymentSetup = false;
+
+      if (isAdmin) {
+        // Fetch admin data
+        const { data: admin, error: adminError } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('profile_id', user.id)
+          .single();
+
+        if (adminError) {
+          console.error("Error fetching admin data:", adminError);
+        } else if (admin) {
+          console.log("Admin data fetched:", { 
+            id: admin.id,
+            companyName: admin.company_name,
+            subscriptionStatus: admin.subscription_status,
+            trialEndsAt: admin.trial_ends_at
+          });
+
+          // Fetch subscription data if customer_id exists
+          let subscription = null;
+          let subscriptionError = null;
+          
+          if (admin.customer_id) {
+            const result = await supabase
+              .from('subscriptions')
+              .select('*')
+              .eq('customer_id', admin.customer_id)
+              .maybeSingle();
+            
+            subscription = result.data;
+            subscriptionError = result.error;
+
             // --- START REVISED LOGIC FOR SUBSCRIPTION STATUS ---
             const admin_subscription_status = admin.subscription_status;
             const stripe_subscription_status = subscription?.subscription_status;
 
             if (admin_subscription_status === 'trialing') {
+              const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
+              const now = new Date();
+              
               if (trialEnd && now < trialEnd) { // Trial is active
                 if (!admin.customer_id || admin.customer_id === '') { // No customer_id means payment setup needed
                   hasActiveSubscription = false; // Not truly active until payment setup
@@ -178,8 +220,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               console.log('DEBUG: Default case - needs payment setup (e.g., not_started).');
             }
             // --- END REVISED LOGIC FOR SUBSCRIPTION STATUS ---
+          }
+          
           if (subscriptionError) {
+            console.error("Error fetching subscription:", subscriptionError);
             console.log('DEBUG: Final subscription state for user (before set):', {
+              hasActiveSubscription,
+              isTrialExpired,
+              requiresPayment,
+              needsPaymentSetup
+            });
           } else if (subscription) {
             console.log("Subscription data fetched:", { 
               subscriptionId: subscription.subscription_id,
@@ -277,25 +327,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isTrialExpired,
             requiresPayment,
             needsPaymentSetup,
-            customer_id: admin.customer_id,
-            console.log('DEBUG: No admin data found - new user needs to go to start-trial.');
+            customer_id: admin.customer_id
           });
         } else {
-          // If no admin data, this is likely a new user whose admin record hasn't been created yet
-          // Allow them to proceed (they'll be handled by the signup flow)
-          hasActiveSubscription = false;
-          isTrialExpired = false;
-          requiresPayment = false;
-          needsPaymentSetup = true;
-          console.log('DEBUG: No admin status found - new user needs to go to start-trial.');
+          console.log('DEBUG: No admin data found - new user needs to go to start-trial.');
         }
       } else {
         // If no admin status, this is likely a new user
         hasActiveSubscription = false;
         isTrialExpired = false;
-          needsPaymentSetup = false; // Ensure dev mode bypasses payment setup
-          hasActiveSubscription = true; // Ensure dev mode has active subscription
-          console.log('DEBUG: Dev mode override: payment not required, active subscription forced.');
+        requiresPayment = false;
         needsPaymentSetup = true;
         console.log('No admin status found - new user needs to go to start-trial');
       }
@@ -303,6 +344,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Final override for dev mode
       if (devModeEnabled()) {
         requiresPayment = false;
+        needsPaymentSetup = false; // Ensure dev mode bypasses payment setup
+        hasActiveSubscription = true; // Ensure dev mode has active subscription
+        console.log('DEBUG: Dev mode override: payment not required, active subscription forced.');
         console.log('Dev mode override: payment not required');
       }
 
