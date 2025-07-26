@@ -124,7 +124,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log("Admin status fetched:", adminStatus);
       }
 
-      const isAdmin = adminStatus?.is_owner || false;
       console.log("User is admin:", isAdmin);
 
       // Transform data to match our types
@@ -137,45 +136,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         createdAt: profile?.created_at || user.created_at,
       };
 
-      let companyData: Company | null = null;
-      let hasActiveSubscription = false;
-      let isTrialExpired = false;
-      let requiresPayment = false;
-      let needsPaymentSetup = false; // Initialize here
+            // --- START REVISED LOGIC FOR SUBSCRIPTION STATUS ---
+            const admin_subscription_status = admin.subscription_status;
+            const stripe_subscription_status = subscription?.subscription_status;
 
-      if (adminStatus?.admin_id) {
-        console.log("Fetching admin record...");
-        const { data: admin, error: adminError } = await supabase
-          .from('admin')
-          .select('*')
-          .eq('id', adminStatus.admin_id)
-          .single();
-
-        if (adminError) {
-          console.error("Error fetching admin record:", adminError);
-        } else {
-          console.log("Admin record fetched:", { 
-            id: admin.id, 
-            companyName: admin.company_name,
-            subscriptionStatus: admin.subscription_status,
-            subscriptionTier: admin.subscription_tier,
-            trialStartedAt: admin.trial_started_at,
-            trialEndsAt: admin.trial_ends_at,
-            customerId: admin.customer_id
-          });
-        }
-
-        if (admin) {
-          // Get current subscription data to determine actual plan
-          console.log("Fetching Stripe subscription data...");
-          const { data: subscription, error: subscriptionError } = await supabase
-            .from('stripe_user_subscriptions')
-            .select('*')
-            .eq('customer_id', admin.customer_id || '')
-            .maybeSingle();
-
+            if (admin_subscription_status === 'trialing') {
+              if (trialEnd && now < trialEnd) { // Trial is active
+                if (!admin.customer_id || admin.customer_id === '') { // No customer_id means payment setup needed
+                  hasActiveSubscription = false; // Not truly active until payment setup
+                  needsPaymentSetup = true;
+                  requiresPayment = false; // Not requiring payment yet, but needs setup
+                  console.log('DEBUG: Trial user without customer_id, needs payment setup.');
+                } else { // Trial is active AND customer_id exists
+                  hasActiveSubscription = true;
+                  needsPaymentSetup = false;
+                  requiresPayment = false;
+                  console.log('DEBUG: Active trial with payment setup complete.');
+                }
+              } else { // Trial expired
+                isTrialExpired = true;
+                requiresPayment = true;
+                needsPaymentSetup = true;
+                hasActiveSubscription = false;
+                console.log('DEBUG: Trial expired, payment required.');
+              }
+            } else if (admin_subscription_status === 'active' || stripe_subscription_status === 'active') {
+              hasActiveSubscription = true;
+              needsPaymentSetup = false;
+              requiresPayment = false;
+              console.log('DEBUG: Active paid subscription.');
+            } else if (admin_subscription_status === 'past_due' || admin_subscription_status === 'canceled' || admin_subscription_status === 'unpaid') {
+              requiresPayment = true;
+              needsPaymentSetup = true;
+              hasActiveSubscription = false;
+              console.log('DEBUG: Subscription past due/canceled/unpaid, requires payment.');
+            } else {
+              // Default case for new users or unknown states (e.g., 'not_started')
+              hasActiveSubscription = false;
+              needsPaymentSetup = true;
+              requiresPayment = false; // Not requiring payment yet, but needs setup
+              console.log('DEBUG: Default case - needs payment setup (e.g., not_started).');
+            }
+            // --- END REVISED LOGIC FOR SUBSCRIPTION STATUS ---
           if (subscriptionError) {
-            console.error("Error fetching subscription data:", subscriptionError);
+            console.log('DEBUG: Final subscription state for user (before set):', {
           } else if (subscription) {
             console.log("Subscription data fetched:", { 
               subscriptionId: subscription.subscription_id,
@@ -274,7 +278,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             requiresPayment,
             needsPaymentSetup,
             customer_id: admin.customer_id,
-            subscription_status: admin.subscription_status
+            console.log('DEBUG: No admin data found - new user needs to go to start-trial.');
           });
         } else {
           // If no admin data, this is likely a new user whose admin record hasn't been created yet
@@ -283,13 +287,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isTrialExpired = false;
           requiresPayment = false;
           needsPaymentSetup = true;
-          console.log('No admin data found - new user needs to go to start-trial');
+          console.log('DEBUG: No admin status found - new user needs to go to start-trial.');
         }
       } else {
         // If no admin status, this is likely a new user
         hasActiveSubscription = false;
         isTrialExpired = false;
-        requiresPayment = false;
+          needsPaymentSetup = false; // Ensure dev mode bypasses payment setup
+          hasActiveSubscription = true; // Ensure dev mode has active subscription
+          console.log('DEBUG: Dev mode override: payment not required, active subscription forced.');
         needsPaymentSetup = true;
         console.log('No admin status found - new user needs to go to start-trial');
       }
