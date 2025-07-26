@@ -32,6 +32,45 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Email Automation System - Expiring Cards**: Implemented automated email notifications for expiring payment methods
+  - Created `send-expiring-card-reminder` Supabase Edge Function for proactive card expiration notifications
+  - Added `last_card_expiring_reminder_sent_at` tracking column to `stripe_subscriptions` table to prevent duplicate emails
+  - Integrated with Stripe API to retrieve payment method expiration dates and customer details
+  - Professional HTML email templates with responsive design and clear call-to-action buttons
+  - Automated detection of cards expiring within 30-60 days with configurable reminder frequency
+  - Built-in rate limiting and comprehensive error handling for reliable email delivery
+  - Email tagging system for analytics and tracking through Resend.com
+
+- **Email Automation System - Failed Payments**: Enhanced webhook handling for automatic failed payment notifications
+  - Extended `stripe-webhook` Edge Function to handle `invoice.payment_failed` events
+  - Automatic email notifications when subscription payments fail with detailed failure information
+  - Professional HTML email templates explaining payment failure reasons and next steps
+  - Direct links to customer portal for easy payment method updates
+  - Comprehensive payment failure details including amount, attempt count, and suggested actions
+  - Automatic admin status updates to `past_due` when payments fail
+  - Integration with existing Resend.com email infrastructure for consistent delivery
+
+### Technical Details
+- New Edge Function: `supabase/functions/send-expiring-card-reminder/index.ts`
+- Database migration: `add_card_expiring_reminder_tracking.sql` adds tracking column and index
+- Enhanced webhook processing in `supabase/functions/stripe-webhook/index.ts`
+- Stripe API integration for payment method retrieval and expiration checking
+- Resend.com email delivery with proper tagging for analytics
+- Comprehensive error handling and logging for both email automation systems
+- External scheduler support for periodic expiring card checks
+- Real-time failed payment notifications via Stripe webhooks
+
+### Benefits
+- Proactive customer engagement before payment issues occur
+- Reduced involuntary churn due to expired payment methods
+- Immediate notification of payment failures for quick resolution
+- Professional email templates that maintain brand consistency
+- Comprehensive payment failure communication with clear next steps
+- Scalable architecture that can be extended for other payment-related automations
+- Enhanced customer experience with timely and relevant payment communications
+- Reduced support burden through automated payment issue notifications
+
 ### Changed
 - **Email Service Migration**: Migrated trial reminder emails from AWS SES to Resend.com
   - Updated `send-trial-reminder` Supabase Edge Function to use Resend.com API instead of AWS SES
