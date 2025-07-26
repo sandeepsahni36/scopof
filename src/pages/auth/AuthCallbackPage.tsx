@@ -22,6 +22,12 @@ const AuthCallbackPage = () => {
   };
 
   useEffect(() => {
+    // Prevent multiple executions
+    if (hasProcessedRef.current) {
+      addDebugInfo('Callback already processed, skipping');
+      return;
+    }
+
     // Check for error in URL first
     const errorMessage = searchParams.get('error_description');
     if (errorMessage) {
@@ -33,16 +39,15 @@ const AuthCallbackPage = () => {
     // Check for code parameter
     const code = searchParams.get('code');
     addDebugInfo(`Code parameter present: ${!!code}`);
+    addDebugInfo(`Full URL: ${window.location.href}`);
     
-    // Check localStorage for PKCE verifier
-    const pkceVerifier = localStorage.getItem('supabase.auth.token');
-    addDebugInfo(`PKCE verifier in localStorage: ${!!pkceVerifier}`);
+    // Check localStorage for PKCE state
+    const authKeys = Object.keys(localStorage).filter(key => key.startsWith('supabase.auth'));
+    addDebugInfo(`Auth keys in localStorage: ${authKeys.join(', ')}`);
     
-    if (code && !pkceVerifier) {
-      addDebugInfo('CRITICAL: Code present but no PKCE verifier found in localStorage');
-      setError('Authentication state was lost. This can happen if localStorage was cleared or if you\'re in a strict privacy mode. Please try signing up again.');
-      return;
-    }
+    // Check for PKCE code verifier specifically
+    const pkceCodeVerifier = localStorage.getItem('supabase.auth.code_verifier');
+    addDebugInfo(`PKCE code verifier present: ${!!pkceCodeVerifier}`);
 
     const handleAuthCallback = async () => {
       try {
@@ -51,13 +56,13 @@ const AuthCallbackPage = () => {
         // Set up timeout (15 seconds)
         timeoutRef.current = setTimeout(() => {
           if (!hasProcessedRef.current) {
-            addDebugInfo('Authentication callback timed out after 15 seconds');
+            addDebugInfo('Authentication callback timed out after 20 seconds');
             setIsTimeout(true);
             setError('Authentication is taking longer than expected. This might be due to a slow connection or server issue.');
           }
-        }, 15000);
+        }, 20000);
 
-        // First, try to exchange the code if present
+        // Strategy 1: Try to exchange the code if present
         if (code) {
           addDebugInfo('Attempting to exchange authorization code');
           
@@ -70,14 +75,14 @@ const AuthCallbackPage = () => {
               // Check if it's a PKCE-related error
               if (exchangeError.message.includes('flow_state_expired') || 
                   exchangeError.message.includes('code_verifier') ||
-                  exchangeError.message.includes('invalid_grant')) {
+                  exchangeError.message.includes('invalid_grant') ||
+                  exchangeError.message.includes('Invalid Refresh Token')) {
                 setError('The confirmation link has expired or was already used. Please request a new confirmation email.');
                 return;
               }
               
-              // For other errors, set error but don't return - let fallback methods try
-              addDebugInfo('Code exchange failed, trying fallback methods');
-              setError(exchangeError.message);
+              // For other errors, continue to fallback methods
+              addDebugInfo('Code exchange failed, will try fallback methods');
             } else if (sessionData.session && !hasProcessedRef.current) {
               addDebugInfo('Code exchange successful, processing session');
               hasProcessedRef.current = true;
@@ -104,16 +109,12 @@ const AuthCallbackPage = () => {
           }
         }
 
-        // Fallback: Try to get existing session
-        addDebugInfo('Trying to get existing session');
+        // Strategy 2: Try to get existing session
+        addDebugInfo('Strategy 2: Trying to get existing session');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
           addDebugInfo(`getSession error: ${sessionError.message}`);
-          // Don't call handleAuthError here as it clears localStorage
-          if (!error) { // Only set error if we don't already have one from code exchange
-            setError(sessionError.message || 'Failed to retrieve session during callback.');
-          }
         } else if (session && !hasProcessedRef.current) {
           addDebugInfo('Found existing session, processing');
           hasProcessedRef.current = true;
@@ -135,12 +136,13 @@ const AuthCallbackPage = () => {
           }
         }
 
-        // Final fallback: Set up auth state change listener
-        addDebugInfo('Setting up auth state change listener as final fallback');
+        // Strategy 3: Set up auth state change listener
+        addDebugInfo('Strategy 3: Setting up auth state change listener');
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
           addDebugInfo(`Auth state change: ${event}, user: ${session?.user?.email || 'none'}`);
 
           if (event === 'SIGNED_IN' && session && !hasProcessedRef.current) {
+            addDebugInfo('Auth state change detected sign in, processing');
             hasProcessedRef.current = true;
             
             if (timeoutRef.current) {
@@ -159,6 +161,41 @@ const AuthCallbackPage = () => {
           }
         });
 
+        // Strategy 4: If we have a code but no session after 3 seconds, try manual refresh
+        if (code && !hasProcessedRef.current) {
+          addDebugInfo('Strategy 4: Setting up delayed manual refresh attempt');
+          setTimeout(async () => {
+            if (!hasProcessedRef.current) {
+              addDebugInfo('Attempting manual session refresh');
+              try {
+                const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+                if (refreshError) {
+                  addDebugInfo(`Manual refresh failed: ${refreshError.message}`);
+                } else if (refreshData.session && !hasProcessedRef.current) {
+                  addDebugInfo('Manual refresh successful, processing session');
+                  hasProcessedRef.current = true;
+                  
+                  if (timeoutRef.current) {
+                    clearTimeout(timeoutRef.current);
+                    timeoutRef.current = null;
+                  }
+
+                  try {
+                    await initialize();
+                    toast.success('Email confirmed successfully');
+                    navigate('/start-trial');
+                  } catch (error: any) {
+                    addDebugInfo(`Auth initialization failed after manual refresh: ${error.message}`);
+                    setError(error.message || 'Failed to initialize user session');
+                  }
+                }
+              } catch (error: any) {
+                addDebugInfo(`Manual refresh threw error: ${error.message}`);
+              }
+            }
+          }, 3000);
+        }
+
         // Cleanup function
         return () => {
           subscription.unsubscribe();
@@ -168,7 +205,9 @@ const AuthCallbackPage = () => {
         };
       } catch (error: any) {
         addDebugInfo(`Auth callback outer error: ${error.message}`);
-        setError(error.message || 'Authentication failed');
+        if (!hasProcessedRef.current) {
+          setError(error.message || 'Authentication failed');
+        }
       }
     };
 
@@ -188,29 +227,9 @@ const AuthCallbackPage = () => {
       return;
     }
     
-    // Clear any stale auth state and try again
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        addDebugInfo(`Retry getSession error: ${error.message}`);
-        setError(error.message);
-        return;
-      }
-      
-      if (session) {
-        addDebugInfo('Retry found session, initializing');
-        hasProcessedRef.current = true;
-        initialize().then(() => {
-          toast.success('Email confirmed successfully');
-          navigate('/start-trial'); // Always go to start-trial after email confirmation
-        }).catch((error) => {
-          addDebugInfo(`Retry initialization failed: ${error.message}`);
-          setError(error.message || 'Failed to initialize user session');
-        });
-      } else {
-        addDebugInfo('Retry found no session, redirecting to login');
-        navigate('/login?message=Please try signing in again');
-      }
-    });
+    // Reload the page to restart the callback process
+    addDebugInfo('Reloading page to restart callback process');
+    window.location.reload();
   };
 
   const handleGoToLogin = () => {
@@ -227,6 +246,7 @@ const AuthCallbackPage = () => {
     const isPkceError = error.includes('flow_state_expired') || 
                        error.includes('code_verifier') || 
                        error.includes('invalid_grant') ||
+                       error.includes('Invalid Refresh Token') ||
                        error.includes('confirmation link has expired');
 
     return (
