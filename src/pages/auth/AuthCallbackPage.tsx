@@ -95,7 +95,8 @@ const AuthCallbackPage = () => {
               try {
                 await initialize();
                 toast.success('Email confirmed successfully');
-                navigate('/start-trial'); // Always go to start-trial after email confirmation
+                console.log('Email confirmed, redirecting to start-trial');
+                navigate('/start-trial', { replace: true }); // Always go to start-trial after email confirmation
                 return;
               } catch (error: any) {
                 addDebugInfo(`Auth initialization failed: ${error.message}`);
@@ -127,7 +128,8 @@ const AuthCallbackPage = () => {
           try {
             await initialize();
             toast.success('Email confirmed successfully');
-            navigate('/start-trial'); // Always go to start-trial after email confirmation
+            console.log('Email confirmed via existing session, redirecting to start-trial');
+            navigate('/start-trial', { replace: true }); // Always go to start-trial after email confirmation
             return;
           } catch (error: any) {
             addDebugInfo(`Auth initialization failed: ${error.message}`);
@@ -153,7 +155,8 @@ const AuthCallbackPage = () => {
             try {
               await initialize();
               toast.success('Email confirmed successfully');
-              navigate('/start-trial');
+              console.log('Email confirmed via auth state change, redirecting to start-trial');
+              navigate('/start-trial', { replace: true });
             } catch (error: any) {
               addDebugInfo(`Auth initialization failed: ${error.message}`);
               setError(error.message || 'Failed to initialize user session');
@@ -183,7 +186,8 @@ const AuthCallbackPage = () => {
                   try {
                     await initialize();
                     toast.success('Email confirmed successfully');
-                    navigate('/start-trial');
+                    console.log('Email confirmed via manual refresh, redirecting to start-trial');
+                    navigate('/start-trial', { replace: true });
                   } catch (error: any) {
                     addDebugInfo(`Auth initialization failed after manual refresh: ${error.message}`);
                     setError(error.message || 'Failed to initialize user session');

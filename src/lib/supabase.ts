@@ -80,8 +80,8 @@ export async function handleAuthError(error: any) {
 
 export async function signUp(email: string, password: string, metadata?: { full_name?: string; company_name?: string }) {
   try {
-    // Always use production URL for email confirmation redirects
-    const redirectUrl = 'https://app.scopostay.com/auth/callback';
+    // Use current site URL for email confirmation redirects
+    const redirectUrl = `${window.location.origin}/auth/callback`;
     console.log('SignUp: Using redirect URL:', redirectUrl);
     
     // Create the auth user with metadata included
@@ -152,8 +152,8 @@ export async function getCurrentUser() {
 }
 
 export async function resendConfirmationEmail(email: string) {
-  // Always use production URL for email confirmation redirects
-  const redirectUrl = 'https://app.scopostay.com/auth/callback';
+  // Use current site URL for email confirmation redirects
+  const redirectUrl = `${window.location.origin}/auth/callback`;
   console.log('ResendConfirmation: Using redirect URL:', redirectUrl);
   
   return supabase.auth.resend({

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **CRITICAL**: Fixed email confirmation redirect flow to properly route new users to start-trial page
+- Updated email confirmation URLs to use current site origin instead of hardcoded production URL
+- Enhanced AuthCallbackPage navigation with replace: true to prevent back button issues
+- Improved logging in authStore to better track subscription state determination
+- This ensures new users who confirm their email are correctly redirected to /start-trial instead of login page
+
+### Fixed
 - **CRITICAL**: Fixed trial user redirect logic to properly route new users to start-trial page
 - Trial users with NULL customer_id (haven't completed payment setup) now correctly have needsPaymentSetup=true
 - This ensures new users are redirected to /start-trial instead of accessing dashboard prematurely
