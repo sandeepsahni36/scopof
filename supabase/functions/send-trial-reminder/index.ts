@@ -63,7 +63,7 @@ serve(async (req) => {
         trial_ends_at,
         trial_reminder_7day_sent,
         subscription_tier,
-        profiles!admin_owner_id_fkey (
+        profiles (
           email,
           full_name
         )

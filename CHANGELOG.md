@@ -49,6 +49,13 @@ All notable changes to this project will be documented in this file.
 - Improved error handling and logging for Resend API responses
 - Maintained backward compatibility with existing database schema and scheduler setup
 
+### Fixed
+- **Database Relationship Error**: Fixed relationship query error in `send-trial-reminder` function
+  - Corrected the join between `admin` and `profiles` tables by removing explicit foreign key reference
+  - Changed from `profiles!admin_owner_id_fkey` to `profiles` to allow PostgREST to infer the correct relationship
+  - This resolves the "Could not find a relationship between 'admin' and 'profiles' in the schema cache" error
+  - Function now correctly retrieves user email and full name for trial reminder emails
+
 ### Benefits
 - Simplified setup process (no AWS account or IAM configuration required)
 - Better email deliverability with Resend's infrastructure
