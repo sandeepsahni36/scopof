@@ -11,9 +11,9 @@ type AuthState = {
   isDevMode: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  hasActiveSubscription: boolean;
-  isTrialExpired: boolean;
-  requiresPayment: boolean;
+  hasActiveSubscription = false;
+  isTrialExpired = false;
+  requiresPayment = false
   needsPaymentSetup: boolean;
   initialize: () => Promise<void>;
   setUser: (user: User | null) => void;
