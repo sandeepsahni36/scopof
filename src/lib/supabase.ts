@@ -9,17 +9,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Get the current site URL for redirects
 const getSiteUrl = () => {
-  // In development, always use the current window location
-  // This handles WebContainer's dynamic URLs
-  if (import.meta.env.DEV) {
-    return window.location.origin;
+  // Always use the production URL for email redirects to ensure consistency
+  const productionUrl = 'https://app.scopostay.com';
+  
+  // In development, we still want emails to redirect to production
+  // but we can use local URL for other purposes
+  if (import.meta.env.DEV && !window.location.href.includes('scopostay.com')) {
+    // For email redirects, always use production URL
+    return productionUrl;
   }
   
-  // In production, use the configured URL or fallback to window.location.origin
-  let siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
-  // Remove trailing slash if present
-  siteUrl = siteUrl.replace(/\/$/, '');
-  return siteUrl;
+  return productionUrl;
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -80,10 +80,9 @@ export async function handleAuthError(error: any) {
 
 export async function signUp(email: string, password: string, metadata?: { full_name?: string; company_name?: string }) {
   try {
-    const redirectUrl = `${getSiteUrl()}/auth/callback`;
+    // Always use production URL for email confirmation redirects
+    const redirectUrl = 'https://app.scopostay.com/auth/callback';
     console.log('SignUp: Using redirect URL:', redirectUrl);
-    console.log('SignUp: Site URL from getSiteUrl():', getSiteUrl());
-    console.log('SignUp: window.location.origin:', window.location.origin);
     
     // Create the auth user with metadata included
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -153,9 +152,9 @@ export async function getCurrentUser() {
 }
 
 export async function resendConfirmationEmail(email: string) {
-  const redirectUrl = `${getSiteUrl()}/auth/callback`;
+  // Always use production URL for email confirmation redirects
+  const redirectUrl = 'https://app.scopostay.com/auth/callback';
   console.log('ResendConfirmation: Using redirect URL:', redirectUrl);
-  console.log('ResendConfirmation: Site URL from getSiteUrl():', getSiteUrl());
   
   return supabase.auth.resend({
     email,
