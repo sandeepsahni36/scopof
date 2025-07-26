@@ -1,4 +1,3 @@
-```typescript
 import { create } from 'zustand';
 import { User, Company } from '../types';
 import { supabase, getCurrentUser } from '../lib/supabase';
