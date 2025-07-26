@@ -38,11 +38,24 @@ import LandingPage from './pages/marketing/LandingPage';
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading, isDevMode, requiresPayment, isTrialExpired, isAdmin, needsPaymentSetup } = useAuthStore();
   
+  // Add comprehensive debugging
+  console.log('=== PROTECTED ROUTE DEBUG ===', {
+    isAuthenticated,
+    loading,
+    isDevMode,
+    requiresPayment,
+    isTrialExpired,
+    isAdmin,
+    needsPaymentSetup,
+    currentPath: window.location.pathname
+  });
+  
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
   
   if (!isAuthenticated && !isDevMode) {
+    console.log('REDIRECT: Not authenticated, going to login');
     return <Navigate to="/login" replace />;
   }
 
@@ -52,12 +65,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     // Rule 1: If user is trialing and needs to complete payment setup (customer_id is NULL)
     // AND they are not already on the /start-trial page
     if (needsPaymentSetup && currentPath !== '/start-trial') {
+      console.log('REDIRECT: needsPaymentSetup is true, going to start-trial');
       return <Navigate to="/start-trial" replace />;
     }
 
     // Rule 2: If user's trial has expired OR their subscription is in a state requiring payment (e.g., canceled, past_due)
     // AND they are not already on the /subscription-required or /access-restricted pages
     if (requiresPayment && currentPath !== '/subscription-required' && currentPath !== '/access-restricted') {
+      console.log('REDIRECT: requiresPayment is true, going to subscription-required or access-restricted');
       if (isAdmin) {
         return <Navigate to="/subscription-required" replace />;
       } else {
@@ -66,6 +81,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     }
   }
   
+  console.log('PROTECTED ROUTE: Allowing access to children');
   return <>{children}</>;
 };
 

@@ -308,16 +308,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Calculate needsPaymentSetup
       let needsPaymentSetup = false;
-      if (companyData?.subscription_status === 'trialing' && !companyData?.customerId) {
+      if (companyData?.subscription_status === 'trialing' && !admin?.customer_id) {
         needsPaymentSetup = true;
-        console.log('User is trialing and needs payment setup (customer_id is NULL)');
+        console.log('*** NEEDS PAYMENT SETUP *** User is trialing and needs payment setup (customer_id is NULL)');
       }
       // If already requiresPayment (e.g., trial expired), it should also need payment setup
       if (requiresPayment) {
         needsPaymentSetup = true;
+        console.log('*** NEEDS PAYMENT SETUP *** requiresPayment is true');
       }
 
-      console.log('Calculated needsPaymentSetup:', needsPaymentSetup);
+      console.log('*** FINAL CALCULATION *** needsPaymentSetup:', needsPaymentSetup);
 
       set({
         user: userData,
@@ -330,7 +331,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         requiresPayment,
         needsPaymentSetup
       });
-      console.log('Auth store initialized with:', {
+      console.log('*** AUTH STORE FINAL STATE ***', {
         user: userData?.email,
         company: companyData?.name,
         isAuthenticated: true,
