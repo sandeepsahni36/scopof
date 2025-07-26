@@ -2,7 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## Core Application Functions
+
+### User Management System
+1. **User Role Hierarchy**: The system supports different user types with distinct access levels:
+   - **Owners**: Full administrative access, can manage company settings, billing, and all users
+   - **Admins**: Administrative access to manage properties, templates, and inspections
+   - **Members**: Invited users with limited access and specific role-based permissions
+
+2. **Onboarding Flow**: Structured user onboarding process ensures proper payment setup:
+   - User registers and receives email confirmation
+   - After email confirmation, user is redirected to start-trial page
+   - User must enter card details and complete payment setup
+   - Dashboard access is granted only after successful payment method authorization
+   - This ensures all trial users have valid payment methods for seamless conversion
+
+3. **Trial and Billing System**: Fair and transparent billing model:
+   - 14-day free trial period with full feature access
+   - Payment method is authorized (not charged) during trial signup
+   - Clients are only charged after the 14-day trial period expires
+   - Users can cancel anytime before trial ends to avoid charges
+   - Automatic conversion to paid subscription if not cancelled
+
+### Technical Implementation
+- Row Level Security (RLS) policies enforce role-based access control
+- Comprehensive user session validation and authentication flows
+- Stripe integration with proper trial period handling and webhook processing
+- Automated user profile and company record creation via database triggers
+
 ## [Unreleased]
+
+### Added
+- **Storage Infrastructure**: Created Supabase storage buckets for file management
+  - `inspection-photos` bucket for storing inspection images (5MB limit, public access)
+  - `inspection-reports` bucket for storing PDF reports (50MB limit, authenticated access)
+  - Implemented Row Level Security policies for organization-based file access
+  - Support for JPEG, PNG, WebP images and PDF documents
+  - Proper file organization with inspection-based folder structure
 
 ### Fixed
 - **CRITICAL**: Fixed email confirmation redirect URLs to consistently use production URL (app.scopostay.com)
