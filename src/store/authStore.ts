@@ -11,9 +11,9 @@ type AuthState = {
   isDevMode: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  hasActiveSubscription = false;
-  isTrialExpired = false;
-  requiresPayment = false
+  hasActiveSubscription: boolean;
+  isTrialExpired: boolean;
+  requiresPayment: boolean;
   needsPaymentSetup: boolean;
   initialize: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -230,7 +230,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
 
           // CRITICAL FIX: Completely revised subscription status determination
-          hasActiveSubscription = false;
+  hasActiveSubscription = false;
           isTrialExpired = false;
           requiresPayment = false; // Default to false, only set to true for specific cases
 
@@ -238,7 +238,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (subscription?.subscription_status === 'active') {
             hasActiveSubscription = true;
             console.log('Active subscription found via Stripe');
-          } 
+          }
           // Check for trialing subscription status
           else if (subscription?.subscription_status === 'trialing' || admin.subscription_status === 'trialing') {
             if (trialEnd && now < trialEnd) {
@@ -269,7 +269,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               requiresPayment = true;
               console.log('Trial expired, payment required');
             }
-          } 
+          }
           // Handle past_due status
           else if (admin.subscription_status === 'past_due' || subscription?.subscription_status === 'past_due') {
             requiresPayment = true;
@@ -280,7 +280,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             requiresPayment = true;
             console.log('Subscription canceled, payment required');
           }
-          // NEW USER CASE: If subscription_status is null/undefined or 'not_started', 
+          // NEW USER CASE: If subscription_status is null/undefined or 'not_started',
           // this is a new user who should go to start-trial page
           else if (!admin.subscription_status || admin.subscription_status === 'not_started') {
             // New user - should go to start-trial page, not payment required
