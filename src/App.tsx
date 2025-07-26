@@ -135,9 +135,6 @@ function App() {
     <>
       <Router>
         <Routes>
-          {/* Marketing pages */}
-          <Route path="/" element={<LandingPage />} />
-          
           {/* Debug route */}
           <Route path="/debug/email" element={<TestEmailConfirmation />} />
           
@@ -149,6 +146,7 @@ function App() {
           
           {/* Auth routes */}
           <Route element={<AuthLayout />}>
+            <Route path="/" element={<LoginPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -223,7 +221,7 @@ function App() {
           </Route>
           
           {/* Catch-all redirect */}
-          <Route path="*" element={<Navigate to="/\" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
       
