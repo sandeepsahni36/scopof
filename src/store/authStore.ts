@@ -229,7 +229,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             customer_id: admin.customer_id
           });
 
-                    // CRITICAL FIX: Completely revised subscription status determination
+          // CRITICAL FIX: Completely revised subscription status determination
           hasActiveSubscription = false;
           isTrialExpired = false;
           requiresPayment = false; // Default to false, only set to true for specific cases
