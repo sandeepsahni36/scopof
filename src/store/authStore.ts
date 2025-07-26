@@ -229,38 +229,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             customer_id: admin.customer_id
           });
 
-          // CRITICAL FIX: Completely revised subscription status determination
-  hasActiveSubscription = false;
+                    // CRITICAL FIX: Completely revised subscription status determination
+          hasActiveSubscription = false;
           isTrialExpired = false;
           requiresPayment = false; // Default to false, only set to true for specific cases
 
-          // First, check for active Stripe subscription
+          // Case 1: Active subscription via Stripe
           if (subscription?.subscription_status === 'active') {
             hasActiveSubscription = true;
             console.log('Active subscription found via Stripe');
           }
-          // Check for trialing subscription status
+          // Case 2: User is in a trialing state (either from Stripe or admin table)
           else if (subscription?.subscription_status === 'trialing' || admin.subscription_status === 'trialing') {
             if (trialEnd && now < trialEnd) {
               // Active trial period
-              hasActiveSubscription = true;
-              console.log('Active trial period found');
-            } else {
-              // Trial has ended
-              isTrialExpired = true;
-              requiresPayment = true;
-              console.log('Trial expired, payment required');
-            }
-          }
-          // Check for active trial from admin table (if no active Stripe sub)
-          else if (admin.subscription_status === 'trialing') {
-            if (trialEnd && now < trialEnd) {
-              // CRITICAL: Trial users with payment setup (customer_id) have active subscription access
-              if (admin.customer_id) {
-                hasActiveSubscription = true; // Trial with payment setup - full access
+              // Now, check if payment setup is complete for this trial
+              if (admin.customer_id) { // If customer_id exists, payment setup is done, so it's an active trial
+                hasActiveSubscription = true;
                 console.log('Active trial found with payment setup (customer_id present)');
               } else {
-                hasActiveSubscription = false; // Trial without payment setup - needs to go to start-trial
+                // Trialing but no customer_id means payment setup is NOT done
+                hasActiveSubscription = false; // User needs to complete payment setup
                 console.log('Active trial found but no payment setup (customer_id is null)');
               }
             } else {
@@ -270,26 +259,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               console.log('Trial expired, payment required');
             }
           }
-          // Handle past_due status
-          else if (admin.subscription_status === 'past_due' || subscription?.subscription_status === 'past_due') {
+          // Case 3: Subscription is past_due or canceled (from Stripe or admin table)
+          else if (admin.subscription_status === 'past_due' || subscription?.subscription_status === 'past_due' ||
+                   admin.subscription_status === 'canceled' || subscription?.subscription_status === 'canceled') {
             requiresPayment = true;
-            console.log('Subscription past due, payment required');
+            console.log('Subscription past due or canceled, payment required');
           }
-          // Handle canceled status
-          else if (admin.subscription_status === 'canceled' || subscription?.subscription_status === 'canceled') {
-            requiresPayment = true;
-            console.log('Subscription canceled, payment required');
-          }
-          // NEW USER CASE: If subscription_status is null/undefined or 'not_started',
-          // this is a new user who should go to start-trial page
+          // Case 4: New user (subscription_status is null/undefined or 'not_started')
           else if (!admin.subscription_status || admin.subscription_status === 'not_started') {
             // New user - should go to start-trial page, not payment required
             hasActiveSubscription = false;
             isTrialExpired = false;
             requiresPayment = false; // CRITICAL: Allow access to start-trial page
             console.log('New user detected, should go to start-trial page');
-          } else {
-            // Other statuses (canceled, past_due, etc.) - payment required
+          }
+          // Fallback for any other unexpected status (treat as requiring payment)
+          else {
             requiresPayment = true;
             console.log('Other status, payment required:', admin.subscription_status);
           }
