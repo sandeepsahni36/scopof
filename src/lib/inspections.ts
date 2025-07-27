@@ -1,5 +1,6 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { uploadFile, checkStorageQuota } from './storage';
+import { uploadFile, checkStorageQuota } from './storage';
 import { Inspection, InspectionItem, InspectionType, InspectionStatus } from '../types';
 
 // Mock data for dev mode
@@ -429,6 +430,24 @@ export async function uploadInspectionPhoto(
     );
 
     return fileUrl;
+    // Check storage quota before upload
+    const canUpload = await checkStorageQuota(file.size);
+    if (!canUpload) {
+      throw new Error('Storage quota exceeded. Please upgrade your plan or free up space.');
+    }
+
+    // Convert image to WebP format for optimization
+    const webpFile = await convertToWebP(file);
+    
+    // Upload using new storage system
+    const fileUrl = await uploadFile(
+      webpFile,
+      'photo',
+      inspectionId,
+      itemId
+    );
+
+    return fileUrl;
   } catch (error: any) {
     console.error('Error uploading inspection photo:', error);
     
@@ -441,6 +460,39 @@ export async function uploadInspectionPhoto(
   }
 }
 
+// Helper function to convert image to WebP format
+async function convertToWebP(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const webpFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), {
+              type: 'image/webp',
+            });
+            resolve(webpFile);
+          } else {
+            reject(new Error('Failed to convert image to WebP'));
+          }
+        }, 'image/webp', 0.8); // 80% quality
+      } else {
+        reject(new Error('Failed to get canvas context'));
+      }
+    };
+    
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = URL.createObjectURL(file);
+  });
+}
 // Helper function to convert image to WebP format
 async function convertToWebP(file: File): Promise<File> {
   return new Promise((resolve, reject) => {
