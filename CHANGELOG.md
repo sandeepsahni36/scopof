@@ -33,6 +33,30 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Conditional Trial Logic**: Implemented support for users who want to skip the trial period
+  - Enhanced registration flow to offer "Start 14-Day Free Trial" vs "Create Account (No Trial)" options
+  - Modified Stripe checkout session creation to conditionally set trial period (0 days for no-trial users, 14 days for trial users)
+  - Updated webhook processing to correctly handle subscription status based on user's trial preference
+  - Added `skip_trial` metadata to Stripe sessions for proper tracking and processing
+  - Enhanced `StartTrialPage` to dynamically adapt messaging based on user's trial choice
+  - Updated `createUserProfileAndAdmin` function to set appropriate initial subscription status
+
+### Technical Details
+- Modified `src/lib/stripe.ts` to accept `skipTrial` parameter in `createCheckoutSession` function
+- Enhanced `supabase/functions/stripe-checkout/index.ts` to conditionally set `trial_period_days` based on `skip_trial` flag
+- Updated `supabase/functions/stripe-webhook/index.ts` to process `skip_trial` metadata and set appropriate subscription status
+- Improved `src/pages/auth/RegisterPage.tsx` with radio button selection for registration type
+- Enhanced `src/pages/auth/StartTrialPage.tsx` to adapt UI and messaging based on user's trial preference
+- Updated `src/store/authStore.ts` to handle registration type metadata and localStorage management
+
+### Benefits
+- Users who don't want a trial can now proceed directly to paid plans without receiving trial-related communications
+- No-trial users will have `subscription_status` set to 'active' immediately, excluding them from trial reminder emails
+- Improved user experience with clear choice between trial and direct subscription paths
+- Maintains existing trial functionality while adding flexibility for different user preferences
+- Proper Stripe integration ensures correct billing behavior for both user types
+
+### Added
 - **Email Automation System - Expiring Cards**: Implemented automated email notifications for expiring payment methods
   - Created `send-expiring-card-reminder` Supabase Edge Function for proactive card expiration notifications
   - Added `last_card_expiring_reminder_sent_at` tracking column to `stripe_subscriptions` table to prevent duplicate emails
