@@ -113,6 +113,10 @@ serve(async (req) => {
           throw new Error("Missing customer or admin_id in session metadata");
         }
 
+        // Check if user opted to skip trial
+        const skipTrial = session.metadata?.skip_trial === 'true';
+        console.log("Skip trial flag from session metadata:", skipTrial);
+
         // Get customer data
         const customer = await stripe.customers.retrieve(session.customer as string);
         if (customer.deleted) {
@@ -140,28 +144,44 @@ serve(async (req) => {
             currentPeriodEnd: subscription.current_period_end
           });
           
-          // Calculate trial dates
-          const trialStartedAt = subscription.trial_start 
-            ? new Date(subscription.trial_start * 1000).toISOString()
-            : new Date().toISOString();
-          const trialEndsAt = subscription.trial_end 
-            ? new Date(subscription.trial_end * 1000).toISOString()
-            : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+          // Calculate trial dates and subscription status based on skip_trial flag
+          let subscriptionStatus;
+          let trialStartedAt = null;
+          let trialEndsAt = null;
+          
+          if (skipTrial) {
+            // User opted to skip trial - set as active immediately
+            subscriptionStatus = 'active';
+            trialStartedAt = null;
+            trialEndsAt = null;
+            console.log('User skipped trial - setting subscription as active immediately');
+          } else {
+            // User chose trial - use Stripe trial dates
+            subscriptionStatus = subscription.status; // Should be 'trialing'
+            trialStartedAt = subscription.trial_start 
+              ? new Date(subscription.trial_start * 1000).toISOString()
+              : new Date().toISOString();
+            trialEndsAt = subscription.trial_end 
+              ? new Date(subscription.trial_end * 1000).toISOString()
+              : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+            console.log('User chose trial - setting trial dates');
+          }
           
           console.log("Updating admin record with subscription trial information:", {
             adminId: session.metadata.admin_id,
-            status: subscription.status,
+            status: subscriptionStatus,
             tier: tier,
             trialStarted: trialStartedAt,
             trialEnds: trialEndsAt,
-            subscriptionId: subscription.id
+            subscriptionId: subscription.id,
+            skipTrial: skipTrial
           });
 
           // Update admin record with subscription status
           const { data: adminUpdateData, error: adminUpdateError } = await supabase
             .from("admin")
             .update({
-              subscription_status: subscription.status,
+              subscription_status: subscriptionStatus,
               subscription_tier: tier,
               trial_started_at: trialStartedAt,
               trial_ends_at: trialEndsAt,
@@ -213,22 +233,30 @@ serve(async (req) => {
         } else {
           // Fallback for non-subscription checkouts (legacy support)
           console.log("Processing non-subscription checkout completion (legacy)");
+          
+          // Check if user opted to skip trial (fallback case)
+          const skipTrial = session.metadata?.skip_trial === 'true';
+          const subscriptionStatus = skipTrial ? 'active' : 'trialing';
+          const trialStartedAt = skipTrial ? null : new Date().toISOString();
+          const trialEndsAt = skipTrial ? null : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+          
           console.log("Updating admin record with trial information:", {
             adminId: session.metadata.admin_id,
-            status: "trialing",
+            status: subscriptionStatus,
             tier: tier,
-            trialStarted: new Date().toISOString(),
-            trialEnds: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+            trialStarted: trialStartedAt,
+            trialEnds: trialEndsAt,
+            skipTrial: skipTrial
           });
 
           // Update admin record with subscription status
           const { data: adminUpdateData, error: adminUpdateError } = await supabase
             .from("admin")
             .update({
-              subscription_status: "trialing",
+              subscription_status: subscriptionStatus,
               subscription_tier: tier,
-              trial_started_at: new Date().toISOString(),
-              trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+              trial_started_at: trialStartedAt,
+              trial_ends_at: trialEndsAt,
             })
             .eq("id", session.metadata.admin_id)
             .select();

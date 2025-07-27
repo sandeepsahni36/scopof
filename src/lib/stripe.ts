@@ -1,7 +1,7 @@
 import { supabase, validateUserSession, handleAuthError } from './supabase';
 import { StripePlan, STRIPE_PRODUCTS } from '../stripe-config';
 
-export async function createCheckoutSession(plan: StripePlan) {
+export async function createCheckoutSession(plan: StripePlan, skipTrial: boolean = false) {
   try {
     console.log('Frontend: Starting checkout session creation for plan:', plan);
     
@@ -22,12 +22,14 @@ export async function createCheckoutSession(plan: StripePlan) {
       priceId: product.priceId,
       mode: product.mode,
       name: product.name
+      skipTrial: skipTrial
     });
 
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
       body: {
         price_id: product.priceId,
         mode: product.mode,
+        skip_trial: skipTrial,
         success_url: `${window.location.origin}/dashboard/admin/subscription?success=true`,
         cancel_url: `${window.location.origin}/dashboard/admin/subscription?canceled=true`,
       },

@@ -80,12 +80,13 @@ serve(async (req) => {
 
     // Parse the request body
     console.log("Parsing request body...");
-    const { price_id, mode, success_url, cancel_url } = await req.json();
+    const { price_id, mode, skip_trial, success_url, cancel_url } = await req.json();
 
     if (!price_id || !mode || !success_url || !cancel_url) {
       console.error("Missing required parameters:", {
         hasPriceId: !!price_id,
         hasMode: !!mode,
+        hasSkipTrial: skip_trial !== undefined,
         hasSuccessUrl: !!success_url,
         hasCancelUrl: !!cancel_url
       });
@@ -95,6 +96,7 @@ serve(async (req) => {
     console.log("Creating checkout session with parameters:", {
       priceId: price_id,
       mode: mode,
+      skipTrial: skip_trial,
       successUrl: success_url,
       cancelUrl: cancel_url
     });
@@ -213,6 +215,10 @@ serve(async (req) => {
     const tier = getTierFromPriceId(price_id);
     console.log(`Determined tier from price ID: ${tier}`);
 
+    // Determine trial period based on skip_trial flag
+    const trialPeriodDays = skip_trial ? 0 : 14;
+    console.log(`Trial period days: ${trialPeriodDays} (skip_trial: ${skip_trial})`);
+
     // Create checkout session with subscription trial
     console.log("Creating Stripe checkout session");
     console.log("Checkout session parameters:", {
@@ -224,7 +230,8 @@ serve(async (req) => {
       userId: user.id,
       adminId: adminData.id,
       tier: tier,
-      trialPeriodDays: 14
+      trialPeriodDays: trialPeriodDays,
+      skipTrial: skip_trial
     });
     
     console.log("Calling Stripe API to create checkout session...");
@@ -239,11 +246,12 @@ serve(async (req) => {
       billing_address_collection: "auto",
       payment_method_collection: "always",
       subscription_data: {
-        trial_period_days: 14,
+        trial_period_days: trialPeriodDays,
         metadata: {
           user_id: user.id,
           admin_id: adminData.id,
           tier: tier,
+          skip_trial: skip_trial ? 'true' : 'false',
         },
       },
       line_items: [
@@ -256,10 +264,11 @@ serve(async (req) => {
         user_id: user.id,
         admin_id: adminData.id,
         tier: tier, // Add tier to metadata
+        skip_trial: skip_trial ? 'true' : 'false',
       },
     };
 
-    console.log("Creating subscription checkout session with trial period");
+    console.log(`Creating subscription checkout session with ${trialPeriodDays}-day trial period`);
     const session = await stripe.checkout.sessions.create(sessionParams);
 
     console.log("Checkout session created successfully:", {
