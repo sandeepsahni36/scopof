@@ -1,4 +1,5 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
+import { uploadFile, checkStorageQuota } from './storage';
 import { Inspection, InspectionItem, InspectionType, InspectionStatus } from '../types';
 
 // Mock data for dev mode
@@ -410,29 +411,24 @@ export async function uploadInspectionPhoto(
       return `https://example.com/mock-photo-${Date.now()}.webp`;
     }
 
-    // Convert image to WebP format (client-side conversion)
-    const webpFile = await convertToWebP(file);
-    
-    const fileName = `inspections/${inspectionId}/items/${itemId}/${Date.now()}.webp`;
-    
-    const { data, error } = await supabase.storage
-      .from('inspection-photos')
-      .upload(fileName, webpFile);
-
-    if (error) {
-      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-        await handleAuthError(error);
-        return null;
-      }
-      throw error;
+    // Check storage quota before upload
+    const canUpload = await checkStorageQuota(file.size);
+    if (!canUpload) {
+      throw new Error('Storage quota exceeded. Please upgrade your plan or free up space.');
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('inspection-photos')
-      .getPublicUrl(fileName);
+    // Convert image to WebP format for optimization
+    const webpFile = await convertToWebP(file);
+    
+    // Upload using new storage system
+    const fileUrl = await uploadFile(
+      webpFile,
+      'photo',
+      inspectionId,
+      itemId
+    );
 
-    return publicUrl;
+    return fileUrl;
   } catch (error: any) {
     console.error('Error uploading inspection photo:', error);
     

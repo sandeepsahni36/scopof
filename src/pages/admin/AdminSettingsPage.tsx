@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuthStore } from '../../store/authStore';
 import { getReportServiceTeams, createReportServiceTeam, updateReportServiceTeam, deleteReportServiceTeam, ReportServiceTeam } from '../../lib/reportServiceTeams';
+import StorageUsageIndicator from '../../components/admin/StorageUsageIndicator';
 import { toast } from 'sonner';
 
 type CompanySettingsFormData = {
@@ -468,6 +469,19 @@ const AdminSettingsPage = () => {
         </div>
       </div>
     </div>
+      {/* Storage Usage */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="p-6">
+          <div className="mb-6">
+            <h2 className="text-lg font-medium text-gray-900">Storage Usage</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Monitor your storage consumption and manage your plan.
+            </p>
+          </div>
+          <StorageUsageIndicator showDetails={true} />
+        </div>
+      </div>
+
   );
 };
 
