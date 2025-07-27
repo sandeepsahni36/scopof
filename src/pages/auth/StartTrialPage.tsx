@@ -11,12 +11,16 @@ import { toast } from 'sonner';
 
 const StartTrialPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { hasActiveSubscription, isTrialExpired, requiresPayment } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [selectedTier, setSelectedTier] = useState('professional');
   const [authError, setAuthError] = useState<string | null>(null);
   const [validatingAuth, setValidatingAuth] = useState(true);
 
+  // Check if user came from no-trial registration path
+  const skipTrial = searchParams.get('skipTrial') === 'true' || 
+                   localStorage.getItem('registration_type') === 'no_trial';
   useEffect(() => {
     // Redirect users who already have active paid subscriptions (not trial users)
     if (hasActiveSubscription && company?.subscription_status === 'active') {
