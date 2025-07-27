@@ -173,7 +173,8 @@ export async function createUserProfileAndAdmin(
   user_id: string,
   email: string,
   full_name: string,
-  company_name: string
+  company_name: string,
+  registration_type: string = 'trial'
 ) {
   try {
     // Start a transaction by disabling realtime
@@ -191,6 +192,11 @@ export async function createUserProfileAndAdmin(
       throw profileError;
     }
 
+    // Determine initial subscription status based on registration type
+    const initialSubscriptionStatus = registration_type === 'no_trial' ? 'not_started' : 'trialing';
+    const trialStartedAt = registration_type === 'no_trial' ? null : new Date().toISOString();
+    const trialEndsAt = registration_type === 'no_trial' ? null : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
     // Create admin record
     const { data: adminData, error: adminError } = await supabase
       .from('admin')
@@ -199,9 +205,9 @@ export async function createUserProfileAndAdmin(
         billing_manager_id: user_id,
         company_name,
         subscription_tier: 'starter',
-        subscription_status: 'trialing',
-        trial_started_at: new Date().toISOString(),
-        trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+        subscription_status: initialSubscriptionStatus,
+        trial_started_at: trialStartedAt,
+        trial_ends_at: trialEndsAt
       }])
       .select()
       .single();

@@ -258,7 +258,7 @@ const RegisterPage = () => {
           type="submit"
           fullWidth={true}
           isLoading={loading}
-        >
+            {registrationType === 'trial' ? 'Start Free Trial' : 'Create Account'}
           Start Free Trial
         </Button>
       </form>
