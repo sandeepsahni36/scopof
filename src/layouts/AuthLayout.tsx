@@ -7,10 +7,10 @@ const AuthLayout = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <Link to="/" className="flex items-center">
+          <a href="https://scopostay.com" className="flex items-center">
             <Building2 className="h-10 w-10 text-primary-600" />
             <span className="ml-2 text-2xl font-bold text-gray-900">scopoStay</span>
-          </Link>
+          </a>
         </div>
       </div>
 
@@ -21,7 +21,7 @@ const AuthLayout = () => {
         
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            &copy; {new Date().getFullYear()} scopoStay. All rights reserved.
+            &copy; scopoStay. All rights reserved.
           </p>
         </div>
       </div>
