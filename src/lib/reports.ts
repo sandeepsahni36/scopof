@@ -1,6 +1,5 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { uploadFile, checkStorageQuota } from './storage';
-import { uploadFile, checkStorageQuota } from './storage';
 import jsPDF from 'jspdf';
 
 export async function generateInspectionReport(reportData: {
@@ -29,31 +28,6 @@ export async function generateInspectionReport(reportData: {
     // Generate PDF report
     const pdfBlob = await createPDFReport(reportData);
     
-    // Check storage quota before upload
-    const canUpload = await checkStorageQuota(pdfBlob.size);
-    if (!canUpload) {
-      throw new Error('Storage quota exceeded. Please upgrade your plan or free up space.');
-    }
-
-    // Create File object from blob
-    const reportFileName = `inspection_report_${reportData.inspection.id}_${Date.now()}.pdf`;
-    const reportFile = new File([pdfBlob], reportFileName, { type: 'application/pdf' });
-    
-    // Upload using new storage system
-    const reportUrl = await uploadFile(
-      reportFile,
-      'report',
-      reportData.inspection.id
-    );
-
-    if (!reportUrl) {
-      throw new Error('Failed to upload report to storage');
-    }
-
-    // Save report record to database
-    await saveReportRecord(reportData, reportUrl);
-
-    return reportUrl;
     // Check storage quota before upload
     const canUpload = await checkStorageQuota(pdfBlob.size);
     if (!canUpload) {

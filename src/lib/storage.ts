@@ -1,6 +1,26 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { toast } from 'sonner';
 
+// AWS SDK v3 imports
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+// Storage configuration
+const STORAGE_CONFIG = {
+  bucket: import.meta.env.VITE_AWS_S3_BUCKET || 'scopostay-storage-prod',
+  region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
+  cdnDomain: import.meta.env.VITE_CDN_DOMAIN || 'https://cdn.scopostay.com',
+};
+
+// Initialize S3 client
+const s3Client = new S3Client({
+  region: STORAGE_CONFIG.region,
+  credentials: {
+    accessKeyId: import.meta.env.VITE_AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: import.meta.env.VITE_AWS_SECRET_ACCESS_KEY || '',
+  },
+});
+
 export interface StorageUsage {
   totalBytes: number;
   photosBytes: number;
@@ -139,7 +159,7 @@ export async function getStorageUsage(): Promise<StorageUsage | null> {
   }
 }
 
-// Upload file using Supabase storage
+// Upload file to S3 with progress tracking
 export async function uploadFile(
   file: File,
   fileType: 'photo' | 'report',
@@ -181,58 +201,74 @@ export async function uploadFile(
       throw new Error('Admin account not found');
     }
 
-    // Generate unique file path
+    // Generate unique file key
     const timestamp = Date.now();
     const fileExtension = file.name.split('.').pop();
-    const filePath = `${fileType}s/${adminData.id}/${inspectionId || 'general'}/${timestamp}.${fileExtension}`;
-
-    // Determine bucket based on file type
-    const bucketName = fileType === 'photo' ? 'inspection-photos' : 'inspection-reports';
-
-    // Upload to Supabase storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from(bucketName)
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from(bucketName)
-      .getPublicUrl(filePath);
+    const fileKey = `${fileType}s/${adminData.id}/${inspectionId || 'general'}/${timestamp}.${fileExtension}`;
 
     // Create file metadata record
-    const { error: metadataError } = await supabase
+    const { data: fileMetadata, error: metadataError } = await supabase
       .from('file_metadata')
       .insert({
         admin_id: adminData.id,
-        file_key: filePath,
+        file_key: fileKey,
         file_name: file.name,
         file_type: fileType,
         file_size: file.size,
         mime_type: file.type,
         inspection_id: inspectionId,
         inspection_item_id: inspectionItemId,
-        s3_bucket: bucketName,
-        s3_region: 'us-east-1',
-        upload_status: 'completed',
-      });
+        s3_bucket: STORAGE_CONFIG.bucket,
+        s3_region: STORAGE_CONFIG.region,
+        upload_status: 'pending',
+      })
+      .select()
+      .single();
 
     if (metadataError) {
-      console.error('Error saving file metadata:', metadataError);
-      // Continue despite metadata error
+      throw metadataError;
     }
 
-    if (onProgress) {
-      onProgress(100);
-    }
+    try {
+      // Upload to S3
+      const uploadCommand = new PutObjectCommand({
+        Bucket: STORAGE_CONFIG.bucket,
+        Key: fileKey,
+        Body: file,
+        ContentType: file.type,
+        Metadata: {
+          'admin-id': adminData.id,
+          'file-type': fileType,
+          'inspection-id': inspectionId || '',
+          'uploaded-by': user.id,
+        },
+      });
 
-    return urlData.publicUrl;
+      await s3Client.send(uploadCommand);
+
+      // Update metadata to completed
+      await supabase
+        .from('file_metadata')
+        .update({ upload_status: 'completed' })
+        .eq('id', fileMetadata.id);
+
+      // Return CDN URL
+      const cdnUrl = `${STORAGE_CONFIG.cdnDomain}/${fileKey}`;
+      
+      if (onProgress) {
+        onProgress(100);
+      }
+
+      return cdnUrl;
+    } catch (uploadError) {
+      // Mark upload as failed
+      await supabase
+        .from('file_metadata')
+        .update({ upload_status: 'failed' })
+        .eq('id', fileMetadata.id);
+
+      throw uploadError;
+    }
   } catch (error: any) {
     console.error('Error uploading file:', error);
     if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
@@ -242,7 +278,7 @@ export async function uploadFile(
   }
 }
 
-// Generate signed URL for secure downloads (using Supabase for now)
+// Generate signed URL for secure downloads
 export async function getSignedDownloadUrl(fileKey: string, expiresIn: number = 3600): Promise<string | null> {
   try {
     const user = await validateUserSession();
@@ -258,7 +294,7 @@ export async function getSignedDownloadUrl(fileKey: string, expiresIn: number = 
     // Verify user has access to this file
     const { data: fileData, error: fileError } = await supabase
       .from('file_metadata')
-      .select('admin_id, s3_bucket')
+      .select('admin_id')
       .eq('file_key', fileKey)
       .single();
 
@@ -266,16 +302,14 @@ export async function getSignedDownloadUrl(fileKey: string, expiresIn: number = 
       throw new Error('File not found or access denied');
     }
 
-    // Generate signed URL using Supabase
-    const { data, error } = await supabase.storage
-      .from(fileData.s3_bucket)
-      .createSignedUrl(fileKey, expiresIn);
+    // Generate signed URL
+    const command = new GetObjectCommand({
+      Bucket: STORAGE_CONFIG.bucket,
+      Key: fileKey,
+    });
 
-    if (error) {
-      throw error;
-    }
-
-    return data.signedUrl;
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
+    return signedUrl;
   } catch (error: any) {
     console.error('Error generating signed URL:', error);
     if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
@@ -301,7 +335,7 @@ export async function deleteFile(fileKey: string): Promise<boolean> {
     // Verify user has access to this file
     const { data: fileData, error: fileError } = await supabase
       .from('file_metadata')
-      .select('admin_id, s3_bucket')
+      .select('admin_id')
       .eq('file_key', fileKey)
       .single();
 
@@ -309,14 +343,13 @@ export async function deleteFile(fileKey: string): Promise<boolean> {
       throw new Error('File not found or access denied');
     }
 
-    // Delete from Supabase storage
-    const { error: deleteError } = await supabase.storage
-      .from(fileData.s3_bucket)
-      .remove([fileKey]);
+    // Delete from S3
+    const deleteCommand = new DeleteObjectCommand({
+      Bucket: STORAGE_CONFIG.bucket,
+      Key: fileKey,
+    });
 
-    if (deleteError) {
-      throw deleteError;
-    }
+    await s3Client.send(deleteCommand);
 
     // Remove metadata record
     await supabase
@@ -386,6 +419,44 @@ export async function getFileMetadata(fileKey: string): Promise<FileMetadata | n
       await handleAuthError(error);
     }
     return null;
+  }
+}
+
+// Batch file operations for migration
+export async function migrateFileFromSupabase(
+  supabaseUrl: string,
+  targetFileKey: string,
+  fileType: 'photo' | 'report',
+  inspectionId?: string
+): Promise<boolean> {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    if (devModeEnabled()) {
+      console.log('Dev mode: Mock file migration');
+      return true;
+    }
+
+    // Download from Supabase
+    const response = await fetch(supabaseUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download file: ${response.statusText}`);
+    }
+
+    const fileBlob = await response.blob();
+    const fileName = targetFileKey.split('/').pop() || 'migrated-file';
+    const file = new File([fileBlob], fileName, { type: fileBlob.type });
+
+    // Upload to new storage
+    const newUrl = await uploadFile(file, fileType, inspectionId);
+    
+    return !!newUrl;
+  } catch (error: any) {
+    console.error('Error migrating file:', error);
+    return false;
   }
 }
 
