@@ -27,10 +27,11 @@ const RegisterPage = () => {
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<RegisterFormInputs>();
+  } = useForm<RegisterFormInputs>({
     defaultValues: {
       registration_type: 'trial',
     },
+  });
   
   const password = watch('password');
   const registrationType = watch('registration_type');
@@ -258,8 +259,8 @@ const RegisterPage = () => {
           type="submit"
           fullWidth={true}
           isLoading={loading}
-            {registrationType === 'trial' ? 'Start Free Trial' : 'Create Account'}
-          Start Free Trial
+        >
+          {registrationType === 'trial' ? 'Start Free Trial' : 'Create Account'}
         </Button>
       </form>
       
