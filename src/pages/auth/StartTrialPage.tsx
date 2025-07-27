@@ -11,16 +11,12 @@ import { toast } from 'sonner';
 
 const StartTrialPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { hasActiveSubscription, isTrialExpired, requiresPayment } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [selectedTier, setSelectedTier] = useState('professional');
   const [authError, setAuthError] = useState<string | null>(null);
   const [validatingAuth, setValidatingAuth] = useState(true);
 
-  // Check if user came from no-trial registration path
-  const skipTrial = searchParams.get('skipTrial') === 'true' || 
-                   localStorage.getItem('registration_type') === 'no_trial';
   useEffect(() => {
     // Redirect users who already have active paid subscriptions (not trial users)
     if (hasActiveSubscription && company?.subscription_status === 'active') {
@@ -235,7 +231,7 @@ const StartTrialPage = () => {
               rightIcon={!loading ? <ArrowRight size={20} /> : undefined}
               className="bg-primary-600 hover:bg-primary-700 text-lg py-4 mb-6"
             >
-              Start 14-Day Free Trial
+              {skipTrial ? 'Choose Plan & Get Started' : 'Start 14-Day Free Trial'}
             </Button>
             
             <div className="text-center mb-6">
@@ -252,20 +248,35 @@ const StartTrialPage = () => {
               <h4 className="text-lg font-semibold text-gray-900 mb-4">
                 What happens next?
               </h4>
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <h5 className="text-sm font-semibold text-blue-800 mb-2">🎉 14-Day Free Trial</h5>
-                <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Start using all features immediately</li>
-                  <li>• No charges during the 14-day trial period</li>
-                  <li>• Payment method secured for seamless transition</li>
-                  <li>• Cancel anytime before trial ends</li>
-                  <li>• Automatic billing starts after trial expires</li>
-                </ul>
-              </div>
+              {skipTrial ? (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <h5 className="text-sm font-semibold text-green-800 mb-2">💳 Direct Subscription</h5>
+                  <ul className="text-sm text-green-700 space-y-1">
+                    <li>• Start using all features immediately</li>
+                    <li>• Billing begins immediately after setup</li>
+                    <li>• Full access to your selected plan</li>
+                    <li>• Cancel anytime from your account settings</li>
+                    <li>• No trial period - direct access to premium features</li>
+                  </ul>
+                </div>
+              ) : (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h5 className="text-sm font-semibold text-blue-800 mb-2">🎉 14-Day Free Trial</h5>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>• Start using all features immediately</li>
+                    <li>• No charges during the 14-day trial period</li>
+                    <li>• Payment method secured for seamless transition</li>
+                    <li>• Cancel anytime before trial ends</li>
+                    <li>• Automatic billing starts after trial expires</li>
+                  </ul>
+                </div>
+              )}
               <ul className="space-y-3 text-gray-600">
                 <li className="flex items-start">
                   <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
-                  <span className="ml-3">Start your 14-day free trial immediately</span>
+                  <span className="ml-3">
+                    {skipTrial ? 'Start using your selected plan immediately' : 'Start your 14-day free trial immediately'}
+                  </span>
                 </li>
                 <li className="flex items-start">
                   <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
@@ -275,15 +286,21 @@ const StartTrialPage = () => {
                 </li>
                 <li className="flex items-start">
                   <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
-                  <span className="ml-3">No charges during trial period</span>
+                  <span className="ml-3">
+                    {skipTrial ? 'Billing starts immediately' : 'No charges during trial period'}
+                  </span>
                 </li>
                 <li className="flex items-start">
                   <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
-                  <span className="ml-3">Cancel anytime before trial ends</span>
+                  <span className="ml-3">
+                    {skipTrial ? 'Cancel anytime from account settings' : 'Cancel anytime before trial ends'}
+                  </span>
                 </li>
                 <li className="flex items-start">
                   <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
-                  <span className="ml-3">Automatic billing starts after trial expires</span>
+                  <span className="ml-3">
+                    {skipTrial ? 'Immediate access to premium support' : 'Automatic billing starts after trial expires'}
+                  </span>
                 </li>
               </ul>
             </div>

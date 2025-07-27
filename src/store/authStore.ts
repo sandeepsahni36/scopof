@@ -110,6 +110,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
       }
 
+      // Check if user has registration type in metadata (for new users)
+      const registrationType = user.user_metadata?.registration_type;
+      console.log("User registration type from metadata:", registrationType);
+
+      // Store registration type in localStorage for StartTrialPage to use
+      if (registrationType === 'no_trial') {
+        localStorage.setItem('registration_type', 'no_trial');
+      }
+
       // Check if user has admin access and subscription status
       console.log("Checking admin status...");
       const { data: adminStatus, error: adminStatusError } = await supabase
