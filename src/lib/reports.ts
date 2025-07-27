@@ -1,5 +1,4 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
-import { uploadFile, checkStorageQuota } from './storage';
 import jsPDF from 'jspdf';
 
 export async function generateInspectionReport(reportData: {
@@ -28,31 +27,30 @@ export async function generateInspectionReport(reportData: {
     // Generate PDF report
     const pdfBlob = await createPDFReport(reportData);
     
-    // Check storage quota before upload
-    const canUpload = await checkStorageQuota(pdfBlob.size);
-    if (!canUpload) {
-      throw new Error('Storage quota exceeded. Please upgrade your plan or free up space.');
-    }
-
-    // Create File object from blob
-    const reportFileName = `inspection_report_${reportData.inspection.id}_${Date.now()}.pdf`;
-    const reportFile = new File([pdfBlob], reportFileName, { type: 'application/pdf' });
+    // Upload PDF to storage
+    const fileName = `reports/${reportData.inspection.id}/${Date.now()}.pdf`;
     
-    // Upload using new storage system
-    const reportUrl = await uploadFile(
-      reportFile,
-      'report',
-      reportData.inspection.id
-    );
+    const { data, error } = await supabase.storage
+      .from('inspection-reports')
+      .upload(fileName, pdfBlob);
 
-    if (!reportUrl) {
-      throw new Error('Failed to upload report to storage');
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return null;
+      }
+      throw error;
     }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('inspection-reports')
+      .getPublicUrl(fileName);
 
     // Save report record to database
-    await saveReportRecord(reportData, reportUrl);
+    await saveReportRecord(reportData, publicUrl);
 
-    return reportUrl;
+    return publicUrl;
   } catch (error: any) {
     console.error('Error generating inspection report:', error);
     
