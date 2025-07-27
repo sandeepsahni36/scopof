@@ -468,7 +468,7 @@ const AdminSettingsPage = () => {
           </div>
         </div>
       </div>
-    </div>
+
       {/* Storage Usage */}
       <div className="bg-white shadow rounded-lg">
         <div className="p-6">
@@ -482,6 +482,28 @@ const AdminSettingsPage = () => {
         </div>
       </div>
 
+      {/* Danger Zone */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="p-6">
+          <h2 className="text-lg font-medium text-gray-900">Danger Zone</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Careful, these actions cannot be undone.
+          </p>
+          
+          <div className="mt-6">
+            <Button
+              variant="danger"
+              onClick={() => {
+                // Handle account deletion
+                toast.error('This feature is not implemented yet');
+              }}
+            >
+              Delete Company Account
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

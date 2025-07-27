@@ -1,13 +1,6 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { toast } from 'sonner';
 
-// Storage configuration
-const STORAGE_CONFIG = {
-  bucket: import.meta.env.VITE_AWS_S3_BUCKET || 'scopostay-storage-prod',
-  region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
-  cdnDomain: import.meta.env.VITE_CDN_DOMAIN || 'https://cdn.scopostay.com',
-};
-
 export interface StorageUsage {
   totalBytes: number;
   photosBytes: number;
@@ -146,7 +139,7 @@ export async function getStorageUsage(): Promise<StorageUsage | null> {
   }
 }
 
-// Upload file using Supabase storage for now (can be replaced with AWS S3 later)
+// Upload file using Supabase storage
 export async function uploadFile(
   file: File,
   fileType: 'photo' | 'report',
@@ -393,44 +386,6 @@ export async function getFileMetadata(fileKey: string): Promise<FileMetadata | n
       await handleAuthError(error);
     }
     return null;
-  }
-}
-
-// Batch file operations for migration
-export async function migrateFileFromSupabase(
-  supabaseUrl: string,
-  targetFileKey: string,
-  fileType: 'photo' | 'report',
-  inspectionId?: string
-): Promise<boolean> {
-  try {
-    const user = await validateUserSession();
-    if (!user) {
-      throw new Error('User session is invalid. Please sign in again.');
-    }
-
-    if (devModeEnabled()) {
-      console.log('Dev mode: Mock file migration');
-      return true;
-    }
-
-    // Download from Supabase
-    const response = await fetch(supabaseUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to download file: ${response.statusText}`);
-    }
-
-    const fileBlob = await response.blob();
-    const fileName = targetFileKey.split('/').pop() || 'migrated-file';
-    const file = new File([fileBlob], fileName, { type: fileBlob.type });
-
-    // Upload to new storage
-    const newUrl = await uploadFile(file, fileType, inspectionId);
-    
-    return !!newUrl;
-  } catch (error: any) {
-    console.error('Error migrating file:', error);
-    return false;
   }
 }
 
