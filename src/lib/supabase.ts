@@ -9,17 +9,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Get the current site URL for redirects
 const getSiteUrl = () => {
-  // Always use the production URL for email redirects to ensure consistency
-  const productionUrl = 'https://app.scopostay.com';
-  
-  // In development, we still want emails to redirect to production
-  // but we can use local URL for other purposes
-  if (import.meta.env.DEV && !window.location.href.includes('scopostay.com')) {
-    // For email redirects, always use production URL
-    return productionUrl;
+  // In development, use the current window's origin.
+  // This ensures that PKCE flow works correctly during local development.
+  if (import.meta.env.DEV) {
+    return window.location.origin;
   }
-  
-  return productionUrl;
+  // For production builds, use the hardcoded production URL.
+  // In production, window.location.origin will already be 'https://app.scopostay.com'.
+  return 'https://app.scopostay.com';
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
