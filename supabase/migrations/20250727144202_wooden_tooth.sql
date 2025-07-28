@@ -1,22 +1,28 @@
 /*
-  # Storage Tracking and Management Schema
+  # Storage Tracking and Management Schema - Clean Migration
 
-  1. New Tables
-    - `storage_usage` - Track storage consumption per admin/company
-    - `file_metadata` - Store file information and metadata
-    - `storage_quotas` - Define tier-based storage limits
-
-  2. Security
-    - Enable RLS on all new tables
-    - Add policies for admin access control
-
-  3. Functions
-    - Storage calculation functions
-    - Quota enforcement triggers
+  1. Drop existing tables first
+  2. Create new tables with proper structure
+  3. Enable RLS and add policies
+  4. Create functions and triggers
 */
 
--- Storage usage tracking table
-CREATE TABLE IF NOT EXISTS storage_usage (
+-- Drop existing tables first (CASCADE removes dependent objects)
+DROP TABLE IF EXISTS file_metadata CASCADE;
+DROP TABLE IF EXISTS storage_usage CASCADE; 
+DROP TABLE IF EXISTS storage_quotas CASCADE;
+
+-- Storage quotas by tier
+CREATE TABLE storage_quotas (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tier text NOT NULL UNIQUE,
+  quota_bytes bigint NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Storage usage tracking table  
+CREATE TABLE storage_usage (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   admin_id uuid NOT NULL REFERENCES admin(id) ON DELETE CASCADE,
   total_bytes bigint DEFAULT 0,
@@ -29,7 +35,7 @@ CREATE TABLE IF NOT EXISTS storage_usage (
 );
 
 -- File metadata tracking
-CREATE TABLE IF NOT EXISTS file_metadata (
+CREATE TABLE file_metadata (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   admin_id uuid NOT NULL REFERENCES admin(id) ON DELETE CASCADE,
   file_key text NOT NULL, -- S3 object key
@@ -46,15 +52,6 @@ CREATE TABLE IF NOT EXISTS file_metadata (
   updated_at timestamptz DEFAULT now()
 );
 
--- Storage quotas by tier
-CREATE TABLE IF NOT EXISTS storage_quotas (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tier text NOT NULL UNIQUE,
-  quota_bytes bigint NOT NULL,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
 -- Insert default quotas
 INSERT INTO storage_quotas (tier, quota_bytes) VALUES
   ('starter', 2147483648),    -- 2GB
@@ -63,11 +60,11 @@ INSERT INTO storage_quotas (tier, quota_bytes) VALUES
 ON CONFLICT (tier) DO UPDATE SET quota_bytes = EXCLUDED.quota_bytes;
 
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_storage_usage_admin_id ON storage_usage(admin_id);
-CREATE INDEX IF NOT EXISTS idx_file_metadata_admin_id ON file_metadata(admin_id);
-CREATE INDEX IF NOT EXISTS idx_file_metadata_inspection_id ON file_metadata(inspection_id);
-CREATE INDEX IF NOT EXISTS idx_file_metadata_file_type ON file_metadata(file_type);
-CREATE INDEX IF NOT EXISTS idx_file_metadata_upload_status ON file_metadata(upload_status);
+CREATE INDEX idx_storage_usage_admin_id ON storage_usage(admin_id);
+CREATE INDEX idx_file_metadata_admin_id ON file_metadata(admin_id);
+CREATE INDEX idx_file_metadata_inspection_id ON file_metadata(inspection_id);
+CREATE INDEX idx_file_metadata_file_type ON file_metadata(file_type);
+CREATE INDEX idx_file_metadata_upload_status ON file_metadata(upload_status);
 
 -- Enable RLS
 ALTER TABLE storage_usage ENABLE ROW LEVEL SECURITY;
