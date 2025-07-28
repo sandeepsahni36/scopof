@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 const EmailConfirmationPage = () => {
   const location = useLocation();
   const email = location.state?.email;
+  const registrationType = location.state?.registrationType || 'trial';
   const [resending, setResending] = React.useState(false);
 
   const handleResendEmail = async () => {
