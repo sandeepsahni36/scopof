@@ -1,14 +1,11 @@
 /*
   # Create Storage Buckets for scopoStay
-
   1. Storage Buckets
     - `inspection-photos` - For storing inspection images uploaded during property inspections
     - `inspection-reports` - For storing generated PDF inspection reports
-
   2. Security
     - Enable RLS on storage buckets
     - Add policies for authenticated users to upload and access their organization's files
-
   3. Configuration
     - Set appropriate file size limits and allowed file types
     - Configure public access for photos and restricted access for reports
@@ -34,8 +31,8 @@ VALUES (
   ARRAY['application/pdf']
 ) ON CONFLICT (id) DO NOTHING;
 
--- Enable RLS on storage objects
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- RLS is already enabled on storage.objects by default in Supabase
+-- No need to explicitly enable it
 
 -- Policy for inspection photos - authenticated users can upload and view photos for their organization
 CREATE POLICY "inspection_photos_upload" ON storage.objects
