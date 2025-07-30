@@ -34,6 +34,13 @@ VALUES (
 -- RLS is already enabled on storage.objects by default in Supabase
 -- No need to explicitly enable it
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "inspection_photos_upload" ON storage.objects;
+DROP POLICY IF EXISTS "inspection_photos_select" ON storage.objects;
+DROP POLICY IF EXISTS "inspection_reports_upload" ON storage.objects;
+DROP POLICY IF EXISTS "inspection_reports_select" ON storage.objects;
+DROP POLICY IF EXISTS "inspection_photos_public_select" ON storage.objects;
+
 -- Policy for inspection photos - authenticated users can upload and view photos for their organization
 CREATE POLICY "inspection_photos_upload" ON storage.objects
   FOR INSERT TO authenticated
