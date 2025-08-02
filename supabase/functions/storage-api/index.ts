@@ -76,7 +76,11 @@ serve(async (req) => {
 
     // 4. Authenticate User and Fetch Context (admin_id, tier, usage, quota)
     const authHeader = req.headers.get("Authorization");
-    console.log("Received Authorization header:", authHeader ? "Present" : "Missing");
+    console.log("Auth: Received Authorization header:", authHeader ? "Present" : "Missing");
+    
+    if (authHeader) {
+      console.log("Auth: Header starts with:", authHeader.substring(0, 20) + "...");
+    }
     
     if (!authHeader) {
       console.warn("Auth: No authorization header provided");
@@ -92,15 +96,48 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    console.log("Extracted token length:", token.length);
-    console.log("Token starts with:", token.substring(0, 20) + "...");
+    console.log("Auth: Extracted token length:", token.length);
+    console.log("Auth: Token starts with:", token.substring(0, 20) + "...");
+    
+    // Additional token validation
+    if (!token || token.length < 10) {
+      console.error("Auth: Token appears to be invalid or too short");
+      return new Response(JSON.stringify({
+        error: "Unauthorized: Invalid token format"
+      }), {
+        status: 401,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+    
+    // Try to decode the JWT to see what claims are present (for debugging)
+    try {
+      const tokenParts = token.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(atob(tokenParts[1]));
+        console.log("Auth: JWT payload claims:", Object.keys(payload));
+        console.log("Auth: Has 'sub' claim:", !!payload.sub);
+        console.log("Auth: Has 'aud' claim:", !!payload.aud);
+        console.log("Auth: Has 'exp' claim:", !!payload.exp);
+        console.log("Auth: Token type/aud:", payload.aud);
+      }
+    } catch (decodeError) {
+      console.error("Auth: Failed to decode JWT for debugging:", decodeError.message);
+    }
 
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !user) {
-      console.error("Auth: Invalid user token:", userError?.message);
+      console.error("Auth: Invalid user token:", {
+        error: userError?.message,
+        code: userError?.code,
+        status: userError?.status
+      });
       return new Response(JSON.stringify({
-        error: "Unauthorized: Invalid token"
+        error: `Unauthorized: ${userError?.message || 'Invalid token'}`
       }), {
         status: 401,
         headers: {
