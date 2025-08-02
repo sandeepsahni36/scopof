@@ -168,7 +168,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const isAdmin = adminStatus?.is_admin || false;
-      console.log("User is admin:", isAdmin);
+      
+      // Fix isAdmin calculation - check for owner or admin role
+      const isAdminRole = adminStatus?.role === 'owner' || adminStatus?.role === 'admin';
+      console.log("User is admin:", isAdminRole, "Role:", adminStatus?.role);
 
       // Transform data to match our types
       const userData: User = {
@@ -176,7 +179,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email: user.email!,
         firstName: profile?.full_name?.split(' ')[0],
         lastName: profile?.full_name?.split(' ')[1],
-        role: isAdmin ? 'admin' : 'user',
+        role: isAdminRole ? 'admin' : 'user',
         createdAt: profile?.created_at || user.created_at,
       };
 
@@ -203,7 +206,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             details: adminError.details,
             hint: adminError.hint
           });
-        } else if (admin) {
+        } else {
           console.log("Admin data fetched:", { 
             id: admin.id,
             companyName: admin.company_name,
@@ -353,6 +356,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const admin_subscription_status = admin.subscription_status;
           const stripe_subscription_status = subscription?.status;
 
+          
           if (admin_subscription_status === 'trialing') {
             if (trialEnd && now < trialEnd) {
               if (!admin.customer_id || admin.customer_id === '') { // No customer_id means payment setup needed
@@ -385,7 +389,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             hasActiveSubscription = false;
             needsPaymentSetup = true;
             requiresPayment = false; // Not requiring payment yet, but needs setup
-            console.log('DEBUG: Default case - needs payment setup (e.g., not_started).');
+            console.log('DEBUG: Default case - needs payment setup. Status:', admin_subscription_status);
           }
           // --- END REVISED LOGIC FOR SUBSCRIPTION STATUS ---
 
@@ -397,21 +401,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             customer_id: admin.customer_id,
             subscription_status: admin.subscription_status
           });
-        } else {
-          // If no admin data, this is likely a new user whose admin record hasn't been created yet
-          hasActiveSubscription = false;
-          isTrialExpired = false;
-          requiresPayment = false;
-          needsPaymentSetup = true;
-          console.log('DEBUG: No admin data found - new user needs to go to start-trial.');
         }
       } else {
-        // If no admin status, this is likely a new user
+        // If user is not admin (member role), set appropriate flags
         hasActiveSubscription = false;
         isTrialExpired = false;
         requiresPayment = false;
         needsPaymentSetup = true;
-        console.log('DEBUG: No admin status found - new user needs to go to start-trial.');
+        console.log('DEBUG: User is not admin (member role) - limited access.');
       }
 
       // Final override for dev mode (should be false now)
@@ -427,7 +424,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         company: companyData,
         loading: false,
         isAuthenticated: true,
-        isAdmin,
+        isAdmin: isAdminRole,
         hasActiveSubscription,
         isTrialExpired,
         requiresPayment,
@@ -437,7 +434,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: userData?.email,
         company: companyData?.name,
         isAuthenticated: true,
-        isAdmin,
+        isAdmin: isAdminRole,
         hasActiveSubscription,
         isTrialExpired,
         requiresPayment,
