@@ -89,6 +89,16 @@ const AuthCallbackPage = () => {
             return;
           }
           
+          // Check for code verifier in localStorage before attempting exchange
+          const storedCodeVerifier = localStorage.getItem('supabase.auth.code_verifier');
+          addDebugInfo(`Code verifier from localStorage before exchange: ${storedCodeVerifier ? 'Present' : 'Missing'}`);
+          
+          if (!storedCodeVerifier) {
+            addDebugInfo('PKCE code verifier is missing from localStorage. This is likely the root cause.');
+            setError('Authentication failed: The confirmation link has expired or the session state was lost. Please try signing up again or request a new confirmation email.');
+            return;
+          }
+          
           try {
             const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
             
