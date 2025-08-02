@@ -58,19 +58,19 @@ serve(async (req) => {
     });
 
     // 3. Initialize MinIO Client with proper URL parsing
-    const url = new URL(minioEndpoint);
+    const minioUrl = new URL(minioEndpoint);
     const minioClient = new MinioClient({
-      endPoint: url.hostname,
-      port: parseInt(url.port) || (url.protocol === 'https:' ? 443 : 80),
-      useSSL: url.protocol === 'https:',
+      endPoint: minioUrl.hostname,
+      port: parseInt(minioUrl.port) || (minioUrl.protocol === 'https:' ? 443 : 80),
+      useSSL: minioUrl.protocol === 'https:',
       accessKey: minioAccessKey,
       secretKey: minioSecretKey
     });
 
     console.log("MinIO client initialized:", {
-      endPoint: url.hostname,
-      port: parseInt(url.port) || (url.protocol === 'https:' ? 443 : 80),
-      useSSL: url.protocol === 'https:',
+      endPoint: minioUrl.hostname,
+      port: parseInt(minioUrl.port) || (minioUrl.protocol === 'https:' ? 443 : 80),
+      useSSL: minioUrl.protocol === 'https:',
       bucketName: minioBucketName
     });
 
