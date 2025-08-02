@@ -27,8 +27,8 @@ const SubscriptionPage = () => {
       toast.success('Payment successful! Your subscription has been updated.');
       // Refresh auth state to get updated subscription info
       initialize().then(() => {
-        // After initializing auth state, redirect to dashboard
-        navigate('/dashboard');
+        // After initializing auth state, stay on subscription page to show updated status
+        console.log('Payment successful - auth state refreshed');
       });
     } else if (canceled === 'true') {
       toast.error('Payment canceled. Please try again if you want to upgrade your subscription.');

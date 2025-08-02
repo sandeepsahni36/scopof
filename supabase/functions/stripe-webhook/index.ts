@@ -619,9 +619,7 @@ Deno.serve(async (req) => {
           paymentMethodLast4
         }
         )
-        const { error: subscriptionError } = await supabase
-
-        // Update subscription record using upsert to handle potential duplicates
+        // Update subscription record using insert/update pattern to handle potential duplicates
         const { error: subscriptionError } = await supabase
           .from("stripe_subscriptions")
           .insert({
@@ -649,8 +647,10 @@ Deno.serve(async (req) => {
                 current_period_end: subscription.current_period_end,
                 cancel_at_period_end: subscription.cancel_at_period_end,
                 status: subscription.status,
+                payment_method_brand: paymentMethodBrand,
+                payment_method_last4: paymentMethodLast4
               })
-              .eq("customer_id", session.customer as string);
+              .eq("customer_id", subscription.customer as string);
             
             if (updateError) {
               console.error("Error updating subscription record:", updateError);
@@ -675,32 +675,14 @@ Deno.serve(async (req) => {
           .from("admin")
           .update({
             subscription_status: subscription.status,
+            subscription_tier: tier,
           });
+          .eq("id", adminData.id)
+          .select();
 
         if (adminUpdateError) {
-          // If it's a duplicate key error, try to update instead
-          if (subscriptionError.code === '23505') {
-            console.log("Subscription record exists, updating instead");
-            const { error: updateError } = await supabase
-              .from("stripe_subscriptions")
-              .update({
-                subscription_id: subscription.id,
-                price_id: subscription.items.data[0]?.price.id,
-                current_period_start: subscription.current_period_start,
-                current_period_end: subscription.current_period_end,
-                cancel_at_period_end: subscription.cancel_at_period_end,
-                status: subscription.status,
-              })
-              .eq("customer_id", subscription.customer as string);
-            
-            if (updateError) {
-              console.error("Error updating subscription record:", updateError);
-              throw updateError;
-            }
-          } else {
-            console.error("Error creating subscription record:", subscriptionError);
-            throw subscriptionError;
-          }
+          console.error("Error updating admin record:", adminUpdateError);
+          throw adminUpdateError;
         }
 
         console.log("Admin record updated successfully:", {

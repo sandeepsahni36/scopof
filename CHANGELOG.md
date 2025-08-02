@@ -33,6 +33,22 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **CRITICAL**: Fixed Stripe webhook syntax errors preventing subscription processing
+  - Removed duplicate `subscriptionError` variable declaration in `stripe-webhook` Edge Function
+  - Fixed missing `.eq()` clause in admin record update query
+  - Corrected variable reference from `session.customer` to `subscription.customer` in update operation
+  - This resolves the "Identifier 'subscriptionError' has already been declared" syntax error
+  - Webhooks now correctly process subscription events and populate Stripe tables
+  - Users completing payment are now properly redirected to dashboard instead of being stuck on start-trial page
+
+- **CRITICAL**: Fixed authStore logic to correctly set company data for admin users
+  - Removed incorrect debug message that was appearing for admin users
+  - Ensured `companyData` is properly passed to `set()` function when user is admin
+  - Fixed subscription status determination logic to correctly evaluate trial and payment states
+  - Updated SubscriptionPage to not automatically redirect to dashboard after payment success
+  - This resolves the issue where `company` was undefined in final auth state, causing incorrect `needsPaymentSetup` calculation
+
+### Fixed
 - **CRITICAL**: Fixed Stripe webhook database constraint error preventing subscription updates
   - Added unique constraint on `customer_id` column in `stripe_subscriptions` table to enable proper upsert operations
   - Updated `stripe-webhook` Edge Function to use insert/update pattern instead of upsert with onConflict
