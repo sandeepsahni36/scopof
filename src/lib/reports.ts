@@ -1,5 +1,6 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import jsPDF from 'jspdf';
+import { uploadFile } from './storage';
 
 export async function generateInspectionReport(reportData: {
   inspection: any;
@@ -27,30 +28,22 @@ export async function generateInspectionReport(reportData: {
     // Generate PDF report
     const pdfBlob = await createPDFReport(reportData);
     
-    // Upload PDF to storage
-    const fileName = `reports/${reportData.inspection.id}/${Date.now()}.pdf`;
+    // Create a File object from the blob for upload
+    const pdfFile = new File([pdfBlob], `inspection-report-${Date.now()}.pdf`, {
+      type: 'application/pdf',
+    });
     
-    const { data, error } = await supabase.storage
-      .from('inspection-reports')
-      .upload(fileName, pdfBlob);
-
-    if (error) {
-      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-        await handleAuthError(error);
-        return null;
-      }
-      throw error;
+    // Upload PDF via custom storage API
+    const uploadResult = await uploadFile(pdfFile, 'report', reportData.inspection.id);
+    
+    if (!uploadResult) {
+      throw new Error('Failed to upload PDF report');
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('inspection-reports')
-      .getPublicUrl(fileName);
-
     // Save report record to database
-    await saveReportRecord(reportData, publicUrl);
+    await saveReportRecord(reportData, uploadResult.fileUrl);
 
-    return publicUrl;
+    return uploadResult.fileUrl;
   } catch (error: any) {
     console.error('Error generating inspection report:', error);
     

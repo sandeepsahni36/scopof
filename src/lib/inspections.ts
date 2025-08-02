@@ -1,5 +1,6 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { Inspection, InspectionItem, InspectionType, InspectionStatus } from '../types';
+import { uploadFile } from './storage';
 
 // Mock data for dev mode
 const MOCK_INSPECTIONS: Inspection[] = [
@@ -413,26 +414,14 @@ export async function uploadInspectionPhoto(
     // Convert image to WebP format (client-side conversion)
     const webpFile = await convertToWebP(file);
     
-    const fileName = `inspections/${inspectionId}/items/${itemId}/${Date.now()}.webp`;
+    // Upload via custom storage API
+    const uploadResult = await uploadFile(webpFile, 'photo', inspectionId, itemId);
     
-    const { data, error } = await supabase.storage
-      .from('inspection-photos')
-      .upload(fileName, webpFile);
-
-    if (error) {
-      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-        await handleAuthError(error);
-        return null;
-      }
-      throw error;
+    if (!uploadResult) {
+      throw new Error('Failed to upload photo');
     }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('inspection-photos')
-      .getPublicUrl(fileName);
-
-    return publicUrl;
+    
+    return uploadResult.fileUrl;
   } catch (error: any) {
     console.error('Error uploading inspection photo:', error);
     

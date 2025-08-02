@@ -33,6 +33,41 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **MinIO Storage Integration**: Implemented complete MinIO storage solution replacing Supabase Storage
+  - Created custom `storage-api` Supabase Edge Function for centralized file management
+  - Integrated MinIO client for secure file uploads, downloads, and deletions
+  - Added comprehensive user authentication and authorization for file operations
+  - Implemented tier-based storage quota enforcement (Starter: 2GB, Professional: 5GB, Enterprise: 50GB)
+  - Added automatic file metadata tracking in `file_metadata` table
+  - Created real-time storage usage monitoring with `storage_usage` table updates
+  - Added `StorageUsageCard` component to display current usage, quotas, and tier information on dashboard
+  - Enhanced photo upload functionality to use MinIO instead of Supabase Storage
+  - Updated PDF report generation to save files to MinIO with proper metadata tracking
+  - Added file deletion capabilities with proper cleanup of both MinIO objects and database records
+  - Implemented storage usage statistics with visual progress bars and upgrade prompts
+
+### Technical Details
+- New Edge Function: `supabase/functions/storage-api/index.ts` with comprehensive file management
+- Updated `src/lib/inspections.ts` to use custom storage API for photo uploads
+- Updated `src/lib/reports.ts` to use custom storage API for PDF report storage
+- Created `src/lib/storage.ts` with unified storage operations and usage tracking
+- Added `src/components/dashboard/StorageUsageCard.tsx` for real-time usage display
+- Database migration: `create_storage_quotas_data.sql` to populate tier-based storage limits
+- Enhanced dashboard with storage usage monitoring and tier-based upgrade prompts
+- Proper error handling and authentication throughout the storage pipeline
+- Support for both development mode (mock operations) and production MinIO integration
+
+### Benefits
+- Complete control over file storage with custom MinIO infrastructure
+- Tier-based storage quota enforcement prevents overuse and supports subscription model
+- Real-time storage usage tracking helps users monitor their consumption
+- Secure file operations with proper user authentication and authorization
+- Scalable storage solution that can handle large volumes of inspection photos and reports
+- Enhanced user experience with clear storage limits and upgrade prompts
+- Comprehensive file metadata tracking for audit trails and data management
+- Cost-effective storage solution with predictable pricing and resource allocation
+
+### Added
 - **Conditional Trial Logic**: Implemented support for users who want to skip the trial period
   - Enhanced registration flow to offer "Start 14-Day Free Trial" vs "Create Account (No Trial)" options
   - Modified Stripe checkout session creation to conditionally set trial period (0 days for no-trial users, 14 days for trial users)

@@ -232,8 +232,14 @@ serve(async (req) => {
     // 5. Route Handling
     const url = new URL(req.url);
     const pathSegments = url.pathname.split('/').filter(Boolean); // e.g., ["storage-api", "upload", "photo"]
-    const endpoint = pathSegments[1]; // e.g., "upload"
-    const subEndpoint = pathSegments[2]; // e.g., "photo" or fileKey part
+    
+    // Remove 'functions', 'v1' from path if present (Supabase function URL structure)
+    const cleanedSegments = pathSegments.filter(segment => 
+      segment !== 'functions' && segment !== 'v1' && segment !== 'storage-api'
+    );
+    
+    const endpoint = cleanedSegments[0]; // e.g., "upload"
+    const subEndpoint = cleanedSegments[1]; // e.g., "photo" or fileKey part
 
     console.log("Route handling:", { endpoint, subEndpoint, pathSegments });
 

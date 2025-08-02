@@ -18,6 +18,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { checkPropertyLimit } from '../../lib/properties';
 import { supabase, devModeEnabled } from '../../lib/supabase';
+import StorageUsageCard from '../../components/dashboard/StorageUsageCard';
 
 // Register ChartJS components
 ChartJS.register(
@@ -285,7 +286,7 @@ const DashboardPage = () => {
       {/* Usage statistics */}
       <div className="border-b border-gray-200 pb-8 mb-8">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Usage Statistics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -406,6 +407,15 @@ const DashboardPage = () => {
                 </Link>
               </div>
             </div>
+          </motion.div>
+          
+          {/* Storage Usage Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <StorageUsageCard />
           </motion.div>
         </div>
       </div>
