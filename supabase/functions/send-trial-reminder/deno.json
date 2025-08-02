@@ -3,6 +3,6 @@
     "start": "deno run --allow-net --allow-env --allow-read index.ts"
   },
   "imports": {
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.44.0?target=deno"
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.44.0?target=esnext"
   }
 }
