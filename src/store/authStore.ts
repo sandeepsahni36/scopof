@@ -189,7 +189,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       let requiresPayment = false;
       let needsPaymentSetup = false;
 
-      if (isAdmin) {
+      if (isAdminRole) {
         // Fetch admin data
         console.log("Fetching admin data for user:", user.id);
         const { data: admin, error: adminError } = await supabase
@@ -403,12 +403,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
         }
       } else {
-        // If user is not admin (member role), set appropriate flags
-        hasActiveSubscription = false;
-        isTrialExpired = false;
-        requiresPayment = false;
-        needsPaymentSetup = true;
-        console.log('DEBUG: User is not admin (member role) - limited access.');
+        // If user is not admin (member role), they don't have company data
+        console.log('User is a team member (not admin) - no company data available');
       }
 
       // Final override for dev mode (should be false now)
