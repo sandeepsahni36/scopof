@@ -34,6 +34,28 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **CRITICAL**: Fixed Stripe Edge Functions compatibility issues preventing checkout and webhook processing
+  - Updated MinIO library import in `storage-api` Edge Function to use `esm.sh` with `?target=esnext` for better Deno compatibility
+  - This should resolve the remaining `Deno.core.runMicrotasks()` errors that were causing Edge Function crashes
+  - Enhanced PKCE authentication flow in `AuthCallbackPage` with explicit `code_verifier` validation and better error handling
+  - Added database migration to establish primary keys on Stripe tables, enabling proper row deletion operations in Supabase dashboard
+
+### Technical Details
+- Modified `storage-api/deno.json` to use compatible MinIO library version with proper Deno target
+- Enhanced authentication callback page with more robust PKCE flow validation and user-friendly error messages
+- Database migration `add_stripe_table_primary_keys.sql` recreates Stripe tables with proper `SERIAL PRIMARY KEY` constraints
+- All changes maintain backward compatibility with existing data and subscription flows
+- Uses table recreation approach instead of problematic `ALTER COLUMN` syntax for PostgreSQL compatibility
+
+### Benefits
+- Eliminates Edge Function crashes during file upload operations
+- Resolves authentication timeout issues during email confirmation flow
+- Enables proper database management and cleanup operations in Supabase dashboard
+- Provides clearer error messages for authentication failures with expired confirmation links
+- Maintains data integrity while improving system reliability
+- Allows deletion of test records from Stripe tables for easier development workflow
+
+### Fixed
+- **CRITICAL**: Fixed Stripe Edge Functions compatibility issues preventing checkout and webhook processing
   - Downgraded Stripe library from v16.0.0 to v13.17.0 across all Edge Functions to resolve `Deno.core.runMicrotasks()` errors
   - Updated MinIO library import in `storage-api` Edge Function to use `esm.sh` with `?target=esnext` for better Deno compatibility
   - Fixed `ReferenceError: paymentMethodBrand is not defined` in webhook by properly initializing variables at case block start
