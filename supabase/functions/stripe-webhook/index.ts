@@ -676,7 +676,7 @@ Deno.serve(async (req) => {
           .update({
             subscription_status: subscription.status,
             subscription_tier: tier,
-          });
+          })
           .eq("id", adminData.id)
           .select();
 
