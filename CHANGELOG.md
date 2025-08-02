@@ -45,6 +45,30 @@ All notable changes to this project will be documented in this file.
 - Modified `deno.json` files for all Stripe-related Edge Functions to use compatible library versions
 - Enhanced webhook error handling and logging for better debugging of subscription lifecycle events
 - Improved authentication callback page with more robust PKCE flow validation and user-friendly error messages
+- Database migration `fix_stripe_table_primary_keys.sql` adds primary key constraints to `stripe_customers`, `stripe_orders`, and `stripe_subscriptions` tables
+- All changes maintain backward compatibility with existing data and subscription flows
+
+### Benefits
+- Eliminates Edge Function crashes during checkout and webhook processing
+- Resolves authentication timeout issues during email confirmation flow
+- Prevents duplicate subscription records and database constraint violations
+- Enables proper database management and cleanup operations
+- Provides clearer error messages for authentication failures
+- Maintains data integrity while improving system reliability
+
+### Fixed
+- **CRITICAL**: Fixed Stripe Edge Functions compatibility issues preventing checkout and webhook processing
+  - Downgraded Stripe library from v16.0.0 to v13.17.0 across all Edge Functions to resolve `Deno.core.runMicrotasks()` errors
+  - Updated MinIO library import in `storage-api` Edge Function to use `esm.sh` with `?target=esnext` for better Deno compatibility
+  - Fixed `ReferenceError: paymentMethodBrand is not defined` in webhook by properly initializing variables at case block start
+  - Replaced complex insert/fallback logic with proper `upsert` operations using `onConflict: "customer_id"` to eliminate duplicate key errors
+  - Enhanced PKCE authentication flow in `AuthCallbackPage` with explicit `code_verifier` validation and better error handling
+  - Added database migration to establish primary keys on Stripe tables, enabling proper row deletion operations in Supabase dashboard
+
+### Technical Details
+- Modified `deno.json` files for all Stripe-related Edge Functions to use compatible library versions
+- Enhanced webhook error handling and logging for better debugging of subscription lifecycle events
+- Improved authentication callback page with more robust PKCE flow validation and user-friendly error messages
 - Database migration `add_stripe_table_primary_keys.sql` adds primary key constraints to `stripe_customers`, `stripe_orders`, and `stripe_subscriptions` tables
 - All changes maintain backward compatibility with existing data and subscription flows
 
