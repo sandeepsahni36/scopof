@@ -100,6 +100,9 @@ const AuthCallbackPage = () => {
               await new Promise(resolve => setTimeout(resolve, 1000));
               try {
                 await initialize();
+                // Add additional delay after initialize to allow state to propagate
+                addDebugInfo('Adding 500ms delay after auth initialization');
+                await new Promise(resolve => setTimeout(resolve, 500));
                 toast.success('Email confirmed successfully');
                 console.log('Email confirmed, redirecting to dashboard');
                 navigate('/dashboard', { replace: true });
@@ -138,6 +141,9 @@ const AuthCallbackPage = () => {
 
               try {
                 await initialize();
+                // Add additional delay after initialize to allow state to propagate
+                addDebugInfo('Adding 500ms delay after auth initialization (refresh path)');
+                await new Promise(resolve => setTimeout(resolve, 500));
                 toast.success('Email confirmed successfully');
                 console.log('Email confirmed via refresh, redirecting to dashboard');
                 navigate('/dashboard', { replace: true });
@@ -173,6 +179,9 @@ const AuthCallbackPage = () => {
           await new Promise(resolve => setTimeout(resolve, 1000));
           try {
             await initialize();
+            // Add additional delay after initialize to allow state to propagate
+            addDebugInfo('Adding 500ms delay after auth initialization (existing session path)');
+            await new Promise(resolve => setTimeout(resolve, 500));
             toast.success('Email confirmed successfully');
             console.log('Email confirmed via existing session, redirecting to dashboard');
             navigate('/dashboard', { replace: true });
@@ -203,6 +212,9 @@ const AuthCallbackPage = () => {
             await new Promise(resolve => setTimeout(resolve, 1000));
             try {
               await initialize();
+              // Add additional delay after initialize to allow state to propagate
+              addDebugInfo('Adding 500ms delay after auth initialization (state change path)');
+              await new Promise(resolve => setTimeout(resolve, 500));
               toast.success('Email confirmed successfully');
               console.log('Email confirmed via auth state change, redirecting to dashboard');
               navigate('/dashboard', { replace: true });
@@ -237,6 +249,9 @@ const AuthCallbackPage = () => {
                   await new Promise(resolve => setTimeout(resolve, 1000));
                   try {
                     await initialize();
+                    // Add additional delay after initialize to allow state to propagate
+                    addDebugInfo('Adding 500ms delay after auth initialization (manual refresh path)');
+                    await new Promise(resolve => setTimeout(resolve, 500));
                     toast.success('Email confirmed successfully');
                     console.log('Email confirmed via manual refresh, redirecting to dashboard');
                     navigate('/dashboard', { replace: true });

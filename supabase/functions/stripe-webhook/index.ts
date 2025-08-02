@@ -355,6 +355,10 @@ Deno.serve(async (req) => {
       case "customer.subscription.created": {
         const subscription = event.data.object;
         
+        // Initialize payment method variables to prevent ReferenceError
+        let paymentMethodBrand = null;
+        let paymentMethodLast4 = null;
+        
         console.log("New subscription created:", {
           subscriptionId: subscription.id,
           customerId: subscription.customer,
@@ -367,10 +371,32 @@ Deno.serve(async (req) => {
         const priceId = subscription.items.data[0]?.price.id;
         const tier = priceId ? getTierFromPriceId(priceId) : 'starter';
         
-        // Update subscription record
+        // Get payment method details if available
+        if (subscription.default_payment_method) {
+          try {
+            console.log("Fetching payment method details:", subscription.default_payment_method);
+            const paymentMethod = await stripe.paymentMethods.retrieve(
+              subscription.default_payment_method as string
+            );
+            
+            if (paymentMethod && paymentMethod.card) {
+              paymentMethodBrand = paymentMethod.card.brand;
+              paymentMethodLast4 = paymentMethod.card.last4;
+              console.log("Payment method details retrieved:", {
+                brand: paymentMethodBrand,
+                last4: paymentMethodLast4
+              });
+            }
+          } catch (error) {
+            console.error("Error retrieving payment method:", error);
+            // Continue without payment method details
+          }
+        }
+        
+        // Create/update subscription record using upsert
         const { error: subscriptionError } = await supabase
           .from("stripe_subscriptions")
-          .insert({
+          .upsert({
             customer_id: subscription.customer as string,
             subscription_id: subscription.id,
             price_id: subscription.items.data[0]?.price.id,
@@ -378,34 +404,15 @@ Deno.serve(async (req) => {
             current_period_end: subscription.current_period_end,
             cancel_at_period_end: subscription.cancel_at_period_end,
             status: subscription.status,
+            payment_method_brand: paymentMethodBrand,
+            payment_method_last4: paymentMethodLast4
+          }, {
+            onConflict: "customer_id",
           });
 
         if (subscriptionError) {
-          // If it's a duplicate key error, try to update instead
-          if (subscriptionError.code === '23505') {
-            console.log("Subscription record exists, updating instead");
-            const { error: updateError } = await supabase
-              .from("stripe_subscriptions")
-              .update({
-                subscription_id: subscription.id,
-                price_id: subscription.items.data[0]?.price.id,
-                current_period_start: subscription.current_period_start,
-                current_period_end: subscription.current_period_end,
-                cancel_at_period_end: subscription.cancel_at_period_end,
-                status: subscription.status,
-                payment_method_brand: paymentMethodBrand,
-                payment_method_last4: paymentMethodLast4
-              })
-              .eq("customer_id", subscription.customer as string);
-            
-            if (updateError) {
-              console.error("Error updating subscription record:", updateError);
-              throw updateError;
-            }
-          } else {
-            console.error("Error creating subscription record:", subscriptionError);
-            throw subscriptionError;
-          }
+          console.error("Error creating/updating subscription record:", subscriptionError);
+          throw subscriptionError;
         }
 
         console.log("Subscription record processed successfully");
