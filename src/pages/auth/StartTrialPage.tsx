@@ -11,21 +11,36 @@ import { toast } from 'sonner';
 
 const StartTrialPage = () => {
   const navigate = useNavigate();
-  const { hasActiveSubscription, isTrialExpired, requiresPayment } = useAuthStore();
+  const { hasActiveSubscription, isTrialExpired, requiresPayment, company } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [selectedTier, setSelectedTier] = useState('professional');
   const [authError, setAuthError] = useState<string | null>(null);
   const [validatingAuth, setValidatingAuth] = useState(true);
 
+  // Get registration type from localStorage
+  const registrationType = localStorage.getItem('registration_type');
+  const skipTrial = registrationType === 'no_trial';
+
+  console.log('StartTrialPage: Component state:', {
+    hasActiveSubscription,
+    isTrialExpired,
+    requiresPayment,
+    company: company?.name,
+    subscriptionStatus: company?.subscription_status,
+    registrationType,
+    skipTrial
+  });
   useEffect(() => {
     // Redirect users who already have active paid subscriptions (not trial users)
     if (hasActiveSubscription && company?.subscription_status === 'active') {
+      console.log('StartTrialPage: Redirecting to dashboard - active paid subscription');
       navigate('/dashboard');
       return;
     }
 
     // Redirect users whose trial has expired to subscription required page
     if (isTrialExpired || requiresPayment) {
+      console.log('StartTrialPage: Redirecting to subscription-required - trial expired or payment required');
       navigate('/subscription-required');
       return;
     }
@@ -33,9 +48,13 @@ const StartTrialPage = () => {
     // Validate user session on component mount
     const checkAuth = async () => {
       try {
+        console.log('StartTrialPage: Validating user session...');
         const user = await validateUserSession();
         if (!user) {
+          console.log('StartTrialPage: No valid user session found');
           setAuthError('Your session has expired. Please sign in again.');
+        } else {
+          console.log('StartTrialPage: User session validated successfully:', user.email);
         }
       } catch (error: any) {
         console.error('Auth validation error:', error);
@@ -62,7 +81,7 @@ const StartTrialPage = () => {
       console.log('Starting trial with selected tier:', selectedTier);
       console.log('StartTrialPage: About to call createCheckoutSession');
       
-      const checkoutUrl = await createCheckoutSession(selectedTier as any);
+      const checkoutUrl = await createCheckoutSession(selectedTier as any, skipTrial);
       
       console.log('StartTrialPage: Received checkout URL:', checkoutUrl);
       
@@ -146,10 +165,13 @@ const StartTrialPage = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
-            Start Your Free Trial
+            {skipTrial ? 'Choose Your Plan' : 'Start Your Free Trial'}
           </h1>
           <p className="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
-            Choose your plan and start managing your properties today
+            {skipTrial 
+              ? 'Select your plan and start managing your properties today'
+              : 'Choose your plan and start your 14-day free trial today'
+            }
           </p>
         </div>
 

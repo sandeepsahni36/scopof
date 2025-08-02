@@ -62,6 +62,9 @@ const AuthCallbackPage = () => {
           }
         }, 20000);
 
+        // Add initial delay to allow Supabase client to fully process the session
+        addDebugInfo('Adding 500ms delay for session processing');
+        await new Promise(resolve => setTimeout(resolve, 500));
         // Strategy 1: Try to exchange the code if present
         if (code) {
           addDebugInfo('Attempting to exchange authorization code');
@@ -92,6 +95,9 @@ const AuthCallbackPage = () => {
                 timeoutRef.current = null;
               }
 
+              // Add delay before initializing to ensure session is fully persisted
+              addDebugInfo('Adding 1000ms delay before auth initialization');
+              await new Promise(resolve => setTimeout(resolve, 1000));
               try {
                 await initialize();
                 toast.success('Email confirmed successfully');
@@ -110,6 +116,43 @@ const AuthCallbackPage = () => {
           }
         }
 
+        // Strategy 1.5: Try explicit session refresh if we have a code but exchange failed
+        if (code && !hasProcessedRef.current) {
+          addDebugInfo('Strategy 1.5: Attempting explicit session refresh');
+          try {
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError) {
+              addDebugInfo(`Explicit refresh failed: ${refreshError.message}`);
+            } else if (refreshData.session && !hasProcessedRef.current) {
+              addDebugInfo('Explicit refresh successful, processing session');
+              hasProcessedRef.current = true;
+              
+              if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
+              }
+
+              // Add delay before initializing
+              addDebugInfo('Adding 1000ms delay before auth initialization (refresh path)');
+              await new Promise(resolve => setTimeout(resolve, 1000));
+
+              try {
+                await initialize();
+                toast.success('Email confirmed successfully');
+                console.log('Email confirmed via refresh, redirecting to start-trial');
+                navigate('/start-trial', { replace: true });
+                return;
+              } catch (error: any) {
+                addDebugInfo(`Auth initialization failed after refresh: ${error.message}`);
+                setError(error.message || 'Failed to initialize user session');
+                return;
+              }
+            }
+          } catch (error: any) {
+            addDebugInfo(`Explicit refresh threw error: ${error.message}`);
+            // Continue to fallback methods
+          }
+        }
         // Strategy 2: Try to get existing session
         addDebugInfo('Strategy 2: Trying to get existing session');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -125,6 +168,9 @@ const AuthCallbackPage = () => {
             timeoutRef.current = null;
           }
 
+          // Add delay before initializing
+          addDebugInfo('Adding 1000ms delay before auth initialization (existing session path)');
+          await new Promise(resolve => setTimeout(resolve, 1000));
           try {
             await initialize();
             toast.success('Email confirmed successfully');
@@ -152,6 +198,9 @@ const AuthCallbackPage = () => {
               timeoutRef.current = null;
             }
 
+            // Add delay before initializing
+            addDebugInfo('Adding 1000ms delay before auth initialization (state change path)');
+            await new Promise(resolve => setTimeout(resolve, 1000));
             try {
               await initialize();
               toast.success('Email confirmed successfully');
@@ -183,6 +232,9 @@ const AuthCallbackPage = () => {
                     timeoutRef.current = null;
                   }
 
+                  // Add delay before initializing
+                  addDebugInfo('Adding 1000ms delay before auth initialization (manual refresh path)');
+                  await new Promise(resolve => setTimeout(resolve, 1000));
                   try {
                     await initialize();
                     toast.success('Email confirmed successfully');

@@ -75,7 +75,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       console.log("Getting current user from Supabase...");
+      
+      // Add explicit session refresh attempt before getting user
+      try {
+        console.log("Attempting session refresh before user fetch...");
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.log("Session refresh failed (this may be normal):", refreshError.message);
+        } else if (refreshData.session) {
+          console.log("Session refreshed successfully");
+        }
+      } catch (refreshErr) {
+        console.log("Session refresh threw error (this may be normal):", refreshErr);
+      }
+      
       const { data: { user } } = await supabase.auth.getUser();
+      console.log("Raw user data from Supabase:", {
+        hasUser: !!user,
+        userId: user?.id,
+        userEmail: user?.email,
+        emailConfirmed: user?.email_confirmed_at,
+        createdAt: user?.created_at,
+        lastSignInAt: user?.last_sign_in_at
+      });
       
       if (!user) {
         console.log("No user found, setting unauthenticated state");
@@ -102,6 +124,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (profileError) {
         console.error("Error fetching profile:", profileError);
+        console.error("Profile error details:", {
+          message: profileError.message,
+          code: profileError.code,
+          details: profileError.details,
+          hint: profileError.hint
+        });
       } else {
         console.log("Profile fetched successfully:", { 
           id: profile.id, 
@@ -129,6 +157,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (adminStatusError) {
         console.error("Error fetching admin status:", adminStatusError);
+        console.error("Admin status error details:", {
+          message: adminStatusError.message,
+          code: adminStatusError.code,
+          details: adminStatusError.details,
+          hint: adminStatusError.hint
+        });
       } else {
         console.log("Admin status fetched:", adminStatus);
       }
@@ -154,14 +188,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (isAdmin) {
         // Fetch admin data
+        console.log("Fetching admin data for user:", user.id);
         const { data: admin, error: adminError } = await supabase
-          .from('admins')
+          .from('admin')
           .select('*')
-          .eq('profile_id', user.id)
+          .eq('owner_id', user.id)
           .single();
 
         if (adminError) {
           console.error("Error fetching admin data:", adminError);
+          console.error("Admin data error details:", {
+            message: adminError.message,
+            code: adminError.code,
+            details: adminError.details,
+            hint: adminError.hint
+          });
         } else if (admin) {
           console.log("Admin data fetched:", { 
             id: admin.id,
@@ -175,8 +216,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           let subscriptionError = null;
           
           if (admin.customer_id) {
+            console.log("Fetching subscription data for customer:", admin.customer_id);
             const result = await supabase
-              .from('subscriptions')
+              .from('stripe_subscriptions')
               .select('*')
               .eq('customer_id', admin.customer_id)
               .maybeSingle();
@@ -184,13 +226,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             subscription = result.data;
             subscriptionError = result.error;
 
+            if (subscriptionError) {
+              console.error("Subscription data error details:", {
+                message: subscriptionError.message,
+                code: subscriptionError.code,
+                details: subscriptionError.details,
+                hint: subscriptionError.hint
+              });
+            }
+
             // --- START REVISED LOGIC FOR SUBSCRIPTION STATUS ---
             const admin_subscription_status = admin.subscription_status;
-            const stripe_subscription_status = subscription?.subscription_status;
+            const stripe_subscription_status = subscription?.status;
 
+            console.log("Subscription status analysis:", {
+              admin_status: admin_subscription_status,
+              stripe_status: stripe_subscription_status,
+              customer_id: admin.customer_id,
+              trial_ends_at: admin.trial_ends_at
+            });
             if (admin_subscription_status === 'trialing') {
               const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
               const now = new Date();
+              
+              console.log("Trial status check:", {
+                trialEnd: trialEnd?.toISOString(),
+                now: now.toISOString(),
+                isTrialActive: trialEnd && now < trialEnd,
+                hasCustomerId: !!admin.customer_id
+              });
               
               if (trialEnd && now < trialEnd) { // Trial is active
                 if (!admin.customer_id || admin.customer_id === '') { // No customer_id means payment setup needed
@@ -231,12 +295,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // --- END REVISED LOGIC FOR SUBSCRIPTION STATUS ---
           }
           
-          if (subscriptionError) {
-            console.error("Error fetching subscription:", subscriptionError);
-          } else if (subscription) {
+          if (subscription) {
             console.log("Subscription data fetched:", {
               subscriptionId: subscription.subscription_id,
-              status: subscription.subscription_status,
+              status: subscription.status,
               priceId: subscription.price_id,
               currentPeriodEnd: subscription.current_period_end
             });
@@ -280,7 +342,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           console.log('Subscription status check:', {
             subscription_status: admin.subscription_status,
-            stripe_status: subscription?.subscription_status,
+            stripe_status: subscription?.status,
             trial_ends_at: admin.trial_ends_at,
             now: now.toISOString(),
             trialEnd: trialEnd?.toISOString(),
@@ -289,7 +351,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           // --- START REVISED LOGIC FOR SUBSCRIPTION STATUS ---
           const admin_subscription_status = admin.subscription_status;
-          const stripe_subscription_status = subscription?.subscription_status;
+          const stripe_subscription_status = subscription?.status;
 
           if (admin_subscription_status === 'trialing') {
             if (trialEnd && now < trialEnd) {
@@ -383,6 +445,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (error) {
       console.error('Error initializing auth state:', error);
+      console.error('Auth initialization error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       set({ 
         loading: false, 
         isAuthenticated: false,
