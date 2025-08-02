@@ -32,6 +32,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **CRITICAL**: Fixed Stripe webhook database constraint error preventing subscription updates
+  - Added unique constraint on `customer_id` column in `stripe_subscriptions` table to enable proper upsert operations
+  - Updated `stripe-webhook` Edge Function to use insert/update pattern instead of upsert with onConflict
+  - This resolves the "there is no unique or exclusion constraint matching the ON CONFLICT specification" error
+  - Webhooks now correctly process subscription events and update user subscription status in database
+  - Users completing payment will now be properly redirected to dashboard instead of being stuck on start-trial page
+
+- **CRITICAL**: Fixed `isAdmin` calculation in authStore to correctly identify admin users
+  - Updated logic to check `adminStatus?.role === 'owner' || adminStatus?.role === 'admin'` instead of `adminStatus?.is_admin`
+  - This ensures users with owner or admin roles are correctly granted administrative access
+  - Resolves issue where admin users were incorrectly treated as regular members
+
+- **Edge Function Dependencies**: Updated all Supabase Edge Functions to use latest compatible dependencies
+  - Updated `@supabase/supabase-js` to v2.44.0 across all Edge Functions
+  - Updated `stripe` to v16.0.0 with proper `?target=deno` parameter for better Deno compatibility
+  - Replaced deprecated `serve` function with `Deno.serve` for improved performance
+  - Updated Stripe API version to `2024-06-20` for latest features and bug fixes
+  - This resolves `Deno.core.runMicrotasks() is not supported in this environment` errors
+
+### Important Note
+- **Database Migration Constraint**: Added critical note to avoid using `ALTER TABLE ... OWNER TO supabase_admin` or `CREATE TABLE ... OWNER TO supabase_admin` in migrations as it leads to failed migrations with error "42501: supabase_admin role memberships are reserved, only superusers can grant them"
+
 ### Added
 - **MinIO Storage Integration**: Implemented complete MinIO storage solution replacing Supabase Storage
   - Created custom `storage-api` Supabase Edge Function for centralized file management

@@ -1,6 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
-import Stripe from "https://esm.sh/stripe@12.18.0?target=deno";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.44.0?target=deno";
+import Stripe from "https://esm.sh/stripe@16.0.0?target=deno";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,7 +19,7 @@ function getTierFromPriceId(priceId: string): string {
   return priceTierMap[priceId] || 'starter';
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -51,7 +50,7 @@ serve(async (req) => {
 
     // Initialize Stripe
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2023-10-16",
+      apiVersion: "2024-06-20",
     });
 
     // Get the signature from the headers
@@ -280,9 +279,9 @@ serve(async (req) => {
         });
 
         // Create order record using upsert to handle potential duplicates
-        const { data: orderData, error: orderError } = await supabase
+        const { error: orderError } = await supabase
           .from("stripe_orders")
-          .upsert({
+          .insert({
             checkout_session_id: session.id,
             payment_intent_id: session.payment_intent || "",
             customer_id: session.customer,
@@ -291,19 +290,19 @@ serve(async (req) => {
             currency: session.currency || "usd",
             payment_status: session.payment_status || "unpaid",
             status: "completed",
-          }, {
-            onConflict: 'checkout_session_id'
-          })
-          .select();
+          });
 
         if (orderError) {
-          console.error("Error creating order record:", orderError);
-          throw orderError;
+          // If it's a duplicate key error, ignore it (order already exists)
+          if (orderError.code !== '23505') {
+            console.error("Error creating order record:", orderError);
+            throw orderError;
+          } else {
+            console.log("Order record already exists, skipping creation");
+          }
         }
 
-        console.log("Order record created successfully:", {
-          orderId: orderData[0]?.id
-        });
+        console.log("Order record processed successfully");
 
         break;
       }
@@ -369,9 +368,9 @@ serve(async (req) => {
         const tier = priceId ? getTierFromPriceId(priceId) : 'starter';
         
         // Update subscription record
-        const { data: subscriptionData, error: subscriptionError } = await supabase
+        const { error: subscriptionError } = await supabase
           .from("stripe_subscriptions")
-          .upsert({
+          .insert({
             customer_id: subscription.customer as string,
             subscription_id: subscription.id,
             price_id: subscription.items.data[0]?.price.id,
@@ -379,19 +378,37 @@ serve(async (req) => {
             current_period_end: subscription.current_period_end,
             cancel_at_period_end: subscription.cancel_at_period_end,
             status: subscription.status,
-          }, {
-            onConflict: "customer_id",
-          })
-          .select();
+          });
 
         if (subscriptionError) {
-          console.error("Error creating subscription record:", subscriptionError);
-          throw subscriptionError;
+          // If it's a duplicate key error, try to update instead
+          if (subscriptionError.code === '23505') {
+            console.log("Subscription record exists, updating instead");
+            const { error: updateError } = await supabase
+              .from("stripe_subscriptions")
+              .update({
+                subscription_id: subscription.id,
+                price_id: subscription.items.data[0]?.price.id,
+                current_period_start: subscription.current_period_start,
+                current_period_end: subscription.current_period_end,
+                cancel_at_period_end: subscription.cancel_at_period_end,
+                status: subscription.status,
+                payment_method_brand: paymentMethodBrand,
+                payment_method_last4: paymentMethodLast4
+              })
+              .eq("customer_id", subscription.customer as string);
+            
+            if (updateError) {
+              console.error("Error updating subscription record:", updateError);
+              throw updateError;
+            }
+          } else {
+            console.error("Error creating subscription record:", subscriptionError);
+            throw subscriptionError;
+          }
         }
 
-        console.log("Subscription record created successfully:", {
-          subscriptionId: subscriptionData[0]?.id
-        });
+        console.log("Subscription record processed successfully");
         
         break;
       }
@@ -600,12 +617,14 @@ serve(async (req) => {
           status: subscription.status,
           paymentMethodBrand,
           paymentMethodLast4
-        });
+        }
+        )
+        const { error: subscriptionError } = await supabase
 
         // Update subscription record using upsert to handle potential duplicates
-        const { data: subscriptionData, error: subscriptionError } = await supabase
+        const { error: subscriptionError } = await supabase
           .from("stripe_subscriptions")
-          .upsert({
+          .insert({
             customer_id: subscription.customer as string,
             subscription_id: subscription.id,
             price_id: subscription.items.data[0]?.price.id,
@@ -615,19 +634,35 @@ serve(async (req) => {
             status: subscription.status,
             payment_method_brand: paymentMethodBrand,
             payment_method_last4: paymentMethodLast4
-          }, {
-            onConflict: "customer_id",
-          })
-          .select();
+          });
 
         if (subscriptionError) {
-          console.error("Error updating subscription record:", subscriptionError);
-          throw subscriptionError;
+          // If it's a duplicate key error, try to update instead
+          if (subscriptionError.code === '23505') {
+            console.log("Subscription record exists, updating instead");
+            const { error: updateError } = await supabase
+              .from("stripe_subscriptions")
+              .update({
+                subscription_id: subscription.id,
+                price_id: subscription.items.data[0]?.price.id,
+                current_period_start: subscription.current_period_start,
+                current_period_end: subscription.current_period_end,
+                cancel_at_period_end: subscription.cancel_at_period_end,
+                status: subscription.status,
+              })
+              .eq("customer_id", session.customer as string);
+            
+            if (updateError) {
+              console.error("Error updating subscription record:", updateError);
+              throw updateError;
+            }
+          } else {
+            console.error("Error creating subscription record:", subscriptionError);
+            throw subscriptionError;
+          }
         }
 
-        console.log("Subscription record updated successfully:", {
-          subscriptionId: subscriptionData[0]?.id
-        });
+        console.log("Subscription record created/updated successfully");
 
         console.log("Updating admin record with subscription status:", {
           adminId: adminData.id,
@@ -640,14 +675,32 @@ serve(async (req) => {
           .from("admin")
           .update({
             subscription_status: subscription.status,
-            subscription_tier: tier,
-          })
-          .eq("id", adminData.id)
-          .select();
+          });
 
         if (adminUpdateError) {
-          console.error("Error updating admin record:", adminUpdateError);
-          throw adminUpdateError;
+          // If it's a duplicate key error, try to update instead
+          if (subscriptionError.code === '23505') {
+            console.log("Subscription record exists, updating instead");
+            const { error: updateError } = await supabase
+              .from("stripe_subscriptions")
+              .update({
+                subscription_id: subscription.id,
+                price_id: subscription.items.data[0]?.price.id,
+                current_period_start: subscription.current_period_start,
+                current_period_end: subscription.current_period_end,
+                cancel_at_period_end: subscription.cancel_at_period_end,
+                status: subscription.status,
+              })
+              .eq("customer_id", subscription.customer as string);
+            
+            if (updateError) {
+              console.error("Error updating subscription record:", updateError);
+              throw updateError;
+            }
+          } else {
+            console.error("Error creating subscription record:", subscriptionError);
+            throw subscriptionError;
+          }
         }
 
         console.log("Admin record updated successfully:", {
@@ -803,9 +856,10 @@ serve(async (req) => {
 
           console.log("Admin record updated successfully:", {
             adminId: adminData.id,
-            updatedData: adminUpdateData
-          });
+          }
+          )
         }
+        console.log("Subscription record processed successfully");
         
         break;
       }

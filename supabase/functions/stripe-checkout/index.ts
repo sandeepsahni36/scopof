@@ -1,6 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
-import Stripe from "https://esm.sh/stripe@12.18.0?target=deno";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.44.0?target=deno";
+import Stripe from "https://esm.sh/stripe@16.0.0?target=deno";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,7 +19,7 @@ function getTierFromPriceId(priceId: string): string {
   return priceTierMap[priceId] || 'starter';
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -55,7 +54,7 @@ serve(async (req) => {
 
     // Initialize Stripe
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2023-10-16",
+      apiVersion: "2024-06-20",
     });
 
     console.log("Supabase and Stripe clients initialized");
@@ -175,17 +174,20 @@ serve(async (req) => {
 
       // Create customer record in our database using upsert to handle potential duplicates
       console.log("Creating customer record in database");
-      const { error: insertError } = await supabase
+      const { error: customerError } = await supabase
         .from("stripe_customers")
-        .upsert({
+        .insert({
           user_id: user.id,
           customer_id: customerId,
-        }, {
-          onConflict: 'user_id'
         });
 
-      if (insertError) {
-        console.error("Error creating customer record:", insertError);
+      if (customerError) {
+        // If it's a duplicate key error, ignore it (customer already exists)
+        if (customerError.code !== '23505') {
+          console.error("Error creating customer record:", customerError);
+        } else {
+          console.log("Customer record already exists, skipping creation");
+        }
       } else {
         console.log("Customer record created/updated successfully in database");
       }
