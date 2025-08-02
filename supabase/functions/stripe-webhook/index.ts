@@ -51,6 +51,7 @@ Deno.serve(async (req) => {
     // Initialize Stripe
     const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2024-06-20",
+      httpClient: Stripe.createFetchHttpClient() // This is crucial for Deno compatibility
     });
 
     // Get the signature from the headers
@@ -70,8 +71,8 @@ Deno.serve(async (req) => {
     // Verify the webhook signature
     let event;
     try {
-      // Use the async version of constructEvent for Deno environment
-      event = await stripe.webhooks.constructEventAsync(body, signature, trimmedWebhookSecret);
+      // Use the synchronous version for Deno environment
+      event = stripe.webhooks.constructEvent(body, signature, trimmedWebhookSecret);
       console.log("Webhook signature verified successfully");
     } catch (err) {
       console.error(`Webhook signature verification failed: ${err.message}`);

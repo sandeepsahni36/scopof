@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
     // Initialize Stripe
     const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2024-06-20",
+      httpClient: Stripe.createFetchHttpClient() // This is crucial for Deno compatibility
     });
 
     console.log("Supabase and Stripe clients initialized");

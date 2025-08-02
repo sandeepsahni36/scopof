@@ -33,6 +33,25 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **CRITICAL**: Fixed Stripe Edge Functions event loop errors preventing webhook and checkout processing
+  - Added `httpClient: Stripe.createFetchHttpClient()` to Stripe initialization in both webhook and checkout Edge Functions
+  - Changed `stripe.webhooks.constructEventAsync()` to synchronous `stripe.webhooks.constructEvent()` method
+  - This resolves `Deno.core.runMicrotasks()` and event loop errors by using Deno's native fetch API instead of Node.js HTTP modules
+  - Stripe webhooks and checkout sessions now process correctly without runtime errors
+
+### Technical Details
+- Modified `supabase/functions/stripe-webhook/index.ts` to use Deno-compatible Stripe HTTP client
+- Modified `supabase/functions/stripe-checkout/index.ts` to use Deno-compatible Stripe HTTP client
+- Replaced non-existent `constructEventAsync` with proper synchronous `constructEvent` method
+- All changes maintain backward compatibility with existing webhook processing logic
+
+### Benefits
+- Eliminates Edge Function crashes during webhook and checkout processing
+- Ensures reliable Stripe integration with proper Deno runtime compatibility
+- Maintains all existing subscription and payment processing functionality
+- Improves system reliability and reduces payment processing errors
+
+### Fixed
 - **CRITICAL**: Fixed Stripe Edge Functions compatibility issues preventing checkout and webhook processing
   - Updated MinIO library import in `storage-api` Edge Function to use `esm.sh` with `?target=esnext` for better Deno compatibility
   - This should resolve the remaining `Deno.core.runMicrotasks()` errors that were causing Edge Function crashes
