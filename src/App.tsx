@@ -5,7 +5,6 @@ import { useAuthStore } from './store/authStore';
 import AuthCallbackPage from './pages/auth/AuthCallbackPage';
 import StartTrialPage from './pages/auth/StartTrialPage';
 import EmailConfirmationPage from './pages/auth/EmailConfirmationPage';
-import TestEmailConfirmation from './pages/auth/TestEmailConfirmation';
 import SubscriptionRequiredPage from './pages/auth/SubscriptionRequiredPage';
 import AccessRestrictedPage from './pages/auth/AccessRestrictedPage';
 
@@ -32,7 +31,6 @@ import UserManagementPage from './pages/admin/UserManagementPage';
 import SubscriptionPage from './pages/admin/SubscriptionPage';
 import InspectionPage from './pages/inspections/InspectionPage';
 import StartInspectionPage from './pages/inspections/StartInspectionPage';
-import LandingPage from './pages/marketing/LandingPage';
 
 // Auth Guard Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -135,9 +133,6 @@ function App() {
     <>
       <Router>
         <Routes>
-          {/* Debug route */}
-          <Route path="/debug/email" element={<TestEmailConfirmation />} />
-          
           {/* Subscription required page */}
           <Route path="/subscription-required" element={<SubscriptionRequiredPage />} />
           
@@ -190,7 +185,6 @@ function App() {
             <Route path="templates" element={<TemplatesPage />} />
             <Route path="templates/:id" element={<TemplateDetailPage />} />
             <Route path="reports" element={<ReportsPage />} />
-            <Route path="reports/:id" element={<ReportDetailPage />} />
             <Route path="inspections/:id" element={<InspectionPage />} />
             
             {/* Admin routes */}
