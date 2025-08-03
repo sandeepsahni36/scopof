@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Database Primary Keys**: Added explicit primary key constraints to Stripe tables for improved data integrity and manageability.
+  - Added `PRIMARY KEY (id)` to `public.stripe_subscriptions` table.
+  - Added `PRIMARY KEY (id)` to `public.stripe_orders` table.
+  - This resolves issues with deleting records and ensures unique identification for each entry.
+
+
 ## Core Application Functions
 
 ### User Management System
@@ -553,13 +562,6 @@ All notable changes to this project will be documented in this file.
 - Modified `src/pages/auth/AuthCallbackPage.tsx` to handle session errors more gracefully
 - Added better error logging to distinguish between different types of authentication failures
 - Improved retry mechanism for authentication callback timeouts
-- Implemented explicit PKCE code exchange before falling back to session retrieval
-- Added localStorage verification for PKCE verifier presence
-- Enhanced user experience with specific error messages for expired confirmation links
-
-### Known Issues
-- ~~Email confirmation links may contain duplicate `type=signup` parameters~~ - FIXED
-- Investigation ongoing for persistent PKCE flow issues despite code exchange improvements
 
 ## [Previous Versions]
 - Initial project setup and core functionality implementation
