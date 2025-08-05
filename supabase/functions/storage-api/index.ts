@@ -278,6 +278,13 @@ serve(async (req) => {
         const inspectionId = formData.get("inspectionId") as string;
         const inspectionItemId = formData.get("inspectionItemId") as string;
 
+        console.log('=== STORAGE API UPLOAD DEBUG ===');
+        console.log('Received inspectionId:', inspectionId);
+        console.log('Received inspectionItemId:', inspectionItemId);
+        console.log('File name:', file?.name);
+        console.log('File type:', fileType);
+        console.log('=== END STORAGE API DEBUG ===');
+
         if (!file) {
           return new Response(JSON.stringify({
             error: "No file uploaded"
@@ -390,6 +397,12 @@ serve(async (req) => {
 
           if (metadataError) {
             console.error("DB: Error saving file metadata:", metadataError?.message);
+            console.log('=== FILE METADATA ERROR DEBUG ===');
+            console.log('Full metadata error object:', JSON.stringify(metadataError, null, 2));
+            console.log('Attempted inspection_item_id:', inspectionItemId);
+            console.log('Attempted inspection_id:', inspectionId);
+            console.log('Admin ID:', userContext.adminId);
+            console.log('=== END METADATA ERROR DEBUG ===');
             // Consider deleting the file from MinIO if DB insert fails for consistency
             try {
               await minioClient.removeObject(minioBucketName, objectName);

@@ -1,3 +1,17 @@
+## [2025-01-31] - Debug Foreign Key Violation
+
+### Added
+- Added comprehensive logging to debug foreign key violation in photo uploads
+- Added logging in `createInspection` to track inspection item creation
+- Added logging in `buildRoomsFromInspectionData` to track item ID mapping
+- Added logging in `storage-api` Edge Function to track received parameters
+- Enhanced error logging in `storage-api` to show full error details
+
+### Debug Information
+- Logs will help identify where invalid inspection_item_id values originate
+- Console logs will show the flow from database creation to frontend usage to Edge Function processing
+- Error logs will provide detailed information about foreign key constraint violations
+
 ## [2025-01-31] - Photo Upload Fix
 
 ### Fixed

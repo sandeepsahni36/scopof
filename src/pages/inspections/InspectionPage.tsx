@@ -202,6 +202,13 @@ const InspectionPage = () => {
             options: templateItem.options || undefined,
           };
 
+          console.log('=== ROOM ITEM CREATION DEBUG ===');
+          console.log('Template item ID:', templateItem.id);
+          console.log('Inspection item ID:', inspectionItem.id);
+          console.log('Item label:', item.label);
+          console.log('Item ID being used:', item.id);
+          console.log('=== END ROOM ITEM DEBUG ===');
+
           room.items.push(item);
         }
       }

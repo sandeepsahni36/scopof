@@ -170,6 +170,13 @@ export async function createInspection(
           .insert(inspectionItems)
           .select();
 
+        console.log('=== INSPECTION ITEMS CREATION DEBUG ===');
+        console.log('Items to insert:', inspectionItems.length);
+        console.log('Items error:', itemsError);
+        console.log('Created items count:', createdInspectionItems?.length || 0);
+        console.log('Created items sample:', createdInspectionItems?.slice(0, 3));
+        console.log('=== END INSPECTION ITEMS DEBUG ===');
+
         if (itemsError) {
           console.error('Error creating inspection items:', itemsError);
           // Continue without pre-created items
