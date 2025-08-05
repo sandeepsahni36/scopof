@@ -1,3 +1,20 @@
+## [2025-01-31] - Report Access Fix
+
+### Added
+- Added `file_key` column to `reports` table to enable secure file access
+- Added `getSignedUrlForFile` function in storage.ts for generating pre-signed URLs
+- Added loading states for report view/download buttons
+
+### Fixed
+- Fixed "AccessDenied" error when viewing/downloading reports from MinIO storage
+- Reports now use pre-signed URLs for secure, temporary access to private files
+- Enhanced error handling for report access operations
+- Improved user experience with loading indicators during file access
+
+### Changed
+- Report viewing and downloading now uses secure pre-signed URLs instead of direct file URLs
+- Updated report data mapping to include file_key for secure access
+
 ## [2025-01-31] - Database Schema Fix
 
 ### Fixed

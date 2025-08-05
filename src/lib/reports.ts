@@ -41,7 +41,7 @@ export async function generateInspectionReport(reportData: {
     }
 
     // Save report record to database
-    await saveReportRecord(reportData, uploadResult.fileUrl);
+    await saveReportRecord(reportData, uploadResult.fileUrl, uploadResult.fileKey);
 
     return uploadResult.fileUrl;
   } catch (error: any) {
@@ -211,13 +211,14 @@ function formatDuration(seconds: number): string {
   return `${minutes}m`;
 }
 
-async function saveReportRecord(reportData: any, reportUrl: string) {
+async function saveReportRecord(reportData: any, reportUrl: string, fileKey: string) {
   try {
     // In dev mode, just log the save operation
     if (devModeEnabled()) {
       console.log('Dev mode: Would save report record:', {
         inspectionId: reportData.inspection.id,
         reportUrl,
+        fileKey,
         generatedAt: new Date().toISOString(),
       });
       return;
@@ -229,6 +230,7 @@ async function saveReportRecord(reportData: any, reportUrl: string) {
       .insert([{
         inspection_id: reportData.inspection.id,
         report_url: reportUrl,
+        file_key: fileKey,
         report_type: 'inspection',
         generated_at: new Date().toISOString(),
       }]);
@@ -336,6 +338,7 @@ export async function getReports(filters?: {
       primaryContactName: item.inspections?.primary_contact_name || 'N/A',
       inspectorName: item.inspections?.inspector_name || 'Unknown Inspector',
       reportUrl: item.report_url || '',
+      fileKey: item.file_key || '',
       generatedAt: item.generated_at || item.created_at,
       createdAt: item.created_at,
     })) || [];

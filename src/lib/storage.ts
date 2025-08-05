@@ -243,6 +243,73 @@ export async function getStorageUsage(): Promise<StorageUsage | null> {
   }
 }
 
+export async function getSignedUrlForFile(fileKey: string): Promise<string | null> {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Mock signed URL for file:', fileKey);
+      return `https://example.com/mock-signed-url/${fileKey}?expires=${Date.now() + 300000}`;
+    }
+
+    // Get user's session token
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session token found');
+    }
+
+    console.log('Getting signed URL for file:', fileKey);
+
+    // Call the storage API to get a pre-signed URL
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/storage-api/download/${fileKey}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Storage API download error:', errorData);
+      
+      // Check if it's an authentication error
+      if (response.status === 401 || response.status === 403) {
+        await handleAuthError(new Error(errorData.error || 'Authentication failed'));
+        return null;
+      }
+      
+      throw new Error(errorData.error || 'Failed to get signed URL');
+    }
+
+    const data = await response.json();
+
+    if (!data || !data.fileUrl) {
+      throw new Error('No signed URL returned from storage API');
+    }
+
+    console.log('Signed URL generated successfully for file:', fileKey);
+    return data.fileUrl;
+  } catch (error: any) {
+    console.error('Error getting signed URL for file:', error);
+    
+    // Check if it's an authentication error
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT') || error.message?.includes('Unauthorized')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
   

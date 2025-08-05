@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getReports } from '../../lib/reports';
 import { getProperties } from '../../lib/properties';
+import { getSignedUrlForFile } from '../../lib/storage';
 import { toast } from 'sonner';
 
 interface Report {
@@ -14,6 +15,7 @@ interface Report {
   primaryContactName: string;
   inspectorName: string;
   reportUrl: string;
+  fileKey: string;
   generatedAt: string;
   createdAt: string;
 }
@@ -29,6 +31,8 @@ const ReportsPage = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingReports, setDownloadingReports] = useState<Set<string>>(new Set());
+  const [viewingReports, setViewingReports] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Filters>({
@@ -71,30 +75,74 @@ const ReportsPage = () => {
     }
   };
 
-  const handleDownloadReport = (reportUrl: string, reportName: string) => {
-    if (!reportUrl) {
-      toast.error('Report URL not available');
+  const handleDownloadReport = async (report: Report) => {
+    if (!report.fileKey) {
+      toast.error('Report file not available for download');
       return;
     }
     
-    // Create a temporary link to download the report
-    const link = document.createElement('a');
-    link.href = reportUrl;
-    link.download = reportName;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      setDownloadingReports(prev => new Set(prev).add(report.id));
+      
+      // Get signed URL from storage API
+      const signedUrl = await getSignedUrlForFile(report.fileKey);
+      
+      if (!signedUrl) {
+        throw new Error('Failed to generate download URL');
+      }
+      
+      // Create a temporary link to download the report
+      const reportName = getReportName(report);
+      const link = document.createElement('a');
+      link.href = signedUrl;
+      link.download = reportName;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Download started');
+    } catch (error: any) {
+      console.error('Error downloading report:', error);
+      toast.error(error.message || 'Failed to download report');
+    } finally {
+      setDownloadingReports(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(report.id);
+        return newSet;
+      });
+    }
   };
 
-  const handleViewReport = (reportUrl: string) => {
-    if (!reportUrl) {
-      toast.error('Report URL not available');
+  const handleViewReport = async (report: Report) => {
+    if (!report.fileKey) {
+      toast.error('Report file not available for viewing');
       return;
     }
     
-    window.open(reportUrl, '_blank');
+    try {
+      setViewingReports(prev => new Set(prev).add(report.id));
+      
+      // Get signed URL from storage API
+      const signedUrl = await getSignedUrlForFile(report.fileKey);
+      
+      if (!signedUrl) {
+        throw new Error('Failed to generate view URL');
+      }
+      
+      // Open in new window
+      window.open(signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (error: any) {
+      console.error('Error viewing report:', error);
+      toast.error(error.message || 'Failed to view report');
+    } finally {
+      setViewingReports(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(report.id);
+        return newSet;
+      });
+    }
   };
 
   const filteredReports = reports.filter(report => {
@@ -301,16 +349,20 @@ const ReportsPage = () => {
                         <Button
                           variant="ghost"
                           size="sm"
+                          isLoading={viewingReports.has(report.id)}
+                          disabled={viewingReports.has(report.id) || downloadingReports.has(report.id)}
                           leftIcon={<Eye size={16} />}
-                          onClick={() => handleViewReport(report.reportUrl)}
+                          onClick={() => handleViewReport(report)}
                         >
                           View
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
+                          isLoading={downloadingReports.has(report.id)}
+                          disabled={downloadingReports.has(report.id) || viewingReports.has(report.id)}
                           leftIcon={<Download size={16} />}
-                          onClick={() => handleDownloadReport(report.reportUrl, getReportName(report))}
+                          onClick={() => handleDownloadReport(report)}
                         >
                           Download
                         </Button>
