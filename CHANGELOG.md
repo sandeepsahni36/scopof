@@ -1,3 +1,10 @@
+## [2025-01-31] - Database Schema Fix
+
+### Fixed
+- Added unique constraint to `storage_usage.admin_id` column to fix "ON CONFLICT specification" error
+- Resolved file upload failures in storage-api Edge Function
+- Enabled proper storage usage tracking and quota enforcement
+
 ## [2025-01-31] - Storage API Fixes
 
 ### Fixed
