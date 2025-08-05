@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Search, Filter, Calendar, Building2, User, Eye, Loader2 } from 'lucide-react';
+import { FileText, Download, Search, Filter, Calendar, Building2, User, Eye, Loader2, UserCheck } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getReports } from '../../lib/reports';
@@ -12,6 +12,7 @@ interface Report {
   propertyName: string;
   inspectionType: 'check_in' | 'check_out';
   primaryContactName: string;
+  inspectorName: string;
   reportUrl: string;
   generatedAt: string;
   createdAt: string;
@@ -71,36 +72,57 @@ const ReportsPage = () => {
   };
 
   const handleDownloadReport = (reportUrl: string, reportName: string) => {
+    if (!reportUrl) {
+      toast.error('Report URL not available');
+      return;
+    }
+    
     // Create a temporary link to download the report
     const link = document.createElement('a');
     link.href = reportUrl;
     link.download = reportName;
     link.target = '_blank';
+    link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleViewReport = (reportUrl: string) => {
+    if (!reportUrl) {
+      toast.error('Report URL not available');
+      return;
+    }
+    
     window.open(reportUrl, '_blank');
   };
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = searchTerm === '' || 
       report.propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.primaryContactName.toLowerCase().includes(searchTerm.toLowerCase());
+      (report.primaryContactName && report.primaryContactName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (report.inspectorName && report.inspectorName.toLowerCase().includes(searchTerm.toLowerCase()));
     
     return matchesSearch;
   });
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
   };
 
   const getReportName = (report: Report) => {
@@ -250,7 +272,11 @@ const ReportsPage = () => {
                           </div>
                           <div className="text-sm text-gray-500 flex items-center">
                             <User className="h-4 w-4 text-gray-400 mr-1" />
-                            {report.primaryContactName}
+                            {report.primaryContactName || 'No contact name'}
+                          </div>
+                          <div className="text-xs text-gray-400 flex items-center mt-1">
+                            <UserCheck className="h-3 w-3 text-gray-400 mr-1" />
+                            Inspector: {report.inspectorName || 'Unknown'}
                           </div>
                         </div>
                       </div>

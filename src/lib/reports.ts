@@ -327,7 +327,18 @@ export async function getReports(filters?: {
       throw error;
     }
 
-    return data;
+    // Transform the data to match the Report interface expected by the frontend
+    return data?.map(item => ({
+      id: item.id,
+      inspectionId: item.inspection_id,
+      propertyName: item.inspections?.properties?.name || 'Unknown Property',
+      inspectionType: item.inspections?.inspection_type || 'check_in',
+      primaryContactName: item.inspections?.primary_contact_name || 'N/A',
+      inspectorName: item.inspections?.inspector_name || 'Unknown Inspector',
+      reportUrl: item.report_url || '',
+      generatedAt: item.generated_at || item.created_at,
+      createdAt: item.created_at,
+    })) || [];
   } catch (error: any) {
     console.error('Error fetching reports:', error);
     
