@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.39.6";
 import { Client as MinioClient } from "npm:minio@8.0.0";
+import { Readable } from "node:stream";
 import { parse } from "https://deno.land/std@0.168.0/path/mod.ts";
 import { v4 as uuidv4 } from "npm:uuid@9.0.1";
 
@@ -347,11 +348,15 @@ serve(async (req) => {
         console.log("Generated object name:", objectName);
 
         try {
+          // Convert Web ReadableStream to Node.js Readable stream
+          const webStream = file.stream();
+          const nodeStream = Readable.fromWeb(webStream);
+
           // Upload file to MinIO
           await minioClient.putObject(
             minioBucketName, 
             objectName, 
-            file.stream(), 
+            nodeStream, 
             file.size, 
             {
               'Content-Type': file.type,
