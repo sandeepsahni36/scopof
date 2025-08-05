@@ -29,6 +29,22 @@
 - Report viewing and downloading now uses secure pre-signed URLs instead of direct file URLs
 - Updated report data mapping to include file_key for secure access
 
+## [2025-01-31] - Photo Upload Foreign Key Fix
+
+### Fixed
+- Fixed foreign key constraint violation when uploading photos during inspections
+- Resolved "file_metadata_inspection_item_id_fkey" error by ensuring inspection items are properly created
+- Enhanced inspection item creation to return database-generated IDs
+- Improved room building logic to only use valid inspection item IDs
+- Added filtering to exclude rooms without valid inspection items
+- Fixed database field name mapping (photo_urls vs photoUrls, template_item_id vs templateItemId)
+
+### Changed
+- Modified `createInspection` function to return both inspection and items data
+- Updated `buildRoomsFromInspectionData` to require valid inspection item records
+- Enhanced error handling for missing inspection items during photo uploads
+- Improved robustness of template-to-inspection-item mapping
+
 ## [2025-01-31] - Database Schema Fix
 
 ### Fixed

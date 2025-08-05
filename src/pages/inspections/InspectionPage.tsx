@@ -161,7 +161,7 @@ const InspectionPage = () => {
       const roomMap = new Map<string, Room>();
 
       // Process each template in the checklist
-      for (const checklistTemplate of checklistTemplates || []) {
+      for (const checklistTemplate of checklistTemplates) {
         const template = checklistTemplate.templates;
         if (!template || !template.template_items) continue;
 
@@ -181,21 +181,22 @@ const InspectionPage = () => {
           
           // Find the corresponding inspection item
           const inspectionItem = inspectionItems.find(
-            item => item.templateItemId === templateItem.id
+            item => item.template_item_id === templateItem.id
           );
 
-          // Skip items that don't have a corresponding inspection item record
+          // Skip template items that don't have corresponding inspection items
           if (!inspectionItem) {
-            console.warn(`No inspection item found for template item ${templateItem.id}, skipping`);
-            return;
+            console.warn(`No inspection item found for template item ${templateItem.id}, skipping this item`);
+            continue;
           }
+          
           // Convert template item to inspection item format
           const item: InspectionItem = {
             id: inspectionItem.id, // Always use inspection item ID
             type: templateItem.type as any,
             label: templateItem.label,
             value: inspectionItem.value || getDefaultValue(templateItem.type),
-            photos: inspectionItem.photoUrls || [],
+            photos: inspectionItem.photo_urls || [],
             notes: inspectionItem.notes || '',
             required: templateItem.required || false,
             options: templateItem.options || undefined,
