@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **CRITICAL**: Fixed Stripe Edge Functions event loop errors by downgrading to compatible library version
+  - Downgraded Stripe library from v16.0.0 to v13.17.0 across all Edge Functions to resolve `Deno.core.runMicrotasks()` errors
+  - Changed target from `esnext` to `deno` for better Deno runtime compatibility
+  - This resolves the "SubtleCryptoProvider cannot be used in a synchronous context" errors in webhook processing
+  - Combined with existing `httpClient: Stripe.createFetchHttpClient()` configuration for optimal Deno compatibility
+  - Webhooks and checkout sessions now process correctly without runtime errors
+
+### Technical Details
+- Modified `deno.json` files for all Stripe-related Edge Functions to use Stripe v13.17.0
+- Updated target parameter from `esnext` to `deno` for improved compatibility
+- Maintains all existing webhook event handling and subscription processing functionality
+- Version 13.17.0 has proven stable in Deno environments while still supporting required Stripe API features
+
+### Benefits
+- Eliminates Edge Function crashes during webhook and checkout processing
+- Ensures reliable Stripe integration with proper Deno runtime compatibility
+- Maintains all existing subscription and payment processing functionality
+- Improves system reliability and reduces payment processing errors
+
+### Fixed
 - **CRITICAL**: Fixed Stripe webhook signature verification for Deno environment
   - Added support for `constructEventAsync` method when available in newer Stripe versions
   - Implemented manual signature verification fallback using Deno's `crypto.subtle` API for compatibility
