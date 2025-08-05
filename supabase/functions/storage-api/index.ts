@@ -347,15 +347,11 @@ serve(async (req) => {
         console.log("Generated object name:", objectName);
 
         try {
-          // Convert file to buffer for MinIO upload
-          const fileBuffer = await file.arrayBuffer();
-          const uint8Array = new Uint8Array(fileBuffer);
-
           // Upload file to MinIO
           await minioClient.putObject(
             minioBucketName, 
             objectName, 
-            uint8Array, 
+            file.stream(), 
             file.size, 
             {
               'Content-Type': file.type,
