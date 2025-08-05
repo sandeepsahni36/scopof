@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { validate as isValidUUID } from 'uuid';
 import { Camera, Check, X, AlertTriangle, Save, Send, Clock, Upload, Trash2, Play, Pause, ArrowLeft, ArrowRight, UserCheck, User } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -184,10 +185,10 @@ const InspectionPage = () => {
             item => item.template_item_id === templateItem.id
           );
 
-          // Skip template items that don't have corresponding inspection items
-          if (!inspectionItem) {
-            console.warn(`No inspection item found for template item ${templateItem.id}, skipping this item`);
-            continue;
+          // Add UUID validation check
+          if (!inspectionItem || !isValidUUID(inspectionItem.id)) {
+            console.warn(`No valid inspection item found for template item ${templateItem.id} or invalid ID: ${inspectionItem?.id}, skipping this item.`);
+            continue; // Skip to the next templateItem
           }
           
           // Convert template item to inspection item format
@@ -205,6 +206,7 @@ const InspectionPage = () => {
           console.log('=== ROOM ITEM CREATION DEBUG ===');
           console.log('Template item ID:', templateItem.id);
           console.log('Inspection item ID:', inspectionItem.id);
+          console.log('Inspection item ID is valid UUID:', isValidUUID(inspectionItem.id));
           console.log('Item label:', item.label);
           console.log('Item ID being used:', item.id);
           console.log('=== END ROOM ITEM DEBUG ===');

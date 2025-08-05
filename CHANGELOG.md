@@ -1,3 +1,33 @@
+## [2025-01-31] - Enhanced UUID Validation for Photo Uploads
+
+### Added
+- Added UUID validation using `uuid.validate()` function to ensure inspection item IDs are valid
+- Enhanced logging to show UUID validation results for inspection items
+- Added import for `uuid` validation function in InspectionPage component
+
+### Fixed
+- Added explicit UUID validation check before using inspection item IDs for photo uploads
+- Prevents foreign key violations by ensuring only valid UUIDs are used as inspection_item_id
+- Improved robustness of room building logic to handle malformed or invalid inspection item IDs
+
+### Debug Information
+- Console logs now show whether inspection item IDs pass UUID validation
+- Enhanced error tracking to identify invalid UUIDs before they reach the database
+
+## [2025-01-31] - Enhanced Debugging for Foreign Key Violation
+
+### Added
+- Added comprehensive logging to debug foreign key violation in photo uploads
+- Added logging in `createInspection` to track inspection item creation
+- Added logging in `buildRoomsFromInspectionData` to track item ID mapping
+- Added logging in `storage-api` Edge Function to track received parameters
+- Enhanced error logging in `storage-api` to show full error details
+
+### Debug Information
+- Logs will help identify where invalid inspection_item_id values originate
+- Console logs will show the flow from database creation to frontend usage to Edge Function processing
+- Error logs will provide detailed information about foreign key constraint violations
+
 ## [2025-01-31] - Debug Foreign Key Violation
 
 ### Added
