@@ -120,9 +120,9 @@ const StartInspectionPage = () => {
         data.clientPresentForSignature
       );
 
-      if (inspection) {
+      if (inspection?.inspection) {
         toast.success('Inspection started successfully');
-        navigate(`/dashboard/inspections/${inspection.id}`);
+        navigate(`/dashboard/inspections/${inspection.inspection.id}`);
       } else {
         throw new Error('Failed to create inspection');
       }

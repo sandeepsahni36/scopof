@@ -167,16 +167,20 @@ export async function createInspection(
       if (inspectionItems.length > 0) {
         const { error: itemsError } = await supabase
           .from('inspection_items')
-          .insert(inspectionItems);
+          .insert(inspectionItems)
+          .select();
 
         if (itemsError) {
           console.error('Error creating inspection items:', itemsError);
           // Continue without pre-created items
+        } else {
+          console.log('Inspection items created successfully');
         }
       }
     }
 
-    return inspection;
+    // Return both inspection and items for immediate use
+    return { inspection, items: [] }; // Items will be loaded separately in InspectionPage
   } catch (error: any) {
     console.error('Error creating inspection:', error);
     

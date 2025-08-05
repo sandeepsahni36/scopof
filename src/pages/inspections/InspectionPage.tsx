@@ -184,14 +184,19 @@ const InspectionPage = () => {
             item => item.templateItemId === templateItem.id
           );
 
+          // Skip items that don't have a corresponding inspection item record
+          if (!inspectionItem) {
+            console.warn(`No inspection item found for template item ${templateItem.id}, skipping`);
+            return;
+          }
           // Convert template item to inspection item format
           const item: InspectionItem = {
-            id: inspectionItem?.id || templateItem.id, // Use inspection item ID if available
+            id: inspectionItem.id, // Always use inspection item ID
             type: templateItem.type as any,
             label: templateItem.label,
-            value: inspectionItem?.value || getDefaultValue(templateItem.type),
-            photos: inspectionItem?.photoUrls || [],
-            notes: inspectionItem?.notes || '',
+            value: inspectionItem.value || getDefaultValue(templateItem.type),
+            photos: inspectionItem.photoUrls || [],
+            notes: inspectionItem.notes || '',
             required: templateItem.required || false,
             options: templateItem.options || undefined,
           };
@@ -200,17 +205,19 @@ const InspectionPage = () => {
         }
       }
 
-      // Convert map to array and sort items within each room
-      const sortedRooms = Array.from(roomMap.values()).map(room => ({
+      // Convert map to array, filter out empty rooms, and sort items within each room
+      const sortedRooms = Array.from(roomMap.values())
+        .filter(room => room.items.length > 0) // Only include rooms with items
+        .map(room => ({
         ...room,
         items: room.items.sort((a, b) => {
           // Find the template items to get their order
           const templateA = checklistTemplates
             ?.flatMap(ct => ct.templates?.template_items || [])
-            .find(ti => ti.id === a.id || inspectionItems.find(ii => ii.id === a.id)?.templateItemId === ti.id);
+            .find(ti => inspectionItems.find(ii => ii.id === a.id)?.templateItemId === ti.id);
           const templateB = checklistTemplates
             ?.flatMap(ct => ct.templates?.template_items || [])
-            .find(ti => ti.id === b.id || inspectionItems.find(ii => ii.id === b.id)?.templateItemId === ti.id);
+            .find(ti => inspectionItems.find(ii => ii.id === b.id)?.templateItemId === ti.id);
           
           return (templateA?.order || 0) - (templateB?.order || 0);
         }),

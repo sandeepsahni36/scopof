@@ -1,3 +1,17 @@
+## [2025-01-31] - Photo Upload Fix
+
+### Fixed
+- Fixed foreign key constraint violation when uploading photos during inspections
+- Resolved "file_metadata_inspection_item_id_fkey" error by ensuring inspection items are properly created
+- Enhanced inspection item creation to return database-generated IDs
+- Improved room building logic to only use valid inspection item IDs
+- Added filtering to exclude rooms without valid inspection items
+
+### Changed
+- Modified `createInspection` function to return both inspection and items data
+- Updated `buildRoomsFromInspectionData` to require valid inspection item records
+- Enhanced error handling for missing inspection items during photo uploads
+
 ## [2025-01-31] - Report Access Fix
 
 ### Added
