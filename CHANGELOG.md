@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **CRITICAL**: Fixed uuidv4 import error in storage-api Edge Function preventing file uploads
+  - Changed uuid import from `https://deno.land/std@0.168.0/uuid/mod.ts` to `npm:uuid@9.0.1` for better Deno compatibility
+  - Added uuid to imports map in `storage-api/deno.json` configuration
+  - This resolves the "uuidv4 is not a function" TypeError that was causing 500 errors during photo uploads
+  - File uploads (photos and PDF reports) now work correctly during inspections
+  - Users can now complete inspections without encountering upload failures
+
+### Fixed
 - **CRITICAL**: Fixed storage table RLS policies and corrected storage usage trigger function
   - Re-enabled Row Level Security on `storage_quotas`, `storage_usage`, and `file_metadata` tables
   - Added proper RLS policies for tier-based quota access (users can only see their own tier's quota)

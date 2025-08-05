@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.39.6";
 import { Client as MinioClient } from "npm:minio@8.0.0";
 import { parse } from "https://deno.land/std@0.168.0/path/mod.ts";
-import { v4 as uuidv4 } from "https://deno.land/std@0.168.0/uuid/mod.ts";
+import { v4 as uuidv4 } from "npm:uuid@9.0.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

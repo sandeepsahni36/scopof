@@ -4,6 +4,7 @@
   },
   "imports": {
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2.39.6",
-    "minio": "https://esm.sh/minio@8.0.0?target=esnext"
+    "minio": "https://esm.sh/minio@8.0.0?target=esnext",
+    "uuid": "npm:uuid@9.0.1"
   }
 }
