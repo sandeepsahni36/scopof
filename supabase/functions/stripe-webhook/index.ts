@@ -68,11 +68,51 @@ Deno.serve(async (req) => {
     const trimmedWebhookSecret = stripeWebhookSecret.trim();
     console.log("Webhook secret length after trimming:", trimmedWebhookSecret.length);
 
-    // Verify the webhook signature
+    // Verify the webhook signature - Use async version for Deno compatibility
     let event;
     try {
-      // Use the synchronous version for Deno environment
-      event = stripe.webhooks.constructEvent(body, signature, trimmedWebhookSecret);
+      // Try to use constructEventAsync if available (newer Stripe versions)
+      if (typeof stripe.webhooks.constructEventAsync === 'function') {
+        event = await stripe.webhooks.constructEventAsync(body, signature, trimmedWebhookSecret);
+      } else {
+        // Fallback: manual verification for Deno compatibility
+        const encoder = new TextEncoder();
+        const sigElements = signature.split(',');
+        const timestamp = sigElements.find(el => el.startsWith('t='))?.replace('t=', '');
+        const signatures = sigElements.filter(el => el.startsWith('v1='));
+        
+        if (!timestamp || signatures.length === 0) {
+          throw new Error('Invalid signature format');
+        }
+
+        const payload = timestamp + '.' + body;
+        const key = await crypto.subtle.importKey(
+          'raw',
+          encoder.encode(trimmedWebhookSecret),
+          { name: 'HMAC', hash: 'SHA-256' },
+          false,
+          ['sign']
+        );
+        
+        const signature_bytes = await crypto.subtle.sign(
+          'HMAC',
+          key,
+          encoder.encode(payload)
+        );
+        
+        const expected_signature = 'v1=' + Array.from(new Uint8Array(signature_bytes))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+
+        const isValid = signatures.some(sig => sig === expected_signature);
+        
+        if (!isValid) {
+          throw new Error('Signature verification failed');
+        }
+
+        // Parse the event manually
+        event = JSON.parse(body);
+      }
       console.log("Webhook signature verified successfully");
     } catch (err) {
       console.error(`Webhook signature verification failed: ${err.message}`);

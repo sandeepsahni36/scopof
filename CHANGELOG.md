@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **CRITICAL**: Fixed Stripe webhook signature verification for Deno environment
+  - Added support for `constructEventAsync` method when available in newer Stripe versions
+  - Implemented manual signature verification fallback using Deno's `crypto.subtle` API for compatibility
+  - This resolves "SubtleCryptoProvider cannot be used in a synchronous context" errors in webhook processing
+  - Webhooks now process correctly without `Deno.core.runMicrotasks()` or signature verification errors
+  - Maintains backward compatibility with existing webhook processing logic
+
+### Technical Details
+- Enhanced `supabase/functions/stripe-webhook/index.ts` with dual signature verification approach
+- Uses `constructEventAsync` when available, falls back to manual HMAC-SHA256 verification
+- Leverages Deno's native `crypto.subtle` API for cryptographic operations
+- All changes maintain existing webhook event handling functionality
+
+### Benefits
+- Eliminates webhook signature verification failures in Deno runtime
+- Ensures reliable Stripe integration with proper async crypto operations
+- Maintains all existing subscription and payment processing functionality
+- Improves system reliability and reduces webhook processing errors
+
 ### Added
 - **Database Primary Keys**: Added explicit primary key constraints to Stripe tables for improved data integrity and manageability.
   - Added `PRIMARY KEY (id)` to `public.stripe_subscriptions` table.
