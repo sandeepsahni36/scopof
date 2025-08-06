@@ -118,6 +118,16 @@ const InspectionPage = () => {
 
   const buildRoomsFromInspectionData = async (inspection: any, inspectionItems: any[]): Promise<Room[]> => {
     try {
+      // Log all inspection item IDs that we received from the database
+      console.log('=== INSPECTION ITEMS RECEIVED FROM DATABASE ===');
+      console.log('Total inspection items:', inspectionItems.length);
+      console.log('Inspection item IDs:', inspectionItems.map(item => ({
+        id: item.id,
+        templateItemId: item.template_item_id,
+        isValidUUID: isValidUUID(item.id)
+      })));
+      console.log('=== END INSPECTION ITEMS DEBUG ===');
+
       // Check if propertyChecklistId exists before querying
       if (!inspection.property_checklist_id) {
         console.warn('No property checklist ID found for inspection:', inspection.id);
@@ -187,7 +197,12 @@ const InspectionPage = () => {
 
           // Add UUID validation check
           if (!inspectionItem || !isValidUUID(inspectionItem.id)) {
-            console.warn(`No valid inspection item found for template item ${templateItem.id} or invalid ID: ${inspectionItem?.id}, skipping this item.`);
+            console.warn(`=== SKIPPING INVALID INSPECTION ITEM ===`);
+            console.warn(`Template item ID: ${templateItem.id}`);
+            console.warn(`Inspection item found: ${!!inspectionItem}`);
+            console.warn(`Inspection item ID: ${inspectionItem?.id}`);
+            console.warn(`Is valid UUID: ${inspectionItem?.id ? isValidUUID(inspectionItem.id) : 'N/A'}`);
+            console.warn(`=== END SKIP WARNING ===`);
             continue; // Skip to the next templateItem
           }
           
@@ -203,13 +218,14 @@ const InspectionPage = () => {
             options: templateItem.options || undefined,
           };
 
-          console.log('=== ROOM ITEM CREATION DEBUG ===');
+          console.log('=== SUCCESSFULLY PROCESSING INSPECTION ITEM ===');
           console.log('Template item ID:', templateItem.id);
           console.log('Inspection item ID:', inspectionItem.id);
           console.log('Inspection item ID is valid UUID:', isValidUUID(inspectionItem.id));
           console.log('Item label:', item.label);
-          console.log('Item ID being used:', item.id);
-          console.log('=== END ROOM ITEM DEBUG ===');
+          console.log('Item ID being used in frontend:', item.id);
+          console.log('Room name:', roomName);
+          console.log('=== END SUCCESSFUL PROCESSING ===');
 
           room.items.push(item);
         }

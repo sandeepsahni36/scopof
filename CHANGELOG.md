@@ -1,6 +1,9 @@
 ## [2025-01-31] - Enhanced UUID Validation for Photo Uploads
 
 ### Added
+- Enhanced logging in `buildRoomsFromInspectionData` to show all inspection item IDs received from database
+- Added comprehensive validation logging to track which inspection items are being processed vs skipped
+- Added detailed debug output to identify the source of invalid inspection item IDs
 - Added UUID validation using `uuid.validate()` function to ensure inspection item IDs are valid
 - Enhanced logging to show UUID validation results for inspection items
 - Added import for `uuid` validation function in InspectionPage component
