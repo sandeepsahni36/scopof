@@ -591,3 +591,59 @@ export async function deleteInspection(inspectionId: string): Promise<boolean> {
     throw error;
   }
 }
+
+export async function deleteIncompleteInspections(): Promise<{ deleted: number; errors: string[] }> {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Cleaning up mock incomplete inspections');
+      const incompleteCount = mockInspectionsState.filter(i => i.status === 'in_progress').length;
+      mockInspectionsState = mockInspectionsState.filter(i => i.status !== 'in_progress');
+      return { deleted: incompleteCount, errors: [] };
+    }
+
+    // Get all incomplete inspections for this admin
+    const { data: incompleteInspections, error: inspectionsError } = await supabase
+      .from('inspections')
+      .select(`
+        id,
+        properties!inner(admin_id)
+      `)
+      .eq('status', 'in_progress')
+      .eq('properties.admin_id', (await supabase.from('admin').select('id').eq('owner_id', user.id).single()).data?.id);
+
+    if (inspectionsError) {
+      throw inspectionsError;
+    }
+
+    const errors: string[] = [];
+    let deletedCount = 0;
+
+    for (const inspection of incompleteInspections || []) {
+      try {
+        const success = await deleteInspection(inspection.id);
+        if (success) {
+          deletedCount++;
+        }
+      } catch (error: any) {
+        errors.push(`Failed to delete inspection ${inspection.id}: ${error.message}`);
+      }
+    }
+
+    return { deleted: deletedCount, errors };
+  } catch (error: any) {
+    console.error('Error cleaning up incomplete inspections:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return { deleted: 0, errors: ['Authentication failed'] };
+    }
+    
+    throw error;
+  }
+}

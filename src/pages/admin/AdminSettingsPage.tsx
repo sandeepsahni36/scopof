@@ -453,7 +453,35 @@ const AdminSettingsPage = () => {
               Careful, these actions cannot be undone.
             </p>
             
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-2">Clean Up Incomplete Inspections</h3>
+                <p className="text-sm text-gray-500 mb-3">
+                  Remove all incomplete inspections and their associated files from storage.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (window.confirm('Are you sure you want to delete all incomplete inspections? This will remove all associated photos and data.')) {
+                      try {
+                        const { deleteIncompleteInspections } = await import('../../lib/inspections');
+                        const result = await deleteIncompleteInspections();
+                        toast.success(`Cleaned up ${result.deleted} incomplete inspections`);
+                        if (result.errors.length > 0) {
+                          console.error('Cleanup errors:', result.errors);
+                          toast.error(`${result.errors.length} errors occurred during cleanup`);
+                        }
+                      } catch (error: any) {
+                        console.error('Error cleaning up inspections:', error);
+                        toast.error('Failed to clean up incomplete inspections');
+                      }
+                    }
+                  }}
+                >
+                  Clean Up Incomplete Inspections
+                </Button>
+              </div>
+              
               <Button
                 variant="danger"
                 onClick={() => {

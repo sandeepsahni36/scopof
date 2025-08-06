@@ -35,6 +35,7 @@ const InspectionPage = () => {
   const [inspectorSignature, setInspectorSignature] = useState<any>(null);
   const [primaryContactName, setPrimaryContactName] = useState('');
   const [inspectorName, setInspectorName] = useState('');
+  const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [completing, setCompleting] = useState(false);
@@ -96,15 +97,8 @@ const InspectionPage = () => {
       
       if (data) {
         setInspection(data.inspection);
-        setPrimaryContactName(data.inspection.primary_contact_name || '');
-        setInspectorName(data.inspection.inspector_name || '');
-        
-        // Load property data for report generation
-        if (data.inspection.property_id) {
-          const { getProperty } = await import('../../lib/properties');
-          const propertyData = await getProperty(data.inspection.property_id);
-          setProperty(propertyData);
-        }
+        setPrimaryContactName(data.inspection.primaryContactName || '');
+        setInspectorName(data.inspection.inspectorName || '');
         
         // Build rooms from actual inspection items and template data
         const rooms = await buildRoomsFromInspectionData(data.inspection, data.items);
@@ -449,7 +443,7 @@ const InspectionPage = () => {
     const isMoveIn = inspection.inspectionType === 'move_in';
     const isMoveOut = inspection.inspectionType === 'move_out';
     const isRealEstate = isMoveIn || isMoveOut;
-    const clientPresentForSignature = inspection.clientPresentForSignature;
+    const clientPresentForSignature = inspection.client_present_for_signature;
 
     if (isCheckIn && (!primaryContactSignature || !inspectorSignature)) {
       toast.error('Both guest and inspector signatures are required for check-in inspections');

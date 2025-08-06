@@ -226,6 +226,34 @@ const PropertyDetailPage = () => {
     }
   };
 
+  const handleDeleteInspection = async (inspectionId: string) => {
+    if (!window.confirm('Are you sure you want to delete this inspection? This action cannot be undone and will remove all associated photos and reports.')) {
+      return;
+    }
+
+    try {
+      setDeletingInspections(prev => new Set(prev).add(inspectionId));
+      
+      const { deleteInspection } = await import('../../lib/inspections');
+      const success = await deleteInspection(inspectionId);
+      
+      if (success) {
+        toast.success('Inspection deleted successfully');
+        // Reload inspection history
+        loadInspectionHistory();
+      }
+    } catch (error: any) {
+      console.error('Error deleting inspection:', error);
+      toast.error('Failed to delete inspection');
+    } finally {
+      setDeletingInspections(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(inspectionId);
+        return newSet;
+      });
+    }
+  };
+
   const getPropertyTypeIcon = (type: string) => {
     switch (type) {
       case 'villa':
