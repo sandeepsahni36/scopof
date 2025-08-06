@@ -397,77 +397,23 @@ const StartInspectionPage = () => {
               <Input
                 label={isShortTermRental ? "Guest Name" : "Client Name"}
                 error={errors.primaryContactName?.message}
-               {...register('primaryContactName', {
-                 minLength: {
-                   value: 2,
-                   message: 'Name must be at least 2 characters',
-                 },
-               })}
-               placeholder={isShortTermRental ? "Enter guest's full name" : "Enter client's full name"}
-               leftIcon={<User size={16} className="text-gray-400" />}
-             />
-             <p className="mt-2 text-sm text-gray-500">
-               {isShortTermRental 
-                 ? 'This name will appear on the inspection report and signature page.'
-                 : 'This name will appear on the inspection report. Leave blank if client is not present.'
-               }
-             </p>
-           </div>
+                {...register('primaryContactName', {
+                  minLength: {
+                    value: 2,
+                    message: 'Name must be at least 2 characters',
+                  },
+                })}
+                placeholder={isShortTermRental ? "Enter guest's full name" : "Enter client's full name"}
+                leftIcon={<User size={16} className="text-gray-400" />}
+              />
+              <p className="mt-2 text-sm text-gray-500">
+                {isShortTermRental 
+                  ? 'This name will appear on the inspection report and signature page.'
+                  : 'This name will appear on the inspection report. Leave blank if client is not present.'
+                }
+              </p>
+            </div>
 
-           {/* Inspection Info */}
-           <div className="bg-gray-50 rounded-lg p-6">
-             <h4 className="text-sm font-semibold text-gray-900 mb-3">What happens next?</h4>
-             <ul className="space-y-2 text-sm text-gray-600">
-               <li className="flex items-start">
-                 <ClipboardCheck className="h-4 w-4 text-primary-500 mt-0.5 mr-2 flex-shrink-0" />
-                 <span>Follow the inspection checklist step by step</span>
-               </li>
-               <li className="flex items-start">
-                 <Camera className="h-4 w-4 text-primary-500 mt-0.5 mr-2 flex-shrink-0" />
-                 <span>Take photos and document any issues found</span>
-               </li>
-               <li className="flex items-start">
-                 <UserCheck className="h-4 w-4 text-primary-500 mt-0.5 mr-2 flex-shrink-0" />
-                 <span>
-                   {isShortTermRental ? (
-                     inspectionType === 'check_in' 
-                       ? 'Get both guest and inspector signatures to confirm property condition'
-                       : 'Complete final inspection with inspector signature'
-                   ) : (
-                     'Complete inspection with inspector signature (client signature optional based on presence)'
-                   )}
-                 </span>
-               </li>
-             </ul>
-           </div>
-
-           {/* Start Button */}
-           <div className="pt-6">
-             <Button
-               type="submit"
-               size="lg"
-               fullWidth
-               isLoading={submitting}
-               disabled={!propertyChecklist}
-               leftIcon={<Camera size={20} />}
-               className="bg-primary-600 hover:bg-primary-700"
-             >
-               {submitting ? 'Starting Inspection...' : 'START INSPECTION'}
-             </Button>
-             {!propertyChecklist && (
-               <p className="mt-2 text-sm text-red-600 text-center">
-                 A checklist is required to start an inspection. Please create one first.
-               </p>
-             )}
-           </div>
-         </form>
-       </div>
-     </div>
-   </div>
- );
-};
-
-export default StartInspectionPage;
             {/* Inspection Info */}
             <div className="bg-gray-50 rounded-lg p-6">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">What happens next?</h4>
@@ -488,9 +434,7 @@ export default StartInspectionPage;
                         ? 'Get both guest and inspector signatures to confirm property condition'
                         : 'Complete final inspection with inspector signature'
                     ) : (
-                      watch('clientPresentForSignature')
-                        ? 'Get both client and inspector signatures to confirm property condition'
-                        : 'Complete inspection with inspector signature'
+                      'Complete inspection with inspector signature (client signature optional based on presence)'
                     )}
                   </span>
                 </li>
