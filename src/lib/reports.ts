@@ -30,7 +30,8 @@ export async function generateInspectionReport(reportData: {
     const pdfBlob = await createPDFReport(reportData);
     
     // Create a File object from the blob for upload
-    const pdfFile = new File([pdfBlob], `inspection-report-${Date.now()}.pdf`, {
+    const fileName = generateReportFileName(reportData);
+    const pdfFile = new File([pdfBlob], fileName, {
       type: 'application/pdf',
     });
     
@@ -242,7 +243,9 @@ async function createPDFReport(reportData: {
       
       try {
         // Check if signature data is valid before embedding
-        if (reportData.inspectorSignature && reportData.inspectorSignature.startsWith('data:image/')) {
+        if (reportData.inspectorSignature && 
+            typeof reportData.inspectorSignature === 'string' && 
+            reportData.inspectorSignature.startsWith('data:image/')) {
           pdf.addImage(
             reportData.inspectorSignature,
             'PNG',
@@ -276,7 +279,9 @@ async function createPDFReport(reportData: {
       
       try {
         // Check if signature data is valid before embedding
-        if (reportData.primaryContactSignature && reportData.primaryContactSignature.startsWith('data:image/')) {
+        if (reportData.primaryContactSignature && 
+            typeof reportData.primaryContactSignature === 'string' && 
+            reportData.primaryContactSignature.startsWith('data:image/')) {
           pdf.addImage(
             reportData.primaryContactSignature,
             'PNG',
@@ -306,15 +311,15 @@ async function createPDFReport(reportData: {
 }
 
 function generateReportFileName(reportData: any): string {
-  const propertyName = reportData.inspection.propertyName || 'Property';
-  const inspectionType = reportData.inspection.inspectionType || 'inspection';
+  const propertyName = reportData.inspection.propertyName || reportData.propertyName || 'Property';
+  const inspectionType = reportData.inspection.inspectionType || reportData.inspection.inspection_type || 'inspection';
   const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const time = new Date().toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
   
   // Clean property name for filename
   const cleanPropertyName = propertyName.replace(/[^a-zA-Z0-9]/g, '_');
   
-  return `${cleanPropertyName}_${inspectionType}_${date}_${time}.pdf`;
+  return `${cleanPropertyName}_${inspectionType.replace('_', '-')}_${date}_${time}.pdf`;
 }
 
 // Helper function to extract file key from MinIO URL

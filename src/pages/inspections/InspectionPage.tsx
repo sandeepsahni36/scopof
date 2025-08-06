@@ -96,8 +96,15 @@ const InspectionPage = () => {
       
       if (data) {
         setInspection(data.inspection);
-        setPrimaryContactName(data.inspection.primaryContactName || '');
-        setInspectorName(data.inspection.inspectorName || '');
+        setPrimaryContactName(data.inspection.primary_contact_name || '');
+        setInspectorName(data.inspection.inspector_name || '');
+        
+        // Load property data for report generation
+        if (data.inspection.property_id) {
+          const { getProperty } = await import('../../lib/properties');
+          const propertyData = await getProperty(data.inspection.property_id);
+          setProperty(propertyData);
+        }
         
         // Build rooms from actual inspection items and template data
         const rooms = await buildRoomsFromInspectionData(data.inspection, data.items);
