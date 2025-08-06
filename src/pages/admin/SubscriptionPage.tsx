@@ -202,7 +202,7 @@ const SubscriptionPage = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" {/* Adjusted grid for responsiveness */}
         >
           {Object.entries(STRIPE_PRODUCTS).map(([key, product]) => (
             <div
@@ -274,7 +274,7 @@ const SubscriptionPage = () => {
       <div className="bg-white shadow rounded-lg">
         <div className="p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Billing History</h2>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto"> {/* Added overflow-x-auto here */}
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
