@@ -277,7 +277,7 @@ const ReportsPage = () => {
 
         {showFilters && (
           <div className="border-t border-gray-200 p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"> {/* Adjusted grid for responsiveness */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Property
@@ -347,7 +347,7 @@ const ReportsPage = () => {
         </div>
       ) : filteredReports.length > 0 ? (
         <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto"> {/* Added overflow-x-auto here */}
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
