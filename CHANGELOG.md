@@ -1,3 +1,34 @@
+## [2025-01-31] - Complete Inspection and Report Management Fixes
+
+### Fixed
+- Fixed signature embedding in PDF reports by properly implementing `pdf.addImage()` calls for both inspector and primary contact signatures
+- Fixed infinite recursion bug in `fetchAndProcessImage` function that was causing "Complete Inspection" to hang
+- Fixed duplicate name input fields - names are now only collected once at inspection start, not again at signature
+- Fixed "Client is Present" checkbox to be interactive and properly control signature requirements
+- Fixed inspection history display on property detail page - now shows actual completed inspections
+- Fixed report download functionality to save files to local disk instead of opening in browser
+
+### Added
+- Added delete functionality for reports with confirmation dialog
+- Added proper inspection history table with type, inspector, contact, date, status, and duration columns
+- Added loading states for inspection history and report operations
+- Added file deletion from MinIO storage when reports are deleted
+- Added larger signature canvas boxes (h-64 instead of h-40) for better signature capture
+- Added read-only display of inspection details (inspector name, contact name, client present status) on signature page
+
+### Changed
+- Signature canvas boxes are now larger and more square-shaped for better usability
+- Inspector and contact names are displayed as read-only text on signature page instead of editable inputs
+- Report download now triggers actual file download instead of opening in new window
+- Inspection history shows real data from database instead of placeholder empty state
+- Delete button for reports includes proper cleanup of both database records and MinIO files
+
+### Technical Details
+- Signatures are embedded as PNG images with 60mm x 30mm dimensions in PDF reports
+- Object URL cleanup is properly handled to prevent memory leaks during image processing
+- Report deletion removes both the database record and the actual file from MinIO storage
+- Inspection history loads dynamically when the "Inspection History" tab is selected
+
 ## [2025-01-31] - Fix Photo and Signature Embedding in PDF Reports
 
 ### Fixed
