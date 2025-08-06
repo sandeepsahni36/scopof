@@ -174,7 +174,7 @@ function TemplatesPage() {
 
         {showFilters && (
           <div className="border-t border-gray-200 p-4">
-            <div>
+            <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Category
               </label>

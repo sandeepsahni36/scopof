@@ -11,6 +11,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
 import BottomNavigation from '../components/layout/BottomNavigation';
+import BottomNavigation from '../components/layout/BottomNavigation';
 
 // Import navigation items for desktop sidebar
 import {
@@ -302,6 +303,9 @@ const DashboardLayout = () => {
           <Outlet />
         </div>
       </main>
+
+      {/* Bottom Navigation for Mobile */}
+      <BottomNavigation />
 
       {/* Bottom Navigation for Mobile */}
       <BottomNavigation />

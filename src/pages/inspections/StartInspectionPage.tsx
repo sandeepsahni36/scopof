@@ -169,17 +169,31 @@ const StartInspectionPage = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Back Button */}
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          leftIcon={<ArrowLeft size={16} />}
-          onClick={() => navigate(`/dashboard/properties/${property.id}`)}
-        >
-          Back to Property
-        </Button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                leftIcon={<ArrowLeft size={16} />}
+                onClick={() => navigate(`/dashboard/properties/${property?.id || ''}`)}
+                className="mr-4"
+              >
+                Back
+              </Button>
+              <div className="flex items-center">
+                <Building2 className="h-6 w-6 text-primary-600 mr-2" />
+                <span className="text-lg font-semibold text-gray-900">scopoStay</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Back Button */}
 
       {/* Header */}
       <div className="text-center mb-8">
@@ -463,6 +477,7 @@ const StartInspectionPage = () => {
           </form>
         </div>
       </div>
+    </div>
     </div>
   );
 };
