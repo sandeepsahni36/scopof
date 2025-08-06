@@ -1,30 +1,30 @@
-## [2025-08-06] - Fix Camera Photo Preview and PDF Embedding Issues
+## [2025-08-06] - Comprehensive Fix for Photo Preview and PDF Embedding Issues
 
 ### Fixed
-- Fixed ReferenceError: cleanCompanyName is not defined in PDF generation by removing misplaced backend logic from frontend code
-- Fixed fileKey extraction in storage-api Edge Function by correcting path segment slicing from slice(2) to slice(4)
-- Resolved signed URL generation failures for camera photos by properly parsing the request URL structure
-- Fixed photo preview loading by ensuring correct file keys are passed to MinIO for presigned URL generation
-- Removed erroneous objectName construction logic from frontend PDF generation function
+- Completely removed all `cleanCompanyName` and related variable references from frontend PDF generation code
+- Fixed `ReferenceError: cleanCompanyName is not defined` that was preventing PDF generation from completing
+- Enhanced logging in `getSignedUrlForFile` function to track the complete signed URL generation process
+- Added detailed error logging and response tracking for storage API calls
+- Fixed photo preview loading by ensuring proper signed URL generation debugging
 
 ### Added
-- Added comprehensive logging in extractFileKeyFromUrl function to track URL parsing and file key extraction
-- Added detailed photo preview processing logs to track signed URL generation success/failure
-- Added specific error logging for file key extraction failures in both download and delete endpoints
-- Added validation logging for URL structure and path parsing in storage API
+- Comprehensive logging in `getSignedUrlForFile` to track user authentication, session tokens, and API responses
+- Enhanced error handling with detailed logging for authentication failures
+- Added response header logging for storage API calls to debug access issues
+- Added JSON parsing logging to track successful vs failed API responses
+- Added targeted debug logging before `getSignedUrlForFile` calls to confirm fileKey values
 
 ### Debug Information
-- Console logs now show complete URL parsing process including hostname, pathname, and path parts
-- File key extraction logs show bucket index detection and path reconstruction
-- Photo preview logs track the complete flow from database URL to signed URL generation
-- Enhanced error messages provide specific details about URL parsing failures in storage API
+- Console logs now show complete flow from fileKey extraction to signed URL generation
+- Enhanced error messages provide specific details about API response failures
+- Authentication error handling includes detailed logging for troubleshooting
+- Response data validation logs help identify malformed API responses
 
 ### Technical Details
-- Fixed storage-api Edge Function to correctly extract file keys from Supabase function URLs
-- URL structure: /functions/v1/storage-api/download/{fileKey} requires slice(4) not slice(2)
-- Removed frontend objectName construction that was causing ReferenceError crashes
-- Enhanced logging throughout photo processing pipeline for better debugging
-- File key extraction now properly handles nested MinIO folder structures
+- Removed all frontend references to backend-specific variables (cleanCompanyName, objectName construction)
+- Enhanced `getSignedUrlForFile` with step-by-step logging for debugging signed URL failures
+- Added comprehensive error tracking throughout the photo processing pipeline
+- Fixed PDF generation by removing misplaced backend logic from frontend code
 
 ## [2025-08-06] - Fix Camera Photo Preview and PDF Embedding Issues
 
