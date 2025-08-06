@@ -202,7 +202,7 @@ const SubscriptionPage = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" {/* Adjusted grid for responsiveness */}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           {Object.entries(STRIPE_PRODUCTS).map(([key, product]) => (
             <div
