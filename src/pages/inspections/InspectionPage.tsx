@@ -164,30 +164,45 @@ const InspectionPage = () => {
           for (const photoUrl of item.photos) {
             // Extract file key from MinIO URL
             const fileKey = extractFileKeyFromUrl(photoUrl);
-            console.log('Original photo URL:', photoUrl);
+            console.log('=== PHOTO PREVIEW PROCESSING ===');
+            console.log('Original photo URL from database:', photoUrl);
             console.log('Extracted file key:', fileKey);
+            
             if (fileKey) {
               loadingSet.add(photoUrl);
               try {
-                console.log('Calling getSignedUrlForFile with fileKey:', fileKey);
+                console.log('Calling getSignedUrlForFile with file key:', fileKey);
                 const signedUrl = await getSignedUrlForFile(fileKey);
-                console.log('Generated signed URL:', signedUrl ? 'SUCCESS' : 'FAILED');
-                console.log('Full signed URL:', signedUrl);
+                console.log('Signed URL generation result:', signedUrl ? 'SUCCESS' : 'FAILED');
+                console.log('Generated signed URL:', signedUrl);
+                
                 if (signedUrl) {
                   urlMap.set(photoUrl, signedUrl);
-                  console.log('Stored signed URL in map for:', photoUrl);
-                  console.log('Map now contains:', urlMap.size, 'entries');
+                  console.log('Stored signed URL in map for original URL:', photoUrl);
+                  console.log('Map now contains entries:', urlMap.size);
+                } else {
+                  console.error('Failed to generate signed URL for file key:', fileKey);
                 }
               } catch (error) {
-                console.error('Error getting signed URL for photo:', photoUrl, error);
+                console.error('=== SIGNED URL GENERATION ERROR ===');
+                console.error('Error getting signed URL for photo URL:', photoUrl);
+                console.error('File key that failed:', fileKey);
                 console.error('Error details:', {
                   message: error.message,
                   stack: error.stack,
-                  fileKey: fileKey
+                  fileKey: fileKey,
+                  originalUrl: photoUrl
                 });
+                console.error('=== END SIGNED URL GENERATION ERROR ===');
               }
               loadingSet.delete(photoUrl);
+            } else {
+              console.error('=== FILE KEY EXTRACTION FAILED ===');
+              console.error('Could not extract file key from photo URL:', photoUrl);
+              console.error('This photo will not have a signed URL generated');
+              console.error('=== END FILE KEY EXTRACTION FAILED ===');
             }
+            console.log('=== END PHOTO PREVIEW PROCESSING ===');
           }
         }
       }

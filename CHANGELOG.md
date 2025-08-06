@@ -1,3 +1,29 @@
+## [2025-08-06] - Fix Camera Photo Preview and PDF Embedding Issues
+
+### Fixed
+- Fixed ReferenceError: cleanCompanyName is not defined in PDF generation by removing misplaced backend logic from frontend code
+- Enhanced file key extraction logging to debug why signed URLs are not being generated for camera photos
+- Added comprehensive logging to track photo URL processing from database storage to signed URL generation
+- Improved error handling and debugging output for photo preview failures
+
+### Added
+- Added detailed logging in extractFileKeyFromUrl function to track URL parsing and file key extraction
+- Added enhanced photo preview processing logs to track signed URL generation success/failure
+- Added specific error logging for file key extraction failures
+- Added validation logging for URL structure and path parsing
+
+### Debug Information
+- Console logs now show complete URL parsing process including hostname, pathname, and path parts
+- File key extraction logs show bucket index detection and path reconstruction
+- Photo preview logs track the complete flow from database URL to signed URL generation
+- Enhanced error messages provide specific details about URL parsing failures
+
+### Technical Details
+- Removed erroneous cleanCompanyName variable reference that was causing PDF generation crashes
+- Enhanced extractFileKeyFromUrl function with step-by-step logging for debugging
+- Photo preview processing now logs each step of the signed URL generation pipeline
+- Error handling improved to capture and log specific failure points in photo processing
+
 ## [2025-01-31] - Enhanced Debugging for Camera Photo Issues
 
 ### Added

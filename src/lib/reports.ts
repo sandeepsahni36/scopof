@@ -439,20 +439,41 @@ async function uploadFileWithPropertyName(
 // Helper function to extract file key from MinIO URL
 function extractFileKeyFromUrl(url: string): string | null {
   try {
+    console.log('=== EXTRACT FILE KEY FROM URL ===');
+    console.log('Input URL:', url);
+    
     // Expected URL format: https://storage.scopostay.com:9000/storage-files/{admin_id}/photo/{uuid}.webp
     const urlObj = new URL(url);
+    console.log('Parsed URL object:', {
+      hostname: urlObj.hostname,
+      pathname: urlObj.pathname,
+      protocol: urlObj.protocol
+    });
+    
     const pathParts = urlObj.pathname.split('/');
+    console.log('Path parts:', pathParts);
     
     // Find the bucket name and extract everything after it
     const bucketIndex = pathParts.findIndex(part => part === 'storage-files');
+    console.log('Bucket index found:', bucketIndex);
+    
     if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
       // Join all parts after the bucket name
-      return pathParts.slice(bucketIndex + 1).join('/');
+      const fileKey = pathParts.slice(bucketIndex + 1).join('/');
+      console.log('Extracted file key:', fileKey);
+      console.log('=== END EXTRACT FILE KEY SUCCESS ===');
+      return fileKey;
     }
     
+    console.log('=== EXTRACT FILE KEY FAILED ===');
+    console.log('Bucket index not found or invalid path structure');
+    console.log('=== END EXTRACT FILE KEY FAILED ===');
     return null;
   } catch (error) {
+    console.error('=== EXTRACT FILE KEY ERROR ===');
     console.error('Error extracting file key from URL:', error);
+    console.error('URL that caused error:', url);
+    console.error('=== END EXTRACT FILE KEY ERROR ===');
     return null;
   }
 }
