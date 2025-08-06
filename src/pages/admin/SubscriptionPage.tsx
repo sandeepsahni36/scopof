@@ -106,7 +106,7 @@ const SubscriptionPage = () => {
   console.log('Subscription data:', subscription);
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Subscription</h1>
@@ -159,7 +159,7 @@ const SubscriptionPage = () => {
       {/* Current Plan */}
       <div className="bg-white shadow rounded-lg mb-8">
         <div className="p-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-gray-900">
                 {currentPlan ? currentPlan[1].name : 'No Active Plan'}
@@ -173,9 +173,9 @@ const SubscriptionPage = () => {
                 </p>
               )}
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-shrink-0">
               {subscription?.current_period_end && hasActiveSubscription && (
-                <div className="flex items-center text-sm text-gray-500">
+                <div className="flex items-center text-sm text-gray-500 whitespace-nowrap">
                   <Clock className="h-4 w-4 mr-1" />
                   <span>
                     Renews on{' '}
@@ -207,7 +207,7 @@ const SubscriptionPage = () => {
           {Object.entries(STRIPE_PRODUCTS).map(([key, product]) => (
             <div
               key={key}
-              className={`relative rounded-lg shadow-sm divide-y divide-gray-200 ${
+              className={`relative rounded-lg shadow-sm divide-y divide-gray-200 w-full ${
                 currentPlan && currentPlan[0] === key
                   ? 'border-2 border-primary-500 bg-primary-50'
                   : 'border border-gray-200 bg-white'

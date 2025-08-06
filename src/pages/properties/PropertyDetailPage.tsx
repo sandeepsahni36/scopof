@@ -303,7 +303,7 @@ const PropertyDetailPage = () => {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full">
       {/* Back Button */}
       <div className="mb-6">
         <Button
@@ -413,11 +413,11 @@ const PropertyDetailPage = () => {
       {/* Tabs */}
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-8">
+          <nav className="-mb-px flex space-x-4 sm:space-x-8 px-4 sm:px-8 overflow-x-auto">
             <button
               onClick={() => setActiveTab('details')}
               className={`
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex-shrink-0
                 ${activeTab === 'details'
                   ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
@@ -428,7 +428,7 @@ const PropertyDetailPage = () => {
             <button
               onClick={() => setActiveTab('checklist')}
               className={`
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex-shrink-0
                 ${activeTab === 'checklist'
                   ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
@@ -444,7 +444,7 @@ const PropertyDetailPage = () => {
             <button
               onClick={() => setActiveTab('inspections')}
               className={`
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex-shrink-0
                 ${activeTab === 'inspections'
                   ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
@@ -455,7 +455,7 @@ const PropertyDetailPage = () => {
           </nav>
         </div>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           {activeTab === 'details' && (
             <div className="space-y-8">
               <div>

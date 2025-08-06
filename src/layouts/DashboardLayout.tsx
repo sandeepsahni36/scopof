@@ -72,7 +72,7 @@ const DashboardLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex overflow-hidden">
+    <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
       <motion.aside
         initial={false}
@@ -294,11 +294,11 @@ const DashboardLayout = () => {
 
       {/* Main content */}
       <main 
-        className={`flex-1 min-h-screen transition-all duration-300 ease-in-out pb-16 overflow-x-hidden ${
+        className={`min-h-screen transition-all duration-300 ease-in-out pb-16 md:pb-0 ${
           isCollapsed ? 'md:ml-20' : 'md:ml-64'
         }`}
       >
-        <div className="py-6 px-4 sm:px-6 max-w-full">
+        <div className="py-6 px-4 sm:px-6 lg:px-8 w-full">
           <Outlet />
         </div>
       </main>

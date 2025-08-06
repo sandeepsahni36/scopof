@@ -124,7 +124,7 @@ function TemplatesPage() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Templates</h1>
@@ -132,7 +132,7 @@ function TemplatesPage() {
             Manage your inspection templates
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-shrink-0">
           <Button
             variant="outline"
             leftIcon={<Filter size={20} />}
