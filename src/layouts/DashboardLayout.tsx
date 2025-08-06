@@ -294,7 +294,7 @@ const DashboardLayout = () => {
 
       {/* Main content */}
       <main 
-        className={`flex-1 min-h-screen transition-all duration-300 ease-in-out pb-16 md:pb-0 ${
+        className={`flex-1 min-h-screen transition-all duration-300 ease-in-out pb-16 ${
           isCollapsed ? 'md:ml-20' : 'md:ml-64'
         }`}
       >
@@ -302,9 +302,6 @@ const DashboardLayout = () => {
           <Outlet />
         </div>
       </main>
-
-      {/* Bottom Navigation for Mobile */}
-      <BottomNavigation />
 
       {/* Bottom Navigation for Mobile */}
       <BottomNavigation />
