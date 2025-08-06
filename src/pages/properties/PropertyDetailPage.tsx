@@ -27,7 +27,6 @@ const PropertyDetailPage = () => {
   const [propertyInspections, setPropertyInspections] = useState<any[]>([]);
   const [inspectionsLoading, setInspectionsLoading] = useState(false);
   const [deletingInspections, setDeletingInspections] = useState<Set<string>>(new Set());
-  const [deletingInspections, setDeletingInspections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (id) {
