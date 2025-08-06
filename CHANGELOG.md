@@ -1,3 +1,43 @@
+## [2025-01-31] - Comprehensive Inspection and Report Management Fixes
+
+### Fixed
+- Fixed photo preview in live inspections by implementing signed URLs for secure image access
+- Fixed "Inspection History" blank page by adding missing `deletingInspections` state variable
+- Fixed inspector and client names not displaying on signature page by correcting database field mapping
+- Fixed "Client Present" checkbox visibility and functionality for real estate inspections
+- Fixed signature boxes to be perfect squares (320x320px) instead of wide rectangles
+- Fixed report download to save files to disk instead of opening in browser
+- Fixed duplicate delete buttons on reports page
+- Fixed PDF filename generation to include property name, inspection type, and timestamp
+
+### Added
+- Added signed URL generation for photo previews in live inspections
+- Added delete functionality for inspections from property detail page
+- Added cleanup utility for incomplete inspections in admin settings
+- Added proper blob-based download mechanism for reports
+- Added enhanced logging for debugging name field issues
+- Added loading states for photo URL generation
+- Added error handling for photo preview failures
+
+### Changed
+- Photo preview boxes increased from h-24 to h-32 for better visibility
+- Signature canvas boxes are now perfect squares (320x320px) with centered layout
+- Report download now uses blob fetching for reliable file saving
+- PDF filenames now follow format: `Property_Name_inspection-type_YYYY-MM-DD_HH-MM-SS.pdf`
+- MinIO storage structure uses company name: `company_name/inspections/inspection_id/photos/item_id/uuid.webp`
+- Inspector and client names are properly mapped from database snake_case fields
+- "Client Present" checkbox properly controls primary contact signature requirement
+
+### Technical Details
+- Photo previews use signed URLs for secure access to private MinIO storage
+- Signature canvas uses explicit width/height (320x320) instead of CSS classes for perfect squares
+- Report download fetches files as blobs and creates temporary object URLs for download
+- Inspection deletion cascades to remove all associated photos, reports, and database records
+- Company-based folder structure: `{company_name}/inspections/{inspection_id}/photos/{item_id}/{uuid}.webp`
+- PDF reports include property name in metadata for better file organization
+- Cleanup utility removes incomplete inspections and all associated MinIO files
+- Enhanced error handling and loading states throughout the inspection workflow
+
 ## [2025-01-31] - Complete Inspection and Report Management Fixes
 
 ### Fixed

@@ -311,15 +311,16 @@ async function createPDFReport(reportData: {
 }
 
 function generateReportFileName(reportData: any): string {
-  const propertyName = reportData.inspection.propertyName || reportData.propertyName || 'Property';
+  const propertyName = reportData.inspection.propertyName || reportData.propertyName || 'Unknown_Property';
   const inspectionType = reportData.inspection.inspectionType || reportData.inspection.inspection_type || 'inspection';
   const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const time = new Date().toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
   
   // Clean property name for filename
   const cleanPropertyName = propertyName.replace(/[^a-zA-Z0-9]/g, '_');
+  const cleanInspectionType = inspectionType.replace('_', '-');
   
-  return `${cleanPropertyName}_${inspectionType.replace('_', '-')}_${date}_${time}.pdf`;
+  return `${cleanPropertyName}_${cleanInspectionType}_${date}_${time}.pdf`;
 }
 
 // Helper function to extract file key from MinIO URL

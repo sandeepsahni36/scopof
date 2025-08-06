@@ -563,6 +563,7 @@ const InspectionPage = () => {
       const reportData = {
         inspection: {
           ...inspection,
+          propertyName: property?.name || 'Unknown Property',
           inspectorName,
           primaryContactName,
         },

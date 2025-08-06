@@ -216,9 +216,13 @@ const ReportsPage = () => {
   };
 
   const getReportName = (report: Report) => {
-    const date = new Date(report.generatedAt).toISOString().split('T')[0];
-    const time = new Date(report.generatedAt).toTimeString().split(' ')[0].replace(/:/g, '-');
-    return `${report.propertyName.replace(/[^a-zA-Z0-9]/g, '_')}_${date}_${time}.pdf`;
+    const date = new Date(report.generatedAt);
+    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    const timeStr = date.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+    const cleanPropertyName = report.propertyName.replace(/[^a-zA-Z0-9]/g, '_');
+    const inspectionType = report.inspectionType.replace('_', '-');
+    
+    return `${cleanPropertyName}_${inspectionType}_${dateStr}_${timeStr}.pdf`;
   };
 
   return (
