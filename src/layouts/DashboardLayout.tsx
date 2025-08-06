@@ -294,7 +294,7 @@ const DashboardLayout = () => {
 
       {/* Main content */}
       <main 
-        className={`min-h-screen transition-all duration-300 ease-in-out pb-16 md:pb-0 ${
+        className={`flex-1 min-h-screen transition-all duration-300 ease-in-out pb-20 md:pb-0 overflow-x-hidden ${
           isCollapsed ? 'md:ml-20' : 'md:ml-64'
         }`}
       >
