@@ -412,23 +412,6 @@ const StartInspectionPage = () => {
               <p className="mt-2 text-sm text-gray-500">
                 This name will appear on the inspection report and signature page.
               </p>
-              
-              {/* Client Present Checkbox (Real Estate only) */}
-              {!isShortTermRental && (
-                <div className="mt-4">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      {...register('clientPresentForSignature')}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-900">Client is Present</span>
-                  </label>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Check this box if the client is present and will provide a signature
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Inspection Info */}

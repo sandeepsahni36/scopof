@@ -26,6 +26,7 @@ const PropertyDetailPage = () => {
   const [checklistName, setChecklistName] = useState('');
   const [propertyInspections, setPropertyInspections] = useState<any[]>([]);
   const [inspectionsLoading, setInspectionsLoading] = useState(false);
+  const [deletingInspections, setDeletingInspections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (id) {

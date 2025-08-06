@@ -277,10 +277,12 @@ serve(async (req) => {
         const file = formData.get("file") as File;
         const inspectionId = formData.get("inspectionId") as string;
         const inspectionItemId = formData.get("inspectionItemId") as string;
+        const propertyName = formData.get("propertyName") as string;
 
         console.log('=== STORAGE API UPLOAD DEBUG ===');
         console.log('Received inspectionId:', inspectionId);
         console.log('Received inspectionItemId:', inspectionItemId);
+        console.log('Received propertyName:', propertyName);
         console.log('File name:', file?.name);
         console.log('File type:', fileType);
         console.log('=== END STORAGE API DEBUG ===');
@@ -368,12 +370,23 @@ serve(async (req) => {
           .replace(/[^a-zA-Z0-9]/g, '_')
           .toLowerCase();
         
+        // Clean property name for filename
+        const cleanPropertyName = propertyName 
+          ? propertyName.replace(/[^a-zA-Z0-9]/g, '_')
+          : 'Unknown_Property';
+        
+        // Generate date/time string for filename
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+        
         // Create hierarchical structure: company/inspections/inspection_id/photos or reports
         let objectName;
         if (fileType === 'photo' && inspectionId) {
           objectName = `${cleanCompanyName}/inspections/${inspectionId}/photos/${inspectionItemId || 'general'}/${uuidv4()}${fileExtension}`;
         } else if (fileType === 'report' && inspectionId) {
-          objectName = `${cleanCompanyName}/inspections/${inspectionId}/reports/${uuidv4()}${fileExtension}`;
+          // Include property name and date in report filename
+          objectName = `${cleanCompanyName}/inspections/${inspectionId}/reports/${cleanPropertyName}_${dateStr}_${timeStr}${fileExtension}`;
         } else {
           // Fallback to old structure
           objectName = `${cleanCompanyName}/${fileType}/${uuidv4()}${fileExtension}`;
@@ -547,7 +560,7 @@ serve(async (req) => {
           const presignedUrl = await minioClient.presignedGetObject(
             minioBucketName, 
             fileKey, 
-            60 * 5 // 5 minutes expiry
+            60 * 30 // 30 minutes expiry to prevent "Request has expired" errors
           );
 
           console.log(`MinIO: Generated presigned URL for ${fileKey}`);

@@ -35,8 +35,13 @@ export async function generateInspectionReport(reportData: {
       type: 'application/pdf',
     });
     
-    // Upload PDF via custom storage API
-    const uploadResult = await uploadFile(pdfFile, 'report', reportData.inspection.id);
+    // Upload PDF via custom storage API with property name
+    const uploadResult = await uploadFileWithPropertyName(
+      pdfFile, 
+      'report', 
+      reportData.inspection.id,
+      reportData.inspection.propertyName || 'Unknown_Property'
+    );
     
     if (!uploadResult) {
       throw new Error('Failed to upload PDF report');
@@ -321,6 +326,104 @@ function generateReportFileName(reportData: any): string {
   const cleanInspectionType = inspectionType.replace('_', '-');
   
   return `${cleanPropertyName}_${cleanInspectionType}_${date}_${time}.pdf`;
+}
+
+// Enhanced upload function that includes property name
+async function uploadFileWithPropertyName(
+  file: File,
+  fileType: 'photo' | 'report',
+  inspectionId: string,
+  propertyName: string
+): Promise<any> {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Mock file upload with property name');
+      return {
+        fileUrl: `https://example.com/mock-${fileType}-${Date.now()}.${file.type.split('/')[1]}`,
+        fileKey: `mock-${fileType}-${Date.now()}`,
+        metadataId: `mock-metadata-${Date.now()}`,
+      };
+    }
+
+    // Get user's session token
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session token found');
+    }
+
+    // Prepare form data with property name
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('inspectionId', inspectionId);
+    formData.append('propertyName', propertyName);
+
+    console.log('Uploading file via storage-api with property name:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType,
+      inspectionId,
+      propertyName
+    });
+
+    // Call the custom storage API Edge Function using fetch for proper FormData handling
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/storage-api/upload/${fileType}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Storage API error:', errorData);
+      
+      // Check if it's an authentication error
+      if (response.status === 401 || response.status === 403) {
+        await handleAuthError(new Error(errorData.error || 'Authentication failed'));
+        return null;
+      }
+      
+      throw new Error(errorData.error || 'Failed to upload file');
+    }
+
+    const data = await response.json();
+
+    if (!data || !data.fileUrl) {
+      throw new Error('No file URL returned from storage API');
+    }
+
+    console.log('File uploaded successfully with property name:', {
+      fileUrl: data.fileUrl,
+      fileKey: data.fileKey,
+      metadataId: data.metadataId
+    });
+
+    return {
+      fileUrl: data.fileUrl,
+      fileKey: data.fileKey,
+      metadataId: data.metadataId,
+    };
+  } catch (error: any) {
+    console.error('Error uploading file with property name:', error);
+    
+    // Check if it's an authentication error
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT') || error.message?.includes('Unauthorized')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
 }
 
 // Helper function to extract file key from MinIO URL

@@ -93,15 +93,29 @@ const ReportsPage = () => {
         throw new Error('Failed to generate download URL');
       }
       
+      console.log('Downloading report with signed URL:', signedUrl);
+      
+      // Fetch the file as a blob for proper download
+      const response = await fetch(signedUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
       // Create a temporary link to download the report
       const reportName = getReportName(report);
       const link = document.createElement('a');
-      link.href = signedUrl;
+      link.href = blobUrl;
       link.download = reportName;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      URL.revokeObjectURL(blobUrl);
       
       toast.success('Download started');
     } catch (error: any) {

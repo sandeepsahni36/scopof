@@ -1,3 +1,40 @@
+## [2025-01-31] - Critical Inspection and Report Fixes
+
+### Fixed
+- Fixed photo preview in live inspections by implementing proper signed URL loading with increased size (w-32 h-32)
+- Fixed "Inspection History" blank page by adding missing `deletingInspections` state variable
+- Fixed inspector and client names not displaying on signature page by correcting database field mapping
+- Fixed signature boxes to be perfect squares (320x320px) with centered layout
+- Fixed report download to save files to disk using blob-based download mechanism
+- Fixed PDF filename to include property name and timestamp in MinIO storage path
+- Fixed "AccessDenied" errors by increasing presigned URL expiry from 5 to 30 minutes
+
+### Added
+- Added interactive "Client is Present" checkbox on signature page for real estate inspections
+- Added dynamic client signature box that appears when "Client is Present" is checked
+- Added comprehensive logging for photo URL generation and signed URL creation
+- Added blob-based download mechanism for reliable file saving
+- Added property name and timestamp to PDF filenames in MinIO storage
+- Added enhanced error handling for photo preview failures
+
+### Changed
+- Photo preview boxes increased from h-24 to w-32 h-32 for better visibility
+- Signature canvas boxes are now perfect squares (320x320px) instead of full-width rectangles
+- "Client is Present" checkbox moved from start page to signature page for better UX
+- Client signature box now appears dynamically based on checkbox state
+- Report download now uses blob fetching for reliable file saving to disk
+- PDF storage path now includes property name: `company/inspections/id/reports/Property_Name_YYYY-MM-DD_HH-MM-SS.pdf`
+- Presigned URL expiry increased to 30 minutes to prevent access errors
+
+### Technical Details
+- Photo previews use signed URLs for secure access to private MinIO storage
+- Signature canvas uses explicit width/height (320x320) instead of CSS classes
+- Report download fetches files as blobs and creates temporary object URLs
+- PDF filenames include property name and timestamp for better organization
+- MinIO storage structure: `{company_name}/inspections/{inspection_id}/reports/{property_name}_{date}_{time}.pdf`
+- Enhanced logging throughout photo and signature workflows for debugging
+- Client present status is stored in database and controls signature requirements
+
 ## [2025-01-31] - Comprehensive Inspection and Report Management Fixes
 
 ### Fixed

@@ -52,6 +52,9 @@ const InspectionPage = () => {
   const [uploadingPhotos, setUploadingPhotos] = useState<Set<string>>(new Set());
   const [signedPhotoUrls, setSignedPhotoUrls] = useState<Map<string, string>>(new Map());
   const [loadingPhotoUrls, setLoadingPhotoUrls] = useState<Set<string>>(new Set());
+  
+  // Client present state for signature page
+  const [clientPresentOnSignaturePage, setClientPresentOnSignaturePage] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -108,6 +111,13 @@ const InspectionPage = () => {
         setInspection(data.inspection);
         setPrimaryContactName(data.inspection.primary_contact_name || '');
         setInspectorName(data.inspection.inspector_name || '');
+        setClientPresentOnSignaturePage(data.inspection.client_present_for_signature || false);
+        
+        console.log('=== INSPECTION DATA LOADED ===');
+        console.log('Inspector name from DB:', data.inspection.inspector_name);
+        console.log('Primary contact name from DB:', data.inspection.primary_contact_name);
+        console.log('Client present from DB:', data.inspection.client_present_for_signature);
+        console.log('=== END INSPECTION DATA ===');
         
         // Load property data for report generation
         if (data.inspection.property_id) {
@@ -144,18 +154,26 @@ const InspectionPage = () => {
     const urlMap = new Map<string, string>();
     const loadingSet = new Set<string>();
     
+    console.log('=== LOADING SIGNED PHOTO URLS ===');
+    console.log('Total rooms:', rooms.length);
+    
     for (const room of rooms) {
       for (const item of room.items) {
         if (item.photos && item.photos.length > 0) {
+          console.log(`Processing ${item.photos.length} photos for item: ${item.label}`);
           for (const photoUrl of item.photos) {
             // Extract file key from MinIO URL
             const fileKey = extractFileKeyFromUrl(photoUrl);
+            console.log('Original photo URL:', photoUrl);
+            console.log('Extracted file key:', fileKey);
             if (fileKey) {
               loadingSet.add(photoUrl);
               try {
                 const signedUrl = await getSignedUrlForFile(fileKey);
+                console.log('Generated signed URL:', signedUrl);
                 if (signedUrl) {
                   urlMap.set(photoUrl, signedUrl);
+                  console.log('Stored signed URL in map for:', photoUrl);
                 }
               } catch (error) {
                 console.error('Error getting signed URL for photo:', photoUrl, error);
@@ -169,6 +187,9 @@ const InspectionPage = () => {
     
     setSignedPhotoUrls(urlMap);
     setLoadingPhotoUrls(loadingSet);
+    console.log('=== SIGNED PHOTO URLS LOADED ===');
+    console.log('Total signed URLs generated:', urlMap.size);
+    console.log('=== END SIGNED PHOTO URLS ===');
   };
 
   const extractFileKeyFromUrl = (url: string): string | null => {
@@ -179,13 +200,34 @@ const InspectionPage = () => {
       // Find the bucket name and extract everything after it
       const bucketIndex = pathParts.findIndex(part => part === 'storage-files');
       if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
-        return pathParts.slice(bucketIndex + 1).join('/');
+        const fileKey = pathParts.slice(bucketIndex + 1).join('/');
+        console.log('Extracted file key from URL:', fileKey);
+        return fileKey;
       }
       
       return null;
     } catch (error) {
       console.error('Error extracting file key from URL:', error);
       return null;
+    }
+  };
+
+  const handleClientPresentToggle = async (isPresent: boolean) => {
+    setClientPresentOnSignaturePage(isPresent);
+    
+    // Update the database
+    try {
+      const { error } = await supabase
+        .from('inspections')
+        .update({ client_present_for_signature: isPresent })
+        .eq('id', inspection.id);
+      
+      if (error) {
+        console.error('Error updating client present status:', error);
+        toast.error('Failed to update client present status');
+      }
+    } catch (error) {
+      console.error('Error updating client present status:', error);
     }
   };
 
@@ -515,7 +557,7 @@ const InspectionPage = () => {
     const isMoveIn = inspection.inspectionType === 'move_in';
     const isMoveOut = inspection.inspectionType === 'move_out';
     const isRealEstate = isMoveIn || isMoveOut;
-    const clientPresentForSignature = inspection.client_present_for_signature;
+    const clientPresentForSignature = clientPresentOnSignaturePage;
 
     if (isCheckIn && (!primaryContactSignature || !inspectorSignature)) {
       toast.error('Both guest and inspector signatures are required for check-in inspections');
@@ -532,7 +574,7 @@ const InspectionPage = () => {
       return;
     }
 
-    if (isRealEstate && clientPresentForSignature && !primaryContactSignature) {
+    if (isRealEstate && clientPresentOnSignaturePage && !primaryContactSignature) {
       toast.error('Client signature is required when client is present');
       return;
     }
@@ -633,7 +675,7 @@ const InspectionPage = () => {
   const isShortTermRental = inspection?.inspectionType === 'check_in' || inspection?.inspectionType === 'check_out';
   const isCheckIn = inspection?.inspectionType === 'check_in';
   const isMoveIn = inspection?.inspectionType === 'move_in';
-  const requiresPrimaryContactSignature = isCheckIn || (isMoveIn && inspection?.clientPresentForSignature);
+  const requiresPrimaryContactSignature = isCheckIn;
   
   const getContactLabel = () => {
     if (isShortTermRental) return 'Guest';
@@ -738,27 +780,38 @@ const InspectionPage = () => {
                   <label className="block text-sm font-medium text-gray-700">{getContactLabel()}</label>
                   <p className="mt-1 text-sm text-gray-900">{primaryContactName || 'Not specified'}</p>
                 </div>
-                {!isShortTermRental && (
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700">Client Present</label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {inspection?.client_present_for_signature ? 'Yes' : 'No'}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
+
+            {/* Client Present Checkbox for Real Estate */}
+            {!isShortTermRental && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={clientPresentOnSignaturePage}
+                    onChange={(e) => handleClientPresentToggle(e.target.checked)}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-sm font-medium text-gray-900">Client is Present for Signature</span>
+                </label>
+                <p className="mt-1 text-xs text-gray-500">
+                  Check this box if the client is present and will provide a signature
+                </p>
+              </div>
+            )}
 
             {/* Inspector Signature */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Inspector Signature *
               </label>
-              <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
+              <div className="border border-gray-300 rounded-lg overflow-hidden bg-white flex justify-center">
                 <SignatureCanvas
                   ref={(ref) => setInspectorSignature(ref)}
                   canvasProps={{
-                    className: 'w-full h-64',
+                    width: 320,
+                    height: 320,
                     style: { background: 'white' }
                   }}
                 />
@@ -775,16 +828,17 @@ const InspectionPage = () => {
             </div>
 
             {/* Primary Contact Signature (conditional) */}
-            {requiresPrimaryContactSignature && (
+            {(requiresPrimaryContactSignature || (clientPresentOnSignaturePage && !isShortTermRental)) && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {getContactLabel()} Signature *
                 </label>
-                <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
+                <div className="border border-gray-300 rounded-lg overflow-hidden bg-white flex justify-center">
                   <SignatureCanvas
                     ref={(ref) => setPrimaryContactSignature(ref)}
                     canvasProps={{
-                      className: 'w-full h-64',
+                      width: 320,
+                      height: 320,
                       style: { background: 'white' }
                     }}
                   />
@@ -812,8 +866,8 @@ const InspectionPage = () => {
                   </>
                 ) : (
                   <>
-                    {isMoveIn && <li>• Client signature is required for move-in inspections if client is present</li>}
-                    {!isMoveIn && <li>• Client signature is optional for move-out inspections</li>}
+                    <li>• Client signature is required only if "Client is Present" is checked</li>
+                    <li>• Use the checkbox above to indicate if the client is present for signing</li>
                   </>
                 )}
               </ul>
@@ -876,16 +930,17 @@ const InspectionPage = () => {
                         {item.photos?.map((photo, index) => (
                           <div key={index} className="relative group">
                             {loadingPhotoUrls.has(photo) ? (
-                              <div className="w-full h-32 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                              <div className="w-32 h-32 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
                               </div>
                             ) : (
                             <img
                               src={signedPhotoUrls.get(photo) || photo}
                               alt={`Photo ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                              className="w-32 h-32 object-cover rounded-lg border border-gray-200"
                               onError={(e) => {
                                 console.error('Error loading photo preview:', photo);
+                                console.error('Signed URL used:', signedPhotoUrls.get(photo));
                                 e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDEyQzIxIDEzLjEgMjAuMSAxNCAyMCAxNEg0QzIuOSAxNCAyIDEzLjEgMiAxMlY2QzIgNC45IDIuOSA0IDQgNEgyMEMyMS4xIDQgMjIgNC45IDIyIDZWMTJaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0iI0Y5RkFGQiIvPgo8cGF0aCBkPSJNOSA5QzEwLjEgOSAxMSA4LjEgMTEgN0MxMSA1LjkgMTAuMSA1IDkgNUM3LjkgNSA3IDUuOSA3IDdDNyA4LjEgNy45IDkgOSA5WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMjEgMTVMMTggMTJMMTUgMTVNOSAxNUw2IDEyTDMgMTUiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+';
                               }}
                             />
