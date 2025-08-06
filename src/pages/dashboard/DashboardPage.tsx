@@ -180,7 +180,7 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
@@ -286,7 +286,7 @@ const DashboardPage = () => {
       {/* Usage statistics */}
       <div className="border-b border-gray-200 pb-8 mb-8">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Usage Statistics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

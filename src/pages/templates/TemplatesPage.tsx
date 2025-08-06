@@ -124,7 +124,7 @@ function TemplatesPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Templates</h1>
@@ -174,14 +174,14 @@ function TemplatesPage() {
 
         {showFilters && (
           <div className="border-t border-gray-200 p-4">
-            <div className="w-full">
+            <div className="w-full max-w-full">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Category
               </label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2"
+                className="w-full max-w-full border border-gray-300 rounded-lg p-2"
               >
                 <option value="all">All Categories</option>
                 {categories.map(category => (
