@@ -2,21 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Home,
   Building2,
-  LayoutTemplate,
-  FileText,
-  Settings,
-  Users,
-  CreditCard,
   ChevronLeft,
   LogOut,
   AlertTriangle,
   Clock,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { NavItem } from '../types';
 import { Button } from '../components/ui/Button';
+import BottomNavigation from '../components/layout/BottomNavigation';
+
+// Import navigation items for desktop sidebar
+import {
+  Home,
+  LayoutTemplate,
+  FileText,
+  Settings,
+  Users,
+  CreditCard,
+} from 'lucide-react';
+import { NavItem } from '../types';
 
 const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: 'Home' },
@@ -74,7 +79,7 @@ const DashboardLayout = () => {
         animate={{ 
           width: isCollapsed ? '5rem' : '16rem',
         }}
-        className="fixed top-0 left-0 z-50 h-full bg-white border-r border-gray-200 transition-all duration-300 ease-in-out"
+        className="fixed top-0 left-0 z-50 h-full bg-white border-r border-gray-200 transition-all duration-300 ease-in-out hidden md:flex md:flex-col"
       >
         <div className="flex flex-col h-full">
           {/* Sidebar header */}
@@ -289,15 +294,17 @@ const DashboardLayout = () => {
 
       {/* Main content */}
       <main 
-        className="flex-1 min-h-screen transition-all duration-300 ease-in-out"
-        style={{
-          marginLeft: isCollapsed ? '5rem' : '16rem'
-        }}
+        className={`flex-1 min-h-screen transition-all duration-300 ease-in-out pb-16 md:pb-0 ${
+          isCollapsed ? 'md:ml-20' : 'md:ml-64'
+        }`}
       >
         <div className="py-6 px-6">
           <Outlet />
         </div>
       </main>
+
+      {/* Bottom Navigation for Mobile */}
+      <BottomNavigation />
     </div>
   );
 };
