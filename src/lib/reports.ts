@@ -40,7 +40,8 @@ export async function generateInspectionReport(reportData: {
       pdfFile, 
       'report', 
       reportData.inspection.id,
-      reportData.inspection.propertyName || 'Unknown_Property'
+      reportData.inspection.propertyName || 'Unknown_Property',
+      reportData
     );
     
     if (!uploadResult) {
@@ -160,7 +161,9 @@ async function createPDFReport(reportData: {
           try {
             // Extract file key from URL for signed URL generation
             const fileKey = extractFileKeyFromUrl(photoUrl);
-            
+          const inspectionType = reportData.inspection?.inspectionType || reportData.inspection?.inspection_type || 'inspection';
+          const cleanInspectionType = inspectionType.replace('_', '-');
+          objectName = `${cleanCompanyName}/inspections/${inspectionId}/reports/${cleanPropertyName}_${cleanInspectionType}_${dateStr}_${timeStr}${fileExtension}`;
             if (fileKey) {
               // Get signed URL for secure access
               const signedUrl = await getSignedUrlForFile(fileKey);
@@ -333,7 +336,8 @@ async function uploadFileWithPropertyName(
   file: File,
   fileType: 'photo' | 'report',
   inspectionId: string,
-  propertyName: string
+  propertyName: string,
+  reportData?: any
 ): Promise<any> {
   try {
     const user = await validateUserSession();
@@ -362,13 +366,19 @@ async function uploadFileWithPropertyName(
     formData.append('file', file);
     formData.append('inspectionId', inspectionId);
     formData.append('propertyName', propertyName);
+    
+    // Add inspection type for better file naming
+    if (reportData?.inspection?.inspectionType) {
+      formData.append('inspectionType', reportData.inspection.inspectionType);
+    }
 
     console.log('Uploading file via storage-api with property name:', {
       fileName: file.name,
       fileSize: file.size,
       fileType,
       inspectionId,
-      propertyName
+      propertyName,
+      inspectionType: reportData?.inspection?.inspectionType
     });
 
     // Call the custom storage API Edge Function using fetch for proper FormData handling

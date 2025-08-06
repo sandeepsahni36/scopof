@@ -169,14 +169,22 @@ const InspectionPage = () => {
             if (fileKey) {
               loadingSet.add(photoUrl);
               try {
+                console.log('Calling getSignedUrlForFile with fileKey:', fileKey);
                 const signedUrl = await getSignedUrlForFile(fileKey);
-                console.log('Generated signed URL:', signedUrl);
+                console.log('Generated signed URL:', signedUrl ? 'SUCCESS' : 'FAILED');
+                console.log('Full signed URL:', signedUrl);
                 if (signedUrl) {
                   urlMap.set(photoUrl, signedUrl);
                   console.log('Stored signed URL in map for:', photoUrl);
+                  console.log('Map now contains:', urlMap.size, 'entries');
                 }
               } catch (error) {
                 console.error('Error getting signed URL for photo:', photoUrl, error);
+                console.error('Error details:', {
+                  message: error.message,
+                  stack: error.stack,
+                  fileKey: fileKey
+                });
               }
               loadingSet.delete(photoUrl);
             }
@@ -185,11 +193,13 @@ const InspectionPage = () => {
       }
     }
     
+    console.log('=== FINAL SIGNED URL MAP ===');
+    console.log('Total signed URLs generated:', urlMap.size);
+    console.log('Map entries:', Array.from(urlMap.entries()));
+    console.log('=== END SIGNED URL MAP ===');
+    
     setSignedPhotoUrls(urlMap);
     setLoadingPhotoUrls(loadingSet);
-    console.log('=== SIGNED PHOTO URLS LOADED ===');
-    console.log('Total signed URLs generated:', urlMap.size);
-    console.log('=== END SIGNED PHOTO URLS ===');
   };
 
   const extractFileKeyFromUrl = (url: string): string | null => {
@@ -930,44 +940,47 @@ const InspectionPage = () => {
                         {item.photos?.map((photo, index) => (
                           <div key={index} className="relative group">
                             {loadingPhotoUrls.has(photo) ? (
-                              <div className="w-32 h-32 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                              <div className="w-40 h-40 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
                               </div>
                             ) : (
                             <img
                               src={signedPhotoUrls.get(photo) || photo}
                               alt={`Photo ${index + 1}`}
-                              className="w-32 h-32 object-cover rounded-lg border border-gray-200"
+                              className="w-40 h-40 object-cover rounded-lg border border-gray-200"
                               onError={(e) => {
                                 console.error('Error loading photo preview:', photo);
                                 console.error('Signed URL used:', signedPhotoUrls.get(photo));
+                                console.error('Original photo URL:', photo);
+                                console.error('All signed URLs in map:', Array.from(signedPhotoUrls.entries()));
                                 e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDEyQzIxIDEzLjEgMjAuMSAxNCAyMCAxNEg0QzIuOSAxNCAyIDEzLjEgMiAxMlY2QzIgNC45IDIuOSA0IDQgNEgyMEMyMS4xIDQgMjIgNC45IDIyIDZWMTJaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0iI0Y5RkFGQiIvPgo8cGF0aCBkPSJNOSA5QzEwLjEgOSAxMSA4LjEgMTEgN0MxMSA1LjkgMTAuMSA1IDkgNUM3LjkgNSA3IDUuOSA3IDdDNyA4LjEgNy45IDkgOSA5WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMjEgMTVMMTggMTJMMTUgMTVNOSAxNUw2IDEyTDMgMTUiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+';
                               }}
                             />
                             )}
                             <button
                               onClick={() => handleRemovePhoto(currentRoom.id, item.id, index)}
-                              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <Trash2 size={12} />
                             </button>
                           </div>
                         ))}
                         
-                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors">
+                        <label className="flex flex-col items-center justify-center w-40 h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors">
                           <div className="flex flex-col items-center justify-center">
                             {uploadingPhotos.has(item.id) ? (
                               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
                             ) : (
                               <>
                                 <Camera size={20} className="text-gray-400 mb-1" />
-                                <span className="text-xs text-gray-500">Add Photo</span>
+                                <span className="text-xs text-gray-500 text-center">Take Photo</span>
                               </>
                             )}
                           </div>
                           <input
                             type="file"
                             accept="image/*"
+                            capture="environment"
                             onChange={(e) => e.target.files && handlePhotoUpload(currentRoom.id, item.id, e.target.files)}
                             className="hidden"
                             disabled={uploadingPhotos.has(item.id)}

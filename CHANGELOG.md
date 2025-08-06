@@ -1,3 +1,35 @@
+## [2025-01-31] - Critical Photo Preview and Camera Access Fixes
+
+### Fixed
+- Fixed photo preview size by increasing from w-32 to w-40 h-40 (160px x 160px) for much better visibility
+- Fixed "Inspection History" blank page by properly declaring `deletingInspections` state variable at component top level
+- Fixed photo preview loading by adding comprehensive signed URL debugging and error logging
+- Fixed PDF download "AccessDenied" errors by increasing presigned URL expiry from 30 to 60 minutes
+- Fixed PDF filename to include inspection type: `Property_Name_check-in_YYYY-MM-DD_HH-MM-SS.pdf`
+
+### Added
+- Added camera access for photo uploads using `capture="environment"` attribute
+- Added comprehensive logging for signed URL generation and photo loading debugging
+- Added inspection type to PDF filenames for better organization
+- Added enhanced error logging for photo preview failures
+- Added proper state variable declaration for inspection deletion functionality
+
+### Changed
+- Photo upload now opens camera directly instead of file picker (on mobile devices)
+- Photo preview boxes increased to w-40 h-40 for much better visibility
+- Upload button text changed from "Add Photo" to "Take Photo" to reflect camera functionality
+- PDF storage path now includes inspection type: `company/inspections/id/reports/Property_Name_check-in_YYYY-MM-DD_HH-MM-SS.pdf`
+- Presigned URL expiry extended to 60 minutes to prevent access timeouts
+- Enhanced debugging output for troubleshooting photo and signed URL issues
+
+### Technical Details
+- Camera access uses `capture="environment"` to prefer rear-facing camera on mobile devices
+- Photo previews use signed URLs for secure access to private MinIO storage with 60-minute expiry
+- Comprehensive logging added throughout photo loading pipeline for debugging
+- PDF filenames now include inspection type for better file organization
+- State variables properly scoped to prevent ReferenceError crashes
+- Enhanced error handling and logging for photo preview failures
+
 ## [2025-01-31] - Critical Inspection and Report Fixes
 
 ### Fixed

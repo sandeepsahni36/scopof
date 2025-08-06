@@ -276,9 +276,18 @@ export async function getSignedUrlForFile(fileKey: string): Promise<string | nul
       }
     );
 
+    console.log('Storage API response status:', response.status);
+    console.log('Storage API response ok:', response.ok);
+
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Storage API download error:', errorData);
+      console.error('Full error response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        errorData
+      });
       
       // Check if it's an authentication error
       if (response.status === 401 || response.status === 403) {
@@ -290,12 +299,14 @@ export async function getSignedUrlForFile(fileKey: string): Promise<string | nul
     }
 
     const data = await response.json();
+    console.log('Storage API response data:', data);
 
     if (!data || !data.fileUrl) {
       throw new Error('No signed URL returned from storage API');
     }
 
     console.log('Signed URL generated successfully for file:', fileKey);
+    console.log('Generated URL:', data.fileUrl);
     return data.fileUrl;
   } catch (error: any) {
     console.error('Error getting signed URL for file:', error);

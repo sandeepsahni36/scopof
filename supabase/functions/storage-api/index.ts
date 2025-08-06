@@ -278,11 +278,13 @@ serve(async (req) => {
         const inspectionId = formData.get("inspectionId") as string;
         const inspectionItemId = formData.get("inspectionItemId") as string;
         const propertyName = formData.get("propertyName") as string;
+        const inspectionType = formData.get("inspectionType") as string;
 
         console.log('=== STORAGE API UPLOAD DEBUG ===');
         console.log('Received inspectionId:', inspectionId);
         console.log('Received inspectionItemId:', inspectionItemId);
         console.log('Received propertyName:', propertyName);
+        console.log('Received inspectionType:', inspectionType);
         console.log('File name:', file?.name);
         console.log('File type:', fileType);
         console.log('=== END STORAGE API DEBUG ===');
@@ -386,7 +388,10 @@ serve(async (req) => {
           objectName = `${cleanCompanyName}/inspections/${inspectionId}/photos/${inspectionItemId || 'general'}/${uuidv4()}${fileExtension}`;
         } else if (fileType === 'report' && inspectionId) {
           // Include property name and date in report filename
-          objectName = `${cleanCompanyName}/inspections/${inspectionId}/reports/${cleanPropertyName}_${dateStr}_${timeStr}${fileExtension}`;
+          const cleanInspectionType = inspectionType 
+            ? inspectionType.replace('_', '-')
+            : 'inspection';
+          objectName = `${cleanCompanyName}/inspections/${inspectionId}/reports/${cleanPropertyName}_${cleanInspectionType}_${dateStr}_${timeStr}${fileExtension}`;
         } else {
           // Fallback to old structure
           objectName = `${cleanCompanyName}/${fileType}/${uuidv4()}${fileExtension}`;
@@ -560,10 +565,10 @@ serve(async (req) => {
           const presignedUrl = await minioClient.presignedGetObject(
             minioBucketName, 
             fileKey, 
-            60 * 30 // 30 minutes expiry to prevent "Request has expired" errors
+            60 * 60 // 60 minutes expiry to prevent "Request has expired" errors
           );
 
-          console.log(`MinIO: Generated presigned URL for ${fileKey}`);
+          console.log(`MinIO: Generated presigned URL for ${fileKey}:`, presignedUrl);
 
           return new Response(JSON.stringify({
             message: "File URL generated successfully",

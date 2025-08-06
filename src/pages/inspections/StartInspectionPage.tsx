@@ -397,23 +397,6 @@ const StartInspectionPage = () => {
               <Input
                 label={isShortTermRental ? "Guest Name" : "Client Name"}
                 error={errors.primaryContactName?.message}
-                {...register('primaryContactName', {
-                  required: inspectionType === 'check_in' || inspectionType === 'move_in' 
-                    ? `${isShortTermRental ? 'Guest' : 'Client'} name is required for ${getInspectionTypeLabel(inspectionType)} inspections` 
-                    : false,
-                  minLength: {
-                    value: 2,
-                    message: `${isShortTermRental ? 'Guest' : 'Client'} name must be at least 2 characters`,
-                  },
-                })}
-                placeholder={`Enter the ${isShortTermRental ? 'guest' : 'client'}'s full name`}
-                leftIcon={<User size={16} className="text-gray-400" />}
-              />
-              <p className="mt-2 text-sm text-gray-500">
-                This name will appear on the inspection report and signature page.
-              </p>
-            </div>
-
             {/* Inspection Info */}
             <div className="bg-gray-50 rounded-lg p-6">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">What happens next?</h4>
