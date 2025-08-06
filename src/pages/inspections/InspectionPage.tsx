@@ -805,6 +805,10 @@ const InspectionPage = () => {
                               src={photo}
                               alt={`Photo ${index + 1}`}
                               className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                              onError={(e) => {
+                                console.error('Error loading photo preview:', photo);
+                                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDEyQzIxIDEzLjEgMjAuMSAxNCAyMCAxNEg0QzIuOSAxNCAyIDEzLjEgMiAxMlY2QzIgNC45IDIuOSA0IDQgNEgyMEMyMS4xIDQgMjIgNC45IDIyIDZWMTJaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0iI0Y5RkFGQiIvPgo8cGF0aCBkPSJNOSA5QzEwLjEgOSAxMSA4LjEgMTEgN0MxMSA1LjkgMTAuMSA1IDkgNUM3LjkgNSA3IDUuOSA3IDdDNyA4LjEgNy45IDkgOSA5WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMjEgMTVMMTggMTJMMTUgMTVNOSAxNUw2IDEyTDMgMTUiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+';
+                              }}
                             />
                             <button
                               onClick={() => handleRemovePhoto(currentRoom.id, item.id, index)}

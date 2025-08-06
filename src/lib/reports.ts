@@ -241,16 +241,21 @@ async function createPDFReport(reportData: {
       yPosition += 10;
       
       try {
-        // Embed the actual inspector signature image
-        pdf.addImage(
-          reportData.inspectorSignature,
-          'PNG',
-          20,
-          yPosition,
-          60, // width in mm
-          30  // height in mm
-        );
-        yPosition += 35; // Add spacing after signature
+        // Check if signature data is valid before embedding
+        if (reportData.inspectorSignature && reportData.inspectorSignature.startsWith('data:image/')) {
+          pdf.addImage(
+            reportData.inspectorSignature,
+            'PNG',
+            20,
+            yPosition,
+            60, // width in mm
+            30  // height in mm
+          );
+          yPosition += 35; // Add spacing after signature
+        } else {
+          pdf.text('[Inspector signature could not be embedded]', 20, yPosition);
+          yPosition += 7;
+        }
       } catch (error) {
         console.error('Error embedding inspector signature:', error);
         pdf.text('[Inspector signature could not be embedded]', 20, yPosition);
@@ -270,16 +275,21 @@ async function createPDFReport(reportData: {
       yPosition += 10;
       
       try {
-        // Embed the actual primary contact signature image
-        pdf.addImage(
-          reportData.primaryContactSignature,
-          'PNG',
-          20,
-          yPosition,
-          60, // width in mm
-          30  // height in mm
-        );
-        yPosition += 35; // Add spacing after signature
+        // Check if signature data is valid before embedding
+        if (reportData.primaryContactSignature && reportData.primaryContactSignature.startsWith('data:image/')) {
+          pdf.addImage(
+            reportData.primaryContactSignature,
+            'PNG',
+            20,
+            yPosition,
+            60, // width in mm
+            30  // height in mm
+          );
+          yPosition += 35; // Add spacing after signature
+        } else {
+          pdf.text(`[${contactLabel} signature could not be embedded]`, 20, yPosition);
+          yPosition += 7;
+        }
       } catch (error) {
         console.error('Error embedding primary contact signature:', error);
         pdf.text(`[${contactLabel} signature could not be embedded]`, 20, yPosition);
@@ -293,6 +303,18 @@ async function createPDFReport(reportData: {
   }
   
   return pdf.output('blob');
+}
+
+function generateReportFileName(reportData: any): string {
+  const propertyName = reportData.inspection.propertyName || 'Property';
+  const inspectionType = reportData.inspection.inspectionType || 'inspection';
+  const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const time = new Date().toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+  
+  // Clean property name for filename
+  const cleanPropertyName = propertyName.replace(/[^a-zA-Z0-9]/g, '_');
+  
+  return `${cleanPropertyName}_${inspectionType}_${date}_${time}.pdf`;
 }
 
 // Helper function to extract file key from MinIO URL

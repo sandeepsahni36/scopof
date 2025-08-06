@@ -803,6 +803,9 @@ const PropertyDetailPage = () => {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Duration
                             </th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -848,6 +851,19 @@ const PropertyDetailPage = () => {
                                   ? `${Math.floor(inspection.duration_seconds / 60)}m`
                                   : 'N/A'
                                 }
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  isLoading={deletingInspections.has(inspection.id)}
+                                  disabled={deletingInspections.has(inspection.id)}
+                                  leftIcon={<Trash2 size={16} />}
+                                  onClick={() => handleDeleteInspection(inspection.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  Delete
+                                </Button>
                               </td>
                             </tr>
                           ))}

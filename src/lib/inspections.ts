@@ -518,3 +518,76 @@ export async function getInspectionsForProperty(propertyId: string): Promise<Ins
     throw error;
   }
 }
+
+export async function deleteInspection(inspectionId: string): Promise<boolean> {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Deleting mock inspection:', inspectionId);
+      const inspectionIndex = mockInspectionsState.findIndex(i => i.id === inspectionId);
+      if (inspectionIndex === -1) {
+        throw new Error('Inspection not found');
+      }
+      
+      mockInspectionsState.splice(inspectionIndex, 1);
+      mockInspectionItemsState = mockInspectionItemsState.filter(item => item.inspectionId !== inspectionId);
+      return true;
+    }
+
+    // First, get all files associated with this inspection for cleanup
+    const { data: filesToDelete, error: filesError } = await supabase
+      .from('file_metadata')
+      .select('file_key')
+      .eq('inspection_id', inspectionId);
+
+    if (filesError) {
+      console.error('Error fetching files for deletion:', filesError);
+      // Continue with inspection deletion even if file cleanup fails
+    }
+
+    // Delete the inspection (cascade should handle inspection_items and reports)
+    const { error } = await supabase
+      .from('inspections')
+      .delete()
+      .eq('id', inspectionId);
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return false;
+      }
+      throw error;
+    }
+
+    // Clean up files from MinIO storage
+    if (filesToDelete && filesToDelete.length > 0) {
+      const { deleteFile } = await import('./storage');
+      
+      for (const file of filesToDelete) {
+        try {
+          await deleteFile(file.file_key);
+          console.log('Deleted file from storage:', file.file_key);
+        } catch (fileError) {
+          console.error('Error deleting file from storage:', file.file_key, fileError);
+          // Continue with other files even if one fails
+        }
+      }
+    }
+
+    return true;
+  } catch (error: any) {
+    console.error('Error deleting inspection:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return false;
+    }
+    
+    throw error;
+  }
+}

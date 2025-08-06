@@ -419,6 +419,17 @@ const ReportsPage = () => {
                         >
                           Delete
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          isLoading={deletingReports.has(report.id)}
+                          disabled={deletingReports.has(report.id) || viewingReports.has(report.id) || downloadingReports.has(report.id)}
+                          leftIcon={<Trash2 size={16} />}
+                          onClick={() => handleDeleteReport(report)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          Delete
+                        </Button>
                       </div>
                     </td>
                   </tr>

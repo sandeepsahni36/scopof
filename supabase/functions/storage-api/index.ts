@@ -350,7 +350,34 @@ serve(async (req) => {
 
         // Generate unique object name for MinIO
         const fileExtension = parse(file.name).ext;
-        const objectName = `${userContext.adminId}/${fileType}/${uuidv4()}${fileExtension}`;
+        
+        // Get company name for folder structure
+        const { data: adminData, error: adminError } = await supabase
+          .from('admin')
+          .select('company_name')
+          .eq('id', userContext.adminId)
+          .single();
+        
+        if (adminError) {
+          console.error("Error fetching company name:", adminError);
+          throw new Error("Failed to fetch company information");
+        }
+        
+        // Clean company name for folder structure
+        const cleanCompanyName = adminData.company_name
+          .replace(/[^a-zA-Z0-9]/g, '_')
+          .toLowerCase();
+        
+        // Create hierarchical structure: company/inspections/inspection_id/photos or reports
+        let objectName;
+        if (fileType === 'photo' && inspectionId) {
+          objectName = `${cleanCompanyName}/inspections/${inspectionId}/photos/${inspectionItemId || 'general'}/${uuidv4()}${fileExtension}`;
+        } else if (fileType === 'report' && inspectionId) {
+          objectName = `${cleanCompanyName}/inspections/${inspectionId}/reports/${uuidv4()}${fileExtension}`;
+        } else {
+          // Fallback to old structure
+          objectName = `${cleanCompanyName}/${fileType}/${uuidv4()}${fileExtension}`;
+        }
 
         console.log("Generated object name:", objectName);
 
