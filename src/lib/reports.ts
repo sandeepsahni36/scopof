@@ -339,28 +339,29 @@ async function fetchAndProcessImage(imageUrl: string): Promise<{
           // Convert to data URL (JPEG for smaller file size)
           const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
           
+          // Clean up object URL
+          URL.revokeObjectURL(objectUrl);
+          
           resolve({
             dataUrl,
             format: 'JPEG'
           });
         } catch (error) {
+          // Clean up object URL on error
+          URL.revokeObjectURL(objectUrl);
           reject(error);
         }
       };
       
       img.onerror = () => {
+        // Clean up object URL on error
+        URL.revokeObjectURL(objectUrl);
         reject(new Error('Failed to load image'));
       };
       
       // Create object URL from blob and set as image source
       const objectUrl = URL.createObjectURL(blob);
       img.src = objectUrl;
-      
-      // Clean up object URL after image loads
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-        img.onload(); // Call the original onload
-      };
     });
   } catch (error) {
     console.error('Error processing image for PDF:', error);
