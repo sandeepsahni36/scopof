@@ -810,7 +810,7 @@ const PropertyDetailPage = () => {
                   </div>
                   
                   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto"> {/* Added overflow-x-auto here */}
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
