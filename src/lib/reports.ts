@@ -211,9 +211,6 @@ async function createPDFReport(reportData: {
               }
             } else {
               // Fallback if file key couldn't be extracted
-              pdf.text(`    Photo ${i + 1}: [Invalid file reference]`, 30, yPosition);
-              yPosition += 5;
-            }
           } catch (error) {
             console.error(`Error embedding photo ${i + 1} for item ${item.label}:`, error);
             // Add fallback text for failed photo

@@ -30,6 +30,36 @@
 
 ### Fixed
 - Fixed ReferenceError: cleanCompanyName is not defined in PDF generation by removing misplaced backend logic from frontend code
+- Fixed fileKey extraction in storage-api Edge Function by correcting path segment slicing from slice(2) to slice(4)
+- Resolved signed URL generation failures for camera photos by properly parsing the request URL structure
+- Fixed photo preview loading by ensuring correct file keys are passed to MinIO for presigned URL generation
+- Removed erroneous objectName construction logic from frontend PDF generation function
+
+### Added
+- Added comprehensive logging in extractFileKeyFromUrl function to track URL parsing and file key extraction
+- Added detailed photo preview processing logs to track signed URL generation success/failure
+- Added specific error logging for file key extraction failures in both download and delete endpoints
+- Added validation logging for URL structure and path parsing in storage API
+- Added critical debug logging to track fileKey values before signed URL generation attempts
+
+### Debug Information
+- Console logs now show complete URL parsing process including hostname, pathname, and path parts
+- File key extraction logs show bucket index detection and path reconstruction
+- Photo preview logs track the complete flow from database URL to signed URL generation
+- Enhanced error messages provide specific details about URL parsing failures in storage API
+- Critical debug logs show fileKey type, value, and truthiness before processing
+
+### Technical Details
+- Fixed storage-api Edge Function to correctly extract file keys from Supabase function URLs
+- URL structure: /functions/v1/storage-api/download/{fileKey} requires slice(4) not slice(2)
+- Removed frontend objectName construction that was causing ReferenceError crashes
+- Enhanced logging throughout photo processing pipeline for better debugging
+- File key extraction now properly handles nested MinIO folder structures
+
+## [2025-08-06] - Fix Camera Photo Preview and PDF Embedding Issues
+
+### Fixed
+- Fixed ReferenceError: cleanCompanyName is not defined in PDF generation by removing misplaced backend logic from frontend code
 - Enhanced file key extraction logging to debug why signed URLs are not being generated for camera photos
 - Added comprehensive logging to track photo URL processing from database storage to signed URL generation
 - Improved error handling and debugging output for photo preview failures

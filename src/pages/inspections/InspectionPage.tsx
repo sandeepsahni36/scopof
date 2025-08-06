@@ -167,6 +167,11 @@ const InspectionPage = () => {
             console.log('=== PHOTO PREVIEW PROCESSING ===');
             console.log('Original photo URL from database:', photoUrl);
             console.log('Extracted file key:', fileKey);
+            console.log('=== CRITICAL DEBUG: fileKey value before if condition ===');
+            console.log('fileKey type:', typeof fileKey);
+            console.log('fileKey value:', fileKey);
+            console.log('fileKey is truthy:', !!fileKey);
+            console.log('=== END CRITICAL DEBUG ===');
             
             if (fileKey) {
               loadingSet.add(photoUrl);
