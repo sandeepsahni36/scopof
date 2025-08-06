@@ -171,6 +171,7 @@ const InspectionPage = () => {
             console.log('fileKey type:', typeof fileKey);
             console.log('fileKey value:', fileKey);
             console.log('fileKey is truthy:', !!fileKey);
+            console.log('About to call getSignedUrlForFile with fileKey:', fileKey);
             console.log('=== END CRITICAL DEBUG ===');
             
             if (fileKey) {

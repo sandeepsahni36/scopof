@@ -161,8 +161,6 @@ async function createPDFReport(reportData: {
           try {
             // Extract file key from URL for signed URL generation
             const fileKey = extractFileKeyFromUrl(photoUrl);
-            const inspectionType = reportData.inspection?.inspectionType || reportData.inspection?.inspection_type || 'inspection';
-            const cleanInspectionType = inspectionType.replace('_', '-');
             
             if (fileKey) {
               // Get signed URL for secure access
