@@ -32,8 +32,7 @@ const mainNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { title: 'Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
-  { title: 'Users', href: '/dashboard/admin/users', icon: 'Users' },
-  { title: 'Subscription', href: '/dashboard/admin/subscription', icon: 'CreditCard' },
+  { title: 'Subscription', href: '/dashboard/admin/subscription', icon: 'CreditCard' }
 ];
 
 const BottomNavigation = () => {
@@ -42,11 +41,7 @@ const BottomNavigation = () => {
   // Combine main and admin items for mobile display
   const allNavItems = [...mainNavItems];
   if (isAdmin) {
-    // Only show the most important admin items on mobile to avoid overcrowding
-    allNavItems.push(
-      { title: 'Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
-      { title: 'Subscription', href: '/dashboard/admin/subscription', icon: 'CreditCard' }
-    );
+    allNavItems.push(...adminNavItems);
   }
 
   return (
