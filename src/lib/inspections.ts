@@ -165,7 +165,7 @@ export async function createInspection(
       }
 
       if (inspectionItems.length > 0) {
-        const { error: itemsError } = await supabase
+        const { data: createdInspectionItems, error: itemsError } = await supabase
           .from('inspection_items')
           .insert(inspectionItems)
           .select();
