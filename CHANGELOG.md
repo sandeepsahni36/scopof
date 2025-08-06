@@ -1,3 +1,23 @@
+## [2025-01-31] - Fix Photo and Signature Embedding in PDF Reports
+
+### Fixed
+- Fixed `fetchAndProcessImage` function where `img.onload` handler was incorrectly overwriting itself
+- Fixed signature embedding by replacing placeholder text with actual `pdf.addImage()` calls
+- Resolved issue where photos were uploaded successfully but not appearing in PDF reports
+- Fixed object URL cleanup to prevent memory leaks during image processing
+
+### Changed
+- Modified PDF generation to embed actual signature images instead of placeholder text
+- Enhanced image processing to properly handle canvas drawing and data URL conversion
+- Improved error handling for both photo and signature embedding failures
+- Added proper cleanup of object URLs after image processing
+
+### Technical Details
+- Photos are now fetched using signed URLs and embedded as JPEG images in PDFs
+- Signatures are embedded as PNG images with 60mm x 30mm dimensions
+- Images are automatically scaled to fit within PDF layout constraints
+- Fallback text is shown if image embedding fails
+
 ## [2025-08-05] - Implement Photo Embedding in PDF Reports
 
 ### Added
