@@ -11,7 +11,6 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
 import BottomNavigation from '../components/layout/BottomNavigation';
-import BottomNavigation from '../components/layout/BottomNavigation';
 
 // Import navigation items for desktop sidebar
 import {
