@@ -428,6 +428,14 @@ export async function uploadInspectionPhoto(
     // Upload via custom storage API
     const uploadResult = await uploadFile(webpFile, 'photo', inspectionId, itemId);
     
+    console.log('=== PHOTO UPLOAD RESULT ===');
+    console.log('Upload result:', {
+      fileUrl: uploadResult?.fileUrl,
+      fileKey: uploadResult?.fileKey,
+      metadataId: uploadResult?.metadataId
+    });
+    console.log('=== END PHOTO UPLOAD RESULT ===');
+    
     if (!uploadResult) {
       throw new Error('Failed to upload photo');
     }
@@ -447,12 +455,27 @@ export async function uploadInspectionPhoto(
 
 // Helper function to convert image to WebP format
 async function convertToWebP(file: File): Promise<File> {
+  console.log('=== WEBP CONVERSION START ===');
+  console.log('Original file details:', {
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    lastModified: file.lastModified
+  });
+  
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
     
     img.onload = () => {
+      console.log('Image loaded for WebP conversion:', {
+        width: img.width,
+        height: img.height,
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight
+      });
+      
       canvas.width = img.width;
       canvas.height = img.height;
       
@@ -464,17 +487,45 @@ async function convertToWebP(file: File): Promise<File> {
             const webpFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), {
               type: 'image/webp',
             });
+            
+            console.log('WebP conversion successful:', {
+              originalName: file.name,
+              webpName: webpFile.name,
+              originalType: file.type,
+              webpType: webpFile.type,
+              originalSize: file.size,
+              webpSize: webpFile.size,
+              sizeReduction: ((file.size - webpFile.size) / file.size * 100).toFixed(2) + '%'
+            });
+            
+            // Log first 50 bytes of WebP file for validation
+            const reader = new FileReader();
+            reader.onload = () => {
+              const arrayBuffer = reader.result as ArrayBuffer;
+              const uint8Array = new Uint8Array(arrayBuffer.slice(0, 50));
+              const hexString = Array.from(uint8Array).map(b => b.toString(16).padStart(2, '0')).join(' ');
+              console.log('WebP file header (first 50 bytes):', hexString);
+              console.log('WebP signature check:', hexString.startsWith('52 49 46 46') ? 'VALID RIFF' : 'INVALID');
+            };
+            reader.readAsArrayBuffer(webpFile.slice(0, 50));
+            
+            console.log('=== WEBP CONVERSION END ===');
             resolve(webpFile);
           } else {
+            console.error('WebP conversion failed: canvas.toBlob returned null');
             reject(new Error('Failed to convert image to WebP'));
           }
         }, 'image/webp', 0.8); // 80% quality
       } else {
+        console.error('WebP conversion failed: could not get canvas context');
         reject(new Error('Failed to get canvas context'));
       }
     };
     
-    img.onerror = () => reject(new Error('Failed to load image'));
+    img.onerror = (error) => {
+      console.error('WebP conversion failed: image load error:', error);
+      reject(new Error('Failed to load image for WebP conversion'));
+    };
     img.src = URL.createObjectURL(file);
   });
 }
