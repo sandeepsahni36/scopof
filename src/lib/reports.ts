@@ -1,6 +1,7 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import jsPDF from 'jspdf';
 import { uploadFile } from './storage';
+import { getSignedUrlForFile } from './storage';
 
 export async function generateInspectionReport(reportData: {
   inspection: any;
@@ -99,7 +100,7 @@ async function createPDFReport(reportData: {
   yPosition += 10;
   
   // Room sections
-  reportData.rooms.forEach(room => {
+  for (const room of reportData.rooms) {
     // Check if we need a new page
     if (yPosition > 250) {
       pdf.addPage();
@@ -116,7 +117,7 @@ async function createPDFReport(reportData: {
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     
-    room.items.forEach((item: any) => {
+    for (const item of room.items) {
       if (yPosition > 270) {
         pdf.addPage();
         yPosition = 20;
@@ -142,16 +143,82 @@ async function createPDFReport(reportData: {
         yPosition += 5;
       }
       
+      // Handle photos - embed them in the PDF
       if (item.photos && item.photos.length > 0) {
-        pdf.text(`  Photos: ${item.photos.length} attached`, 30, yPosition);
+        pdf.text(`  Photos (${item.photos.length}):`, 30, yPosition);
         yPosition += 5;
+        
+        for (let i = 0; i < item.photos.length; i++) {
+          const photoUrl = item.photos[i];
+          
+          try {
+            // Extract file key from URL for signed URL generation
+            const fileKey = extractFileKeyFromUrl(photoUrl);
+            
+            if (fileKey) {
+              // Get signed URL for secure access
+              const signedUrl = await getSignedUrlForFile(fileKey);
+              
+              if (signedUrl) {
+                // Fetch and embed the image
+                const imageData = await fetchAndProcessImage(signedUrl);
+                
+                if (imageData) {
+                  // Check if we need a new page for the image
+                  if (yPosition > 200) {
+                    pdf.addPage();
+                    yPosition = 20;
+                  }
+                  
+                  // Add image to PDF (scaled to fit)
+                  const imageWidth = 80; // Max width in mm
+                  const imageHeight = 60; // Max height in mm
+                  
+                  pdf.addImage(
+                    imageData.dataUrl,
+                    imageData.format,
+                    30,
+                    yPosition,
+                    imageWidth,
+                    imageHeight
+                  );
+                  
+                  yPosition += imageHeight + 10; // Add spacing after image
+                  
+                  // Add photo caption
+                  pdf.setFontSize(8);
+                  pdf.text(`Photo ${i + 1} of ${item.photos.length}`, 30, yPosition);
+                  pdf.setFontSize(10);
+                  yPosition += 5;
+                } else {
+                  // Fallback if image couldn't be processed
+                  pdf.text(`    Photo ${i + 1}: [Image could not be embedded]`, 30, yPosition);
+                  yPosition += 5;
+                }
+              } else {
+                // Fallback if signed URL couldn't be generated
+                pdf.text(`    Photo ${i + 1}: [Access denied]`, 30, yPosition);
+                yPosition += 5;
+              }
+            } else {
+              // Fallback if file key couldn't be extracted
+              pdf.text(`    Photo ${i + 1}: [Invalid file reference]`, 30, yPosition);
+              yPosition += 5;
+            }
+          } catch (error) {
+            console.error(`Error embedding photo ${i + 1} for item ${item.label}:`, error);
+            // Add fallback text for failed photo
+            pdf.text(`    Photo ${i + 1}: [Failed to load]`, 30, yPosition);
+            yPosition += 5;
+          }
+        }
       }
       
       yPosition += 3;
-    });
+    }
     
     yPosition += 5;
-  });
+  }
   
   // Signature section
   if (reportData.inspectorSignature || reportData.primaryContactSignature) {
@@ -194,6 +261,111 @@ async function createPDFReport(reportData: {
   }
   
   return pdf.output('blob');
+}
+
+// Helper function to extract file key from MinIO URL
+function extractFileKeyFromUrl(url: string): string | null {
+  try {
+    // Expected URL format: https://storage.scopostay.com:9000/storage-files/{admin_id}/photo/{uuid}.webp
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    
+    // Find the bucket name and extract everything after it
+    const bucketIndex = pathParts.findIndex(part => part === 'storage-files');
+    if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+      // Join all parts after the bucket name
+      return pathParts.slice(bucketIndex + 1).join('/');
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting file key from URL:', error);
+    return null;
+  }
+}
+
+// Helper function to fetch and process image for PDF embedding
+async function fetchAndProcessImage(imageUrl: string): Promise<{
+  dataUrl: string;
+  format: string;
+} | null> {
+  try {
+    console.log('Fetching image for PDF embedding:', imageUrl);
+    
+    // Fetch the image
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      console.error('Failed to fetch image:', response.status, response.statusText);
+      return null;
+    }
+    
+    const blob = await response.blob();
+    
+    // Create an image element to load the blob
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous'; // Handle CORS if needed
+      
+      img.onload = () => {
+        try {
+          // Create canvas to process the image
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            reject(new Error('Failed to get canvas context'));
+            return;
+          }
+          
+          // Calculate dimensions to fit within PDF constraints
+          const maxWidth = 300; // pixels
+          const maxHeight = 225; // pixels
+          
+          let { width, height } = img;
+          
+          // Scale down if necessary
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width *= ratio;
+            height *= ratio;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Draw the image onto the canvas
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to data URL (JPEG for smaller file size)
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          
+          resolve({
+            dataUrl,
+            format: 'JPEG'
+          });
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Failed to load image'));
+      };
+      
+      // Create object URL from blob and set as image source
+      const objectUrl = URL.createObjectURL(blob);
+      img.src = objectUrl;
+      
+      // Clean up object URL after image loads
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        img.onload(); // Call the original onload
+      };
+    });
+  } catch (error) {
+    console.error('Error processing image for PDF:', error);
+    return null;
+  }
 }
 
 function generateMockPDFReport(reportData: any): string {

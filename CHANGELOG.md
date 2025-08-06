@@ -1,3 +1,30 @@
+## [2025-08-05] - Implement Photo Embedding in PDF Reports
+
+### Added
+- Added photo embedding functionality to PDF reports
+- Added `extractFileKeyFromUrl` helper function to extract MinIO file keys from URLs
+- Added `fetchAndProcessImage` helper function to fetch, scale, and convert images for PDF embedding
+- Added proper image scaling to fit within PDF layout constraints
+- Added error handling for image fetching and processing failures
+- Added fallback text when images cannot be embedded
+
+### Fixed
+- Fixed ReferenceError: createdInspectionItems is not defined in createInspection function
+- Properly destructured the data property from Supabase insert response
+- Resolved inspection creation failure that was preventing inspections from starting
+
+### Changed
+- Modified `createPDFReport` function to fetch and embed actual photos instead of just showing photo counts
+- Enhanced PDF layout to accommodate embedded images with proper spacing
+- Converted forEach loops to for...of loops to support async operations
+- Images are now scaled and converted to JPEG format for optimal PDF file size
+
+### Technical Details
+- Photos are fetched using signed URLs for secure access
+- Images are processed through HTML5 Canvas for scaling and format conversion
+- PDF layout automatically handles page breaks when images don't fit
+- Each embedded photo includes a caption showing its position in the sequence
+
 ## [2025-01-31] - Fix Inspection Creation ReferenceError
 
 ### Fixed
