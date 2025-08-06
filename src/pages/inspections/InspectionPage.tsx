@@ -50,6 +50,8 @@ const InspectionPage = () => {
   
   // Photo upload state
   const [uploadingPhotos, setUploadingPhotos] = useState<Set<string>>(new Set());
+  const [signedPhotoUrls, setSignedPhotoUrls] = useState<Map<string, string>>(new Map());
+  const [loadingPhotoUrls, setLoadingPhotoUrls] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (id) {
@@ -93,17 +95,37 @@ const InspectionPage = () => {
   const loadInspectionData = async (inspectionId: string) => {
     try {
       setLoading(true);
+      console.log('Loading inspection data for ID:', inspectionId);
       const data = await getInspectionDetails(inspectionId);
       
       if (data) {
+        console.log('Inspection data loaded:', {
+          inspectorName: data.inspection.inspector_name,
+          primaryContactName: data.inspection.primary_contact_name,
+          clientPresent: data.inspection.client_present_for_signature
+        });
+        
         setInspection(data.inspection);
-        setPrimaryContactName(data.inspection.primaryContactName || '');
-        setInspectorName(data.inspection.inspectorName || '');
+        setPrimaryContactName(data.inspection.primary_contact_name || '');
+        setInspectorName(data.inspection.inspector_name || '');
+        
+        // Load property data for report generation
+        if (data.inspection.property_id) {
+          const { getProperty } = await import('../../lib/properties');
+          const propertyData = await getProperty(data.inspection.property_id);
+          if (propertyData) {
+            setProperty(propertyData);
+            console.log('Property data loaded for inspection:', propertyData.name);
+          }
+        }
         
         // Build rooms from actual inspection items and template data
         const rooms = await buildRoomsFromInspectionData(data.inspection, data.items);
         
         setRooms(rooms);
+        
+        // Load signed URLs for all photos
+        await loadSignedPhotoUrls(rooms);
       } else {
         toast.error('Inspection not found');
         navigate('/dashboard');
@@ -114,6 +136,56 @@ const InspectionPage = () => {
       navigate('/dashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSignedPhotoUrls = async (rooms: Room[]) => {
+    const { getSignedUrlForFile } = await import('../../lib/storage');
+    const urlMap = new Map<string, string>();
+    const loadingSet = new Set<string>();
+    
+    for (const room of rooms) {
+      for (const item of room.items) {
+        if (item.photos && item.photos.length > 0) {
+          for (const photoUrl of item.photos) {
+            // Extract file key from MinIO URL
+            const fileKey = extractFileKeyFromUrl(photoUrl);
+            if (fileKey) {
+              loadingSet.add(photoUrl);
+              try {
+                const signedUrl = await getSignedUrlForFile(fileKey);
+                if (signedUrl) {
+                  urlMap.set(photoUrl, signedUrl);
+                }
+              } catch (error) {
+                console.error('Error getting signed URL for photo:', photoUrl, error);
+              }
+              loadingSet.delete(photoUrl);
+            }
+          }
+        }
+      }
+    }
+    
+    setSignedPhotoUrls(urlMap);
+    setLoadingPhotoUrls(loadingSet);
+  };
+
+  const extractFileKeyFromUrl = (url: string): string | null => {
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      
+      // Find the bucket name and extract everything after it
+      const bucketIndex = pathParts.findIndex(part => part === 'storage-files');
+      if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+        return pathParts.slice(bucketIndex + 1).join('/');
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error extracting file key from URL:', error);
+      return null;
     }
   };
 
@@ -669,7 +741,7 @@ const InspectionPage = () => {
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700">Client Present</label>
                     <p className="mt-1 text-sm text-gray-900">
-                      {inspection?.clientPresentForSignature ? 'Yes' : 'No'}
+                      {inspection?.client_present_for_signature ? 'Yes' : 'No'}
                     </p>
                   </div>
                 )}
@@ -799,18 +871,24 @@ const InspectionPage = () => {
                   
                   {item.type === 'photo' && (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {item.photos?.map((photo, index) => (
                           <div key={index} className="relative group">
+                            {loadingPhotoUrls.has(photo) ? (
+                              <div className="w-full h-32 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                              </div>
+                            ) : (
                             <img
-                              src={photo}
+                              src={signedPhotoUrls.get(photo) || photo}
                               alt={`Photo ${index + 1}`}
-                              className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                              className="w-full h-32 object-cover rounded-lg border border-gray-200"
                               onError={(e) => {
                                 console.error('Error loading photo preview:', photo);
                                 e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDEyQzIxIDEzLjEgMjAuMSAxNCAyMCAxNEg0QzIuOSAxNCAyIDEzLjEgMiAxMlY2QzIgNC45IDIuOSA0IDQgNEgyMEMyMS4xIDQgMjIgNC45IDIyIDZWMTJaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0iI0Y5RkFGQiIvPgo8cGF0aCBkPSJNOSA5QzEwLjEgOSAxMSA4LjEgMTEgN0MxMSA1LjkgMTAuMSA1IDkgNUM3LjkgNSA3IDUuOSA3IDdDNyA4LjEgNy45IDkgOSA5WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMjEgMTVMMTggMTJMMTUgMTVNOSAxNUw2IDEyTDMgMTUiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+';
                               }}
                             />
+                            )}
                             <button
                               onClick={() => handleRemovePhoto(currentRoom.id, item.id, index)}
                               className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
