@@ -568,7 +568,18 @@ serve(async (req) => {
             60 * 60 // 60 minutes expiry to prevent "Request has expired" errors
           );
 
-          console.log(`MinIO: Generated presigned URL for ${fileKey}:`, presignedUrl);
+          console.log("=== PRESIGNED URL GENERATION ===");
+          console.log("MinIO bucket:", minioBucketName);
+          console.log("File key for presigned URL:", fileKey);
+          console.log("Expiry time:", "60 minutes");
+          console.log("Generated presigned URL:", presignedUrl);
+          console.log("Presigned URL analysis:", {
+            isValidUrl: presignedUrl.startsWith('http'),
+            urlLength: presignedUrl.length,
+            containsFileKey: presignedUrl.includes(fileKey.split('/').pop() || ''),
+            hasExpiry: presignedUrl.includes('Expires=') || presignedUrl.includes('X-Amz-Expires=')
+          });
+          console.log("=== END PRESIGNED URL GENERATION ===");
 
           return new Response(JSON.stringify({
             message: "File URL generated successfully",

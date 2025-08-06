@@ -299,14 +299,24 @@ export async function getSignedUrlForFile(fileKey: string): Promise<string | nul
     }
 
     const data = await response.json();
-    console.log('Storage API response data:', data);
 
+    console.log('=== SIGNED URL SUCCESS ===');
+    console.log('Response data:', {
+      hasFileUrl: !!data.fileUrl,
+      fileUrlLength: data.fileUrl?.length || 0,
+      fileUrlPreview: data.fileUrl?.substring(0, 100) + '...',
+      message: data.message
+    });
+    
     if (!data || !data.fileUrl) {
+      console.error('Invalid response data:', data);
       throw new Error('No signed URL returned from storage API');
     }
 
-    console.log('Signed URL generated successfully for file:', fileKey);
-    console.log('Generated URL:', data.fileUrl);
+    console.log('Signed URL generated successfully for file key:', fileKey);
+    console.log('Generated signed URL (full):', data.fileUrl);
+    console.log('=== END SIGNED URL SUCCESS ===');
+    
     return data.fileUrl;
   } catch (error: any) {
     console.error('Error getting signed URL for file:', error);

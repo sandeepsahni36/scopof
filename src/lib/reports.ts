@@ -463,17 +463,47 @@ async function fetchAndProcessImage(imageUrl: string): Promise<{
   format: string;
 } | null> {
   try {
+    console.log('=== PDF IMAGE FETCH START ===');
     console.log('Fetching image for PDF embedding:', imageUrl);
+    console.log('Image URL analysis:', {
+      isValidUrl: imageUrl.startsWith('http'),
+      urlLength: imageUrl.length,
+      hostname: new URL(imageUrl).hostname,
+      pathname: new URL(imageUrl).pathname
+    });
     
     // Fetch the image
     const response = await fetch(imageUrl);
+    
+    console.log('=== PDF IMAGE FETCH RESPONSE ===');
+    console.log('Fetch response:', {
+      status: response.status,
+      ok: response.ok,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+    
     if (!response.ok) {
-      console.error('Failed to fetch image:', response.status, response.statusText);
+      console.error('=== PDF IMAGE FETCH FAILED ===');
+      console.error('Failed to fetch image for PDF:', {
+        url: imageUrl,
+        status: response.status,
+        statusText: response.statusText
+      });
+      console.error('=== END PDF IMAGE FETCH FAILED ===');
       return null;
     }
     
     const blob = await response.blob();
+    
+    console.log('=== PDF IMAGE BLOB PROCESSING ===');
+    console.log('Blob details:', {
+      type: blob.type,
+      size: blob.size
+    });
+    
     const objectUrl = URL.createObjectURL(blob);
+    console.log('Object URL created:', objectUrl);
     
     // Create an image element to load the blob
     return new Promise((resolve, reject) => {
@@ -481,12 +511,21 @@ async function fetchAndProcessImage(imageUrl: string): Promise<{
       img.crossOrigin = 'anonymous'; // Handle CORS if needed
       
       img.onload = () => {
+        console.log('=== PDF IMAGE LOAD SUCCESS ===');
+        console.log('Image loaded for PDF processing:', {
+          width: img.width,
+          height: img.height,
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight
+        });
+        
         try {
           // Create canvas to process the image
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           
           if (!ctx) {
+            console.error('PDF image processing failed: could not get canvas context');
             URL.revokeObjectURL(objectUrl);
             reject(new Error('Failed to get canvas context'));
             return;
@@ -498,11 +537,17 @@ async function fetchAndProcessImage(imageUrl: string): Promise<{
           
           let { width, height } = img;
           
+          console.log('=== PDF IMAGE SCALING ===');
+          console.log('Original dimensions:', { width, height });
+          
           // Scale down if necessary
           if (width > maxWidth || height > maxHeight) {
             const ratio = Math.min(maxWidth / width, maxHeight / height);
             width *= ratio;
             height *= ratio;
+            console.log('Scaled dimensions:', { width, height, ratio });
+          } else {
+            console.log('No scaling needed');
           }
           
           canvas.width = width;
@@ -510,9 +555,18 @@ async function fetchAndProcessImage(imageUrl: string): Promise<{
           
           // Draw the image onto the canvas
           ctx.drawImage(img, 0, 0, width, height);
+          console.log('Image drawn to canvas successfully');
           
           // Convert to data URL (JPEG for smaller file size)
           const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          
+          console.log('=== PDF IMAGE CONVERSION SUCCESS ===');
+          console.log('Data URL generated:', {
+            length: dataUrl.length,
+            startsWithData: dataUrl.startsWith('data:image/jpeg'),
+            preview: dataUrl.substring(0, 50) + '...'
+          });
+          console.log('=== END PDF IMAGE CONVERSION SUCCESS ===');
           
           // Clean up object URL
           URL.revokeObjectURL(objectUrl);
@@ -522,6 +576,12 @@ async function fetchAndProcessImage(imageUrl: string): Promise<{
             format: 'JPEG'
           });
         } catch (error) {
+          console.error('=== PDF IMAGE PROCESSING ERROR ===');
+          console.error('Error during canvas processing:', {
+            message: error.message,
+            stack: error.stack
+          });
+          console.error('=== END PDF IMAGE PROCESSING ERROR ===');
           // Clean up object URL on error
           URL.revokeObjectURL(objectUrl);
           reject(error);
@@ -529,15 +589,29 @@ async function fetchAndProcessImage(imageUrl: string): Promise<{
       };
       
       img.onerror = () => {
+        console.error('=== PDF IMAGE LOAD ERROR ===');
+        console.error('Failed to load image for PDF processing:', {
+          url: imageUrl,
+          objectUrl: objectUrl,
+          error: error
+        });
+        console.error('=== END PDF IMAGE LOAD ERROR ===');
         // Clean up object URL on error
         URL.revokeObjectURL(objectUrl);
         reject(new Error('Failed to load image'));
       };
       
       img.src = objectUrl;
+      console.log('Image src set to object URL, waiting for load...');
     });
   } catch (error) {
-    console.error('Error processing image for PDF:', error);
+    console.error('=== PDF IMAGE PROCESSING OUTER ERROR ===');
+    console.error('Outer error in fetchAndProcessImage:', {
+      message: error.message,
+      stack: error.stack,
+      imageUrl: imageUrl
+    });
+    console.error('=== END PDF IMAGE PROCESSING OUTER ERROR ===');
     return null;
   }
 }

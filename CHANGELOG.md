@@ -1,3 +1,29 @@
+## [2025-01-31] - Enhanced Debugging for Camera Photo Issues
+
+### Added
+- Added comprehensive logging throughout the camera photo pipeline to debug preview and PDF embedding failures
+- Added WebP conversion logging to track file type, size, and header validation
+- Added storage API upload/download logging to trace file URLs and signed URL generation
+- Added photo preview error logging with detailed image element analysis
+- Added PDF image processing logging to track fetch, blob conversion, and canvas operations
+- Added MinIO presigned URL generation logging with URL structure analysis
+- Added file key extraction debugging with URL path analysis
+
+### Debug Information
+- WebP conversion logs original vs converted file details and validates file headers
+- Storage API logs track file upload success and response data structure
+- Signed URL generation logs trace the complete URL creation process
+- Photo preview logs capture image loading failures with element state details
+- PDF embedding logs track image fetch, blob processing, and canvas conversion steps
+- Enhanced error logging throughout the entire photo processing pipeline
+
+### Technical Details
+- WebP file header validation checks for proper RIFF signature
+- File URL analysis validates URL structure and MinIO bucket references
+- Presigned URL validation checks for proper expiry parameters and HTTPS protocol
+- Canvas processing logs track image scaling and data URL generation
+- Comprehensive error capture at every stage of photo processing workflow
+
 ## [2025-01-31] - Critical Photo Preview and Camera Access Fixes
 
 ### Fixed
