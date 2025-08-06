@@ -7,6 +7,11 @@
 - Fixed "Client is Present" checkbox to be interactive and properly control signature requirements
 - Fixed inspection history display on property detail page - now shows actual completed inspections
 - Fixed report download functionality to save files to local disk instead of opening in browser
+- Fixed database field mapping for inspector and client names (snake_case vs camelCase)
+- Fixed missing `deletingInspections` state variable that was causing inspection history page to crash
+- Fixed duplicate delete buttons on reports page
+- Fixed photo preview size in live inspections (increased from h-24 to h-32)
+- Fixed signature boxes to be more square-shaped (w-80 h-64) and centered
 
 ### Added
 - Added delete functionality for reports with confirmation dialog
@@ -17,6 +22,8 @@
 - Added read-only display of inspection details (inspector name, contact name, client present status) on signature page
 - Added delete functionality for inspections from property detail page
 - Added company-based folder structure in MinIO storage for better organization
+- Added cleanup functionality for incomplete inspections in admin settings
+- Added blob-based download mechanism for more reliable file downloads
 
 ### Changed
 - Signature canvas boxes are now larger and more square-shaped for better usability
@@ -27,6 +34,7 @@
 - MinIO storage structure now uses company name: `company_name/inspections/inspection_id/photos/` and `company_name/inspections/inspection_id/reports/`
 - PDF report filenames now include property name, inspection type, date, and time for better organization
 - Photo preview includes error handling with fallback placeholder image
+- Photo preview boxes increased in size for better visibility
 
 ### Technical Details
 - Signatures are embedded as PNG images with 60mm x 30mm dimensions in PDF reports
@@ -36,6 +44,8 @@
 - Inspection deletion cascades to remove all associated photos, reports, and database records
 - MinIO folder structure: `{company_name}/inspections/{inspection_id}/photos/{item_id}/{uuid}.webp`
 - Report files: `{company_name}/inspections/{inspection_id}/reports/{uuid}.pdf`
+- Download mechanism uses blob fetching and URL.createObjectURL for reliable file saving
+- Added cleanup utility for incomplete inspections accessible from admin settings
 
 ## [2025-01-31] - Complete Inspection and Report Management Fixes
 
