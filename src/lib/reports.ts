@@ -161,9 +161,9 @@ async function createPDFReport(reportData: {
           try {
             // Extract file key from URL for signed URL generation
             const fileKey = extractFileKeyFromUrl(photoUrl);
-          const inspectionType = reportData.inspection?.inspectionType || reportData.inspection?.inspection_type || 'inspection';
-          const cleanInspectionType = inspectionType.replace('_', '-');
-          objectName = `${cleanCompanyName}/inspections/${inspectionId}/reports/${cleanPropertyName}_${cleanInspectionType}_${dateStr}_${timeStr}${fileExtension}`;
+            const inspectionType = reportData.inspection?.inspectionType || reportData.inspection?.inspection_type || 'inspection';
+            const cleanInspectionType = inspectionType.replace('_', '-');
+            
             if (fileKey) {
               // Get signed URL for secure access
               const signedUrl = await getSignedUrlForFile(fileKey);
@@ -211,6 +211,9 @@ async function createPDFReport(reportData: {
               }
             } else {
               // Fallback if file key couldn't be extracted
+              pdf.text(`    Photo ${i + 1}: [Invalid URL]`, 30, yPosition);
+              yPosition += 5;
+            }
           } catch (error) {
             console.error(`Error embedding photo ${i + 1} for item ${item.label}:`, error);
             // Add fallback text for failed photo
@@ -606,7 +609,7 @@ async function fetchAndProcessImage(imageUrl: string): Promise<{
         }
       };
       
-      img.onerror = () => {
+      img.onerror = (error) => {
         console.error('=== PDF IMAGE LOAD ERROR ===');
         console.error('Failed to load image for PDF processing:', {
           url: imageUrl,
