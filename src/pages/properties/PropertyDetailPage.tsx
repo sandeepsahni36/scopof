@@ -759,22 +759,122 @@ const PropertyDetailPage = () => {
           )}
 
           {activeTab === 'inspections' && (
-            <div className="text-center py-12">
-              <Camera className="mx-auto h-16 w-16 text-gray-400" />
-              <h3 className="mt-4 text-lg font-semibold text-gray-900">No Inspections Yet</h3>
-              <p className="mt-2 text-base text-gray-500">
-                Inspection history will appear here once you start conducting inspections.
-              </p>
-              <div className="mt-6">
-                <Link to={`/start-inspection/${property.id}`}>
-                  <Button 
-                    leftIcon={<Camera size={16} />}
-                    disabled={!propertyChecklist}
-                  >
-                    {propertyChecklist ? 'Start First Inspection' : 'Create Checklist First'}
-                  </Button>
-                </Link>
-              </div>
+            <div>
+              {inspectionsLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading inspection history...</p>
+                </div>
+              ) : propertyInspections.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Inspection History</h3>
+                    <Link to={`/start-inspection/${property.id}`}>
+                      <Button 
+                        leftIcon={<Camera size={16} />}
+                        disabled={!propertyChecklist}
+                        size="sm"
+                      >
+                        New Inspection
+                      </Button>
+                    </Link>
+                  </div>
+                  
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Type
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Inspector
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Contact
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Date
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Duration
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {propertyInspections.map((inspection) => (
+                            <tr key={inspection.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  inspection.inspection_type === 'check_in' || inspection.inspection_type === 'move_in'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {inspection.inspection_type?.replace('_', '-')}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {inspection.inspector_name || 'Unknown'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {inspection.primary_contact_name || 'N/A'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {new Date(inspection.start_time).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  inspection.status === 'completed'
+                                    ? 'bg-green-100 text-green-800'
+                                    : inspection.status === 'in_progress'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {inspection.status.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {inspection.duration_seconds 
+                                  ? `${Math.floor(inspection.duration_seconds / 60)}m`
+                                  : 'N/A'
+                                }
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Camera className="mx-auto h-16 w-16 text-gray-400" />
+                  <h3 className="mt-4 text-lg font-semibold text-gray-900">No Inspections Yet</h3>
+                  <p className="mt-2 text-base text-gray-500">
+                    Inspection history will appear here once you complete inspections for this property.
+                  </p>
+                  <div className="mt-6">
+                    <Link to={`/start-inspection/${property.id}`}>
+                      <Button 
+                        leftIcon={<Camera size={16} />}
+                        disabled={!propertyChecklist}
+                      >
+                        {propertyChecklist ? 'Start First Inspection' : 'Create Checklist First'}
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
