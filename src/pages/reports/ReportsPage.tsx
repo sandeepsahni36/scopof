@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Search, Filter, Calendar, Building2, User, Eye, Loader2, UserCheck } from 'lucide-react';
+import { FileText, Download, Search, Filter, Calendar, Building2, User, Eye, Loader2, UserCheck, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getReports } from '../../lib/reports';
 import { getProperties } from '../../lib/properties';
-import { getSignedUrlForFile } from '../../lib/storage';
+import { getSignedUrlForFile, deleteFile } from '../../lib/storage';
+import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
 interface Report {
@@ -33,6 +34,7 @@ const ReportsPage = () => {
   const [loading, setLoading] = useState(true);
   const [downloadingReports, setDownloadingReports] = useState<Set<string>>(new Set());
   const [viewingReports, setViewingReports] = useState<Set<string>>(new Set());
+  const [deletingReports, setDeletingReports] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Filters>({
@@ -96,8 +98,7 @@ const ReportsPage = () => {
       const link = document.createElement('a');
       link.href = signedUrl;
       link.download = reportName;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -138,6 +139,47 @@ const ReportsPage = () => {
       toast.error(error.message || 'Failed to view report');
     } finally {
       setViewingReports(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(report.id);
+        return newSet;
+      });
+    }
+  };
+
+  const handleDeleteReport = async (report: Report) => {
+    if (!window.confirm(`Are you sure you want to delete this report? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeletingReports(prev => new Set(prev).add(report.id));
+      
+      // Delete the file from MinIO storage
+      if (report.fileKey) {
+        const fileDeleted = await deleteFile(report.fileKey);
+        if (!fileDeleted) {
+          throw new Error('Failed to delete file from storage');
+        }
+      }
+      
+      // Delete the report record from database
+      const { error } = await supabase
+        .from('reports')
+        .delete()
+        .eq('id', report.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setReports(reports.filter(r => r.id !== report.id));
+      toast.success('Report deleted successfully');
+    } catch (error: any) {
+      console.error('Error deleting report:', error);
+      toast.error(error.message || 'Failed to delete report');
+    } finally {
+      setDeletingReports(prev => {
         const newSet = new Set(prev);
         newSet.delete(report.id);
         return newSet;
@@ -350,7 +392,7 @@ const ReportsPage = () => {
                           variant="ghost"
                           size="sm"
                           isLoading={viewingReports.has(report.id)}
-                          disabled={viewingReports.has(report.id) || downloadingReports.has(report.id)}
+                          disabled={viewingReports.has(report.id) || downloadingReports.has(report.id) || deletingReports.has(report.id)}
                           leftIcon={<Eye size={16} />}
                           onClick={() => handleViewReport(report)}
                         >
@@ -360,11 +402,22 @@ const ReportsPage = () => {
                           variant="ghost"
                           size="sm"
                           isLoading={downloadingReports.has(report.id)}
-                          disabled={downloadingReports.has(report.id) || viewingReports.has(report.id)}
+                          disabled={downloadingReports.has(report.id) || viewingReports.has(report.id) || deletingReports.has(report.id)}
                           leftIcon={<Download size={16} />}
                           onClick={() => handleDownloadReport(report)}
                         >
                           Download
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          isLoading={deletingReports.has(report.id)}
+                          disabled={deletingReports.has(report.id) || viewingReports.has(report.id) || downloadingReports.has(report.id)}
+                          leftIcon={<Trash2 size={16} />}
+                          onClick={() => handleDeleteReport(report)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          Delete
                         </Button>
                       </div>
                     </td>

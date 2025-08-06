@@ -239,8 +239,24 @@ async function createPDFReport(reportData: {
     if (reportData.inspectorSignature) {
       pdf.text('Inspector signature:', 20, yPosition);
       yPosition += 10;
-      pdf.text('[Inspector signature captured digitally]', 20, yPosition);
-      yPosition += 7;
+      
+      try {
+        // Embed the actual inspector signature image
+        pdf.addImage(
+          reportData.inspectorSignature,
+          'PNG',
+          20,
+          yPosition,
+          60, // width in mm
+          30  // height in mm
+        );
+        yPosition += 35; // Add spacing after signature
+      } catch (error) {
+        console.error('Error embedding inspector signature:', error);
+        pdf.text('[Inspector signature could not be embedded]', 20, yPosition);
+        yPosition += 7;
+      }
+      
       pdf.text(`Signed by: ${reportData.inspectorName}`, 20, yPosition);
       yPosition += 7;
       pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPosition);
@@ -252,8 +268,24 @@ async function createPDFReport(reportData: {
       const contactLabel = reportData.inspection.inspectionType?.includes('check') ? 'Guest' : 'Client';
       pdf.text(`${contactLabel} signature:`, 20, yPosition);
       yPosition += 10;
-      pdf.text(`[${contactLabel} signature captured digitally]`, 20, yPosition);
-      yPosition += 7;
+      
+      try {
+        // Embed the actual primary contact signature image
+        pdf.addImage(
+          reportData.primaryContactSignature,
+          'PNG',
+          20,
+          yPosition,
+          60, // width in mm
+          30  // height in mm
+        );
+        yPosition += 35; // Add spacing after signature
+      } catch (error) {
+        console.error('Error embedding primary contact signature:', error);
+        pdf.text(`[${contactLabel} signature could not be embedded]`, 20, yPosition);
+        yPosition += 7;
+      }
+      
       pdf.text(`Signed by: ${reportData.primaryContactName}`, 20, yPosition);
       yPosition += 7;
       pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPosition);
@@ -300,6 +332,7 @@ async function fetchAndProcessImage(imageUrl: string): Promise<{
     }
     
     const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
     
     // Create an image element to load the blob
     return new Promise((resolve, reject) => {
@@ -313,6 +346,7 @@ async function fetchAndProcessImage(imageUrl: string): Promise<{
           const ctx = canvas.getContext('2d');
           
           if (!ctx) {
+            URL.revokeObjectURL(objectUrl);
             reject(new Error('Failed to get canvas context'));
             return;
           }
@@ -359,8 +393,6 @@ async function fetchAndProcessImage(imageUrl: string): Promise<{
         reject(new Error('Failed to load image'));
       };
       
-      // Create object URL from blob and set as image source
-      const objectUrl = URL.createObjectURL(blob);
       img.src = objectUrl;
     });
   } catch (error) {

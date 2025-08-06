@@ -652,52 +652,28 @@ const InspectionPage = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
             <h2 className="text-xl font-semibold text-gray-900">Complete Inspection</h2>
             
-            {/* Inspector Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Inspector Name *</label>
-              <Input
-                type="text"
-                value={inspectorName}
-                onChange={(e) => setInspectorName(e.target.value)}
-                placeholder="Enter inspector name"
-                leftIcon={<UserCheck size={16} className="text-gray-400" />}
-              />
-            </div>
-
-            {/* Primary Contact Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {getContactLabel()} Name {requiresPrimaryContactSignature ? '*' : ''}
-              </label>
-              <Input
-                type="text"
-                value={primaryContactName}
-                onChange={(e) => setPrimaryContactName(e.target.value)}
-                placeholder={`Enter ${getContactLabel().toLowerCase()} name`}
-                leftIcon={<User size={16} className="text-gray-400" />}
-              />
-            </div>
-
-            {/* Client Present Checkbox (Real Estate only) */}
-            {!isShortTermRental && (
-              <div>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={inspection?.clientPresentForSignature || false}
-                    readOnly
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-900">Client is Present</span>
-                </label>
-                <p className="mt-1 text-xs text-gray-500">
-                  {inspection?.clientPresentForSignature 
-                    ? 'Client signature will be required' 
-                    : 'Client signature not required'
-                  }
-                </p>
+            {/* Display Names (Read-only) */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-900 mb-3">Inspection Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Inspector</label>
+                  <p className="mt-1 text-sm text-gray-900">{inspectorName || 'Not specified'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">{getContactLabel()}</label>
+                  <p className="mt-1 text-sm text-gray-900">{primaryContactName || 'Not specified'}</p>
+                </div>
+                {!isShortTermRental && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700">Client Present</label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {inspection?.clientPresentForSignature ? 'Yes' : 'No'}
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Inspector Signature */}
             <div>
@@ -708,7 +684,7 @@ const InspectionPage = () => {
                 <SignatureCanvas
                   ref={(ref) => setInspectorSignature(ref)}
                   canvasProps={{
-                    className: 'w-full h-40',
+                    className: 'w-full h-64',
                     style: { background: 'white' }
                   }}
                 />
@@ -734,7 +710,7 @@ const InspectionPage = () => {
                   <SignatureCanvas
                     ref={(ref) => setPrimaryContactSignature(ref)}
                     canvasProps={{
-                      className: 'w-full h-40',
+                      className: 'w-full h-64',
                       style: { background: 'white' }
                     }}
                   />
