@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { validate as isValidUUID } from 'uuid';
-import { Camera, Check, X, AlertTriangle, Save, Send, Clock, Upload, Trash2, Play, Pause, ArrowLeft, ArrowRight, UserCheck, User } from 'lucide-react';
+import { Camera, Check, X, AlertTriangle, Save, Send, Clock, Upload, Trash2, Play, Pause, ArrowLeft, ArrowRight, UserCheck, User, Flag } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import SignatureCanvas from 'react-signature-canvas';
