@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     for (const item of markedItems) {
       try {
         const templateItem = item.template_items;
-        const reportTeam = templateItem?.report_service_teams;
+        const reportTeam = item.report_service_teams;
 
         if (!reportTeam?.email) {
           console.warn(`No report recipient email found for item ${item.id}`);

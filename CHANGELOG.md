@@ -1,6 +1,18 @@
 ## [Unreleased]
 
 ### Fixed
+- Fixed inspection report email alerts not being sent by correcting the database query in `send-inspection-report-email` Edge Function
+- Fixed "No report recipient email found" error by properly joining `report_service_teams` table on `inspection_items.report_recipient_id`
+- Resolved email function query to fetch recipient information from the correct table relationship
+- Fixed report recipient selection during inspections to properly store and retrieve email addresses
+
+### Technical Details
+- Updated Edge Function query to select `report_recipient_id` directly from `inspection_items` table
+- Fixed table join to connect `inspection_items.report_recipient_id` with `report_service_teams.id`
+- Removed incorrect nested query structure that was looking for recipient in `template_items` table
+- Email alerts now properly send to the recipients selected during inspection marking
+
+### Fixed
 - Fixed inspection report email alerts not being sent by adding explicit trigger for `send-inspection-report-email` Edge Function
 - Added automatic email sending when inspections are completed for all items marked for reporting
 - Added success/error feedback for email sending process with count of emails sent
