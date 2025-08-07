@@ -1,9 +1,16 @@
---- a/src/components/properties/PropertyCard.tsx
-+++ b/src/components/properties/PropertyCard.tsx
-@@ -13,7 +13,7 @@
- }
+import React, { useState, useEffect } from 'react';
+import { MoreVertical, MapPin, Home, Building, Calendar, CheckCircle } from 'lucide-react';
+import { Property } from '../../types';
+import { getPropertyChecklists } from '../../lib/propertyChecklists';
 
- const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete, isAdmin }) => {
+interface PropertyCardProps {
+  property: Property;
+  onEdit: (property: Property) => void;
+  onDelete: (property: Property) => void;
+  isAdmin: boolean;
+}
+
+const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete, isAdmin }) => {
 -  const [showMenu, setShowMenu] = useState(false);
 +  const [showMenu, setShowMenu] = useState(false); // State to control dropdown visibility
    const [hasChecklist, setHasChecklist] = useState(false);
