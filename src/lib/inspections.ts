@@ -233,7 +233,7 @@ export async function getInspectionDetails(inspectionId: string): Promise<{
         .single(),
       supabase
         .from('inspection_items')
-        .select('*')
+        .select('*, report_recipient_id')
         .eq('inspection_id', inspectionId)
         .order('order_index')
     ]);
