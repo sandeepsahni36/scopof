@@ -389,7 +389,7 @@ This is an automated message. Please do not reply to this email.`;
             subject: emailSubject,
             html: emailHtml,
             text: emailText,
-            reply_to: "noreply@scopostay.com",
+            reply_to: "no-reply@scopostay.com",
             tags: [
               {
                 name: 'category',
