@@ -254,7 +254,7 @@ export async function createProperty(propertyData: Omit<Property, 'id' | 'create
       throw error;
     }
 
-    return data;
+    return mapDbPropertyToProperty(data);
   } catch (error: any) {
     console.error('Error creating property:', error);
     
