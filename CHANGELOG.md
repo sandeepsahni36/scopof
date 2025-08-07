@@ -1,5 +1,23 @@
 ## [Unreleased]
 
+### Fixed
+- Fixed inspection report email alerts not being sent by adding explicit trigger for `send-inspection-report-email` Edge Function
+- Added automatic email sending when inspections are completed for all items marked for reporting
+- Added success/error feedback for email sending process with count of emails sent
+- Enhanced inspection completion workflow to include email alert functionality
+
+### Added
+- Added automatic invocation of `send-inspection-report-email` Edge Function after successful inspection completion
+- Added logging for email function triggers and results for debugging
+- Added user feedback showing number of email alerts sent upon inspection completion
+- Added error handling for email sending failures with appropriate user notifications
+
+### Technical Details
+- Inspection completion now calls `supabase.functions.invoke('send-inspection-report-email')` after report generation
+- Email function receives `inspectionId` parameter to process all marked items for that inspection
+- Success toast messages now include count of emails sent when applicable
+- Error handling ensures inspection completion succeeds even if email sending fails
+
 ### Added
 - Added report recipient dropdown selection when "Mark for Report" is checked during inspections
 - Added automatic loading of report service teams from company settings for recipient selection

@@ -709,6 +709,29 @@ const InspectionPage = () => {
         toast.success('Inspection completed successfully!');
       }
       
+      // Send inspection report emails for marked items
+      try {
+        console.log('Triggering inspection report email function for inspection:', inspection.id);
+        const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-inspection-report-email', {
+          body: {
+            inspectionId: inspection.id,
+          },
+        });
+
+        if (emailError) {
+          console.error('Error sending inspection report emails:', emailError);
+          toast.error('Inspection completed but failed to send email alerts');
+        } else {
+          console.log('Inspection report email function result:', emailResult);
+          if (emailResult?.stats?.emailsSent > 0) {
+            toast.success(`Inspection completed! ${emailResult.stats.emailsSent} email alert(s) sent.`);
+          }
+        }
+      } catch (emailError) {
+        console.error('Error invoking inspection report email function:', emailError);
+        toast.error('Inspection completed but failed to send email alerts');
+      }
+      
       // Redirect to dashboard
       navigate('/dashboard');
     } catch (error: any) {
