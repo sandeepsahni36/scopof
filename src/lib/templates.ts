@@ -530,9 +530,6 @@ export async function createTemplate(
             section_name: item.sectionName || null,
             required: item.required,
             options: item.options,
-            report_enabled: item.reportEnabled,
-            maintenance_email: null, // Deprecated field
-            report_recipient_id: item.reportRecipientId || null,
             order: item.order,
           }))
         )
@@ -674,9 +671,6 @@ export async function updateTemplate(
             section_name: item.sectionName || null,
             required: item.required,
             options: item.options,
-            report_enabled: item.reportEnabled,
-            maintenance_email: null, // Deprecated field
-            report_recipient_id: item.reportRecipientId || null,
             order: item.order,
           }))
         )
