@@ -619,7 +619,7 @@ serve(async (req) => {
           });
         }
 
-        const fileKey = pathSegments.slice(4).join('/'); // Reconstruct fileKey (skip functions/v1/storage-api/delete)
+        const fileKey = cleanedSegments.slice(1).join('/'); // Reconstruct fileKey from cleaned segments (skip 'delete')
         if (!fileKey) {
           return new Response(JSON.stringify({
             error: "File key not provided"
