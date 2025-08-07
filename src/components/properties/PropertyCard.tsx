@@ -2,13 +2,13 @@
 +++ b/src/components/properties/PropertyCard.tsx
 @@ -13,7 +13,7 @@
  }
- 
+
  const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete, isAdmin }) => {
 -  const [showMenu, setShowMenu] = useState(false);
 +  const [showMenu, setShowMenu] = useState(false); // State to control dropdown visibility
    const [hasChecklist, setHasChecklist] = useState(false);
    const [checklistLoading, setChecklistLoading] = useState(true);
- 
+
 @@ -55,7 +55,7 @@
    return (
      <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 overflow-hidden group">
@@ -29,7 +29,7 @@
                >
 @@ -79,7 +79,7 @@
                </button>
-               
+
                {showMenu && (
 -                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
 +                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
