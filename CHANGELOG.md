@@ -1,3 +1,15 @@
+## [2025-01-31] - Fix Property Creation Date Display
+
+### Fixed
+- Fixed "Invalid Date" display for newly created properties by applying date mapping in `createProperty` function
+- Fixed `createProperty` function to properly transform database response using `mapDbPropertyToProperty` helper
+- Ensured all property operations (get, create, update) consistently return properly formatted Property objects
+
+### Technical Details
+- `createProperty` function now applies `mapDbPropertyToProperty` transformation to database response
+- All property CRUD operations now consistently map snake_case database fields to camelCase frontend fields
+- Date fields (`created_at` -> `createdAt`, `updated_at` -> `updatedAt`) are properly transformed for all operations
+
 ## [2025-01-31] - Fix Property Date Display Issues
 
 ### Fixed
