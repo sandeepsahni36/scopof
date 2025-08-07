@@ -1,6 +1,23 @@
 ## [Unreleased]
 
 ### Added
+- Added report recipient dropdown selection when "Mark for Report" is checked during inspections
+- Added automatic loading of report service teams from company settings for recipient selection
+- Added `reportRecipientId` field to inspection items for storing selected email recipient
+- Added `handleReportRecipientUpdate` function to handle recipient selection changes
+- Added validation requiring recipient selection when items are marked for reporting
+
+### Fixed
+- Fixed `Flag` icon import error in InspectionPage component
+- Fixed `markedForReport is not defined` error in auto-save functionality
+- Fixed missing `reportRecipientId` parameter in `updateInspectionItem` function
+
+### Changed
+- "Mark for Report" functionality now requires selecting a specific email recipient from company's report service teams
+- Report recipient selection is mandatory when marking items for reporting
+- Inspection items now store both the marked status and the specific recipient ID for targeted email alerts
+
+### Added
 - Added in-inspection reporting functionality allowing inspectors to mark items for email alerts during inspections
 - Added "Mark for Report" checkbox for each inspection item with flag icon and descriptive text
 - Added new Supabase Edge Function `send-inspection-report-email` to handle automated email notifications

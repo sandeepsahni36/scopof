@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input';
 import SignatureCanvas from 'react-signature-canvas';
 import { getInspectionDetails, updateInspectionItem, updateInspectionStatus, uploadInspectionPhoto } from '../../lib/inspections';
 import { generateInspectionReport } from '../../lib/reports';
+import { getReportServiceTeams, ReportServiceTeam } from '../../lib/reportServiceTeams';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 
@@ -19,6 +20,8 @@ type InspectionItem = {
   notes?: string;
   required?: boolean;
   options?: string[];
+  markedForReport?: boolean;
+  reportRecipientId?: string;
 };
 
 type Room = {
@@ -55,6 +58,9 @@ const InspectionPage = () => {
   
   // Client present state for signature page
   const [clientPresentOnSignaturePage, setClientPresentOnSignaturePage] = useState(false);
+  
+  // Report service teams state
+  const [reportServiceTeams, setReportServiceTeams] = useState<ReportServiceTeam[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -62,6 +68,9 @@ const InspectionPage = () => {
     }
   }, [id]);
 
+  useEffect(() => {
+    loadReportServiceTeams();
+  }, []);
   useEffect(() => {
     // Start timer when component mounts
     const now = new Date();
@@ -94,6 +103,18 @@ const InspectionPage = () => {
       }
     };
   }, [isTimerRunning, startTime]);
+
+  const loadReportServiceTeams = async () => {
+    try {
+      const teamsData = await getReportServiceTeams();
+      if (teamsData) {
+        setReportServiceTeams(teamsData);
+      }
+    } catch (error: any) {
+      console.error('Error loading report service teams:', error);
+      // Don't show error toast as this is not critical for inspection functionality
+    }
+  };
 
   const loadInspectionData = async (inspectionId: string) => {
     try {
@@ -362,6 +383,8 @@ const InspectionPage = () => {
             notes: inspectionItem.notes || '',
             required: templateItem.required || false,
             options: templateItem.options || undefined,
+            markedForReport: inspectionItem.marked_for_report || false,
+            reportRecipientId: inspectionItem.report_recipient_id || undefined,
           };
 
           console.log('=== SUCCESSFULLY PROCESSING INSPECTION ITEM ===');
@@ -554,6 +577,32 @@ const InspectionPage = () => {
     }
   };
 
+  const handleReportRecipientUpdate = async (roomId: string, itemId: string, recipientId: string) => {
+    setRooms(rooms.map(room => {
+      if (room.id === roomId) {
+        return {
+          ...room,
+          items: room.items.map(item => {
+            if (item.id === itemId) {
+              return {
+                ...item,
+                reportRecipientId: recipientId,
+              };
+            }
+            return item;
+          }),
+        };
+      }
+      return room;
+    }));
+
+    // Auto-save the change
+    try {
+      await updateInspectionItem(itemId, undefined, undefined, undefined, undefined, recipientId);
+    } catch (error) {
+      console.error('Error auto-saving report recipient:', error);
+    }
+  };
   const handleSaveInspection = async () => {
     try {
       setSaving(true);
@@ -1062,6 +1111,33 @@ const InspectionPage = () => {
                     <p className="mt-1 text-xs text-gray-500 ml-6">
                       Check this box to send an email alert about this item when the inspection is completed
                     </p>
+                    
+                    {/* Report Recipient Dropdown */}
+                    {item.markedForReport && (
+                      <div className="mt-3 ml-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Report Recipient *
+                        </label>
+                        <select
+                          value={item.reportRecipientId || ''}
+                          onChange={(e) => handleReportRecipientUpdate(currentRoom.id, item.id, e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          required={item.markedForReport}
+                        >
+                          <option value="">Select a team...</option>
+                          {reportServiceTeams.map((team) => (
+                            <option key={team.id} value={team.id}>
+                              {team.designation} ({team.email})
+                            </option>
+                          ))}
+                        </select>
+                        {reportServiceTeams.length === 0 && (
+                          <p className="mt-1 text-xs text-amber-600">
+                            No teams available. Add teams in Company Settings first.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
