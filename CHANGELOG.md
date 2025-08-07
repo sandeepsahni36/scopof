@@ -1,6 +1,30 @@
 ## [Unreleased]
 
 ### Fixed
+- Fixed template saving errors with foreign key constraint violations by implementing sequential item insertion
+- Fixed parent-child relationship handling in template items by mapping client-side IDs to database IDs
+- Resolved "template_items_parent_id_fkey" constraint violation when saving templates with sections and nested items
+- Fixed template editor to properly handle hierarchical item structures during save operations
+
+### Added
+- Added sequential template item insertion to ensure parent items are created before their children
+- Added client-side ID to database ID mapping for proper parent-child relationship resolution
+- Added UUID generation for all new template items to ensure unique client-side identification
+- Added proper error handling for individual template item insertion failures
+
+### Changed
+- Template item insertion now processes items one by one instead of batch insertion
+- Parent-child relationships are resolved dynamically during insertion using ID mapping
+- Template items now always have client-side UUIDs for consistent identification
+- Form validation ensures all items have proper IDs before submission
+
+### Technical Details
+- Sequential insertion ensures parent items exist in database before children reference them
+- Client-side UUIDs are mapped to database-generated IDs during insertion process
+- Foreign key constraints are satisfied by resolving parent references to actual database IDs
+- Template editor maintains hierarchical structure while ensuring database consistency
+
+### Fixed
 - Fixed inspection report email alerts not being sent by correcting the database query in `send-inspection-report-email` Edge Function
 - Fixed "No report recipient email found" error by properly joining `report_service_teams` table on `inspection_items.report_recipient_id`
 - Resolved email function query to fetch recipient information from the correct table relationship
