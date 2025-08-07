@@ -1,3 +1,26 @@
+## [2025-01-31] - Fix Property Date Display Issues
+
+### Fixed
+- Fixed "Invalid Date" display for "Date Added" and "Last Updated" fields on property detail page
+- Fixed database field mapping between snake_case (database) and camelCase (frontend) for property dates
+- Added proper data transformation in properties library to map `created_at` to `createdAt` and `updated_at` to `updatedAt`
+- Fixed date mapping for all property operations (get, create, update) to ensure consistent date handling
+
+### Added
+- Added `mapDbPropertyToProperty` helper function to transform database responses to frontend Property type
+- Added consistent date field mapping across all property API functions
+
+### Changed
+- Property data now properly maps database snake_case fields to frontend camelCase fields
+- All property operations now return properly formatted Property objects with valid date strings
+- Date display on property detail page now shows actual creation and modification dates
+
+### Technical Details
+- Database stores dates as `created_at` and `updated_at` (snake_case)
+- Frontend Property type expects `createdAt` and `updatedAt` (camelCase)
+- Added transformation layer in properties library to handle this mapping consistently
+- All property CRUD operations now use the mapping function to ensure data consistency
+
 ## [2025-01-31] - Fix Property Edit Functionality and Mobile Navigation
 
 ### Fixed

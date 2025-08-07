@@ -137,7 +137,7 @@ export async function getProperties(searchTerm?: string, filters?: {
       throw error;
     }
 
-    return data?.map(mapDbPropertyToProperty) || [];
+    return data;
   } catch (error: any) {
     console.error('Error fetching properties:', error);
     
@@ -307,7 +307,7 @@ export async function updateProperty(id: string, propertyData: Partial<Omit<Prop
       throw error;
     }
 
-    return data;
+    return mapDbPropertyToProperty(data);
   } catch (error: any) {
     console.error('Error updating property:', error);
     
