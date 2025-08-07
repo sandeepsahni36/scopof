@@ -1,3 +1,10 @@
+## [Unreleased]
+
+### Fixed
+- Fixed file deletion order in inspection deletion to prevent "File not found" errors
+- Fixed property date display showing "Invalid Date" by properly mapping database snake_case fields to camelCase
+- Applied date field mapping to all property operations (get, create, update)
+
 ## [2025-01-31] - Fix Property Date Display in Detail View
 
 ### Fixed
