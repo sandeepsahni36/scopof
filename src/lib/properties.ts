@@ -1,6 +1,22 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { Property } from '../types';
 
+// Helper function to map database property to frontend Property type
+function mapDbPropertyToProperty(dbProperty: any): Property {
+  return {
+    id: dbProperty.id,
+    companyId: dbProperty.admin_id,
+    name: dbProperty.name,
+    address: dbProperty.address,
+    type: dbProperty.type,
+    bedrooms: dbProperty.bedrooms,
+    bathrooms: dbProperty.bathrooms,
+    notes: dbProperty.notes,
+    createdAt: dbProperty.created_at,
+    updatedAt: dbProperty.updated_at,
+  };
+}
+
 // Mock data for dev mode
 const MOCK_PROPERTIES: Property[] = [
   {
@@ -121,7 +137,7 @@ export async function getProperties(searchTerm?: string, filters?: {
       throw error;
     }
 
-    return data;
+    return data?.map(mapDbPropertyToProperty) || [];
   } catch (error: any) {
     console.error('Error fetching properties:', error);
     
