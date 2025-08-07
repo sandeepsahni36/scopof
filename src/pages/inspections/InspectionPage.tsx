@@ -546,6 +546,8 @@ const InspectionPage = () => {
         await updateInspectionItem(itemId, value);
       } else if (field === 'notes') {
         await updateInspectionItem(itemId, null, value);
+      } else if (field === 'markedForReport') {
+        await updateInspectionItem(itemId, undefined, undefined, undefined, value);
       }
     } catch (error) {
       console.error('Error auto-saving item:', error);
