@@ -147,7 +147,7 @@ export async function getProperties(searchTerm?: string, filters?: {
       throw error;
     }
 
-    return data;
+    return data?.map(mapDbPropertyToProperty) || [];
   } catch (error: any) {
     console.error('Error fetching properties:', error);
     
@@ -191,7 +191,7 @@ export async function getProperty(id: string) {
       throw error;
     }
 
-    return data;
+    return mapDbPropertyToProperty(data);
   } catch (error: any) {
     console.error('Error fetching property:', error);
     
