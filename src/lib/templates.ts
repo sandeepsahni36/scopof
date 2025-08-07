@@ -431,6 +431,7 @@ function buildItemHierarchy(flatItems: any[]): TemplateItem[] {
 export async function createTemplate(
   templateData: { name: string; description?: string },
   items: Array<{
+    id: string;
     parentId?: string;
     type: TemplateItemType;
     label: string;
@@ -519,29 +520,44 @@ export async function createTemplate(
 
     // Create template items with hierarchy support
     if (items.length > 0) {
-      const { data: templateItems, error: itemsError } = await supabase
-        .from('template_items')
-        .insert(
-          items.map((item) => ({
+      // Insert items sequentially to handle parent-child relationships
+      const templateItems = [];
+      const clientIdToDbIdMap = new Map<string, string>();
+      
+      for (const item of items) {
+        // Resolve parent_id from client-side ID to database ID
+        const resolvedParentId = item.parentId ? clientIdToDbIdMap.get(item.parentId) : null;
+        
+        const { data: insertedItem, error: itemError } = await supabase
+          .from('template_items')
+          .insert({
             template_id: template.id,
-            parent_id: item.parentId || null,
+            parent_id: resolvedParentId,
             type: item.type,
             label: item.label,
             section_name: item.sectionName || null,
             required: item.required,
             options: item.options,
+            report_enabled: item.reportEnabled,
+            report_recipient_id: item.reportRecipientId || null,
             order: item.order,
-          }))
-        )
-        .select();
-
-      if (itemsError) {
-        if (itemsError.message?.includes('user_not_found') || itemsError.message?.includes('JWT')) {
-          await handleAuthError(itemsError);
-          return null;
+          })
+          .select()
+          .single();
+        
+        if (itemError) {
+          if (itemError.message?.includes('user_not_found') || itemError.message?.includes('JWT')) {
+            await handleAuthError(itemError);
+            return null;
+          }
+          throw itemError;
         }
-        throw itemsError;
+        
+        templateItems.push(insertedItem);
+        // Map client-side ID to database ID for future parent references
+        clientIdToDbIdMap.set(item.id, insertedItem.id);
       }
+
 
       return { template, items: templateItems };
     }
@@ -563,6 +579,7 @@ export async function updateTemplate(
   id: string,
   templateData: { name: string; description?: string },
   items: Array<{
+    id: string;
     parentId?: string;
     type: TemplateItemType;
     label: string;
@@ -660,29 +677,44 @@ export async function updateTemplate(
 
     // Create new items with hierarchy support
     if (items.length > 0) {
-      const { data: templateItems, error: itemsError } = await supabase
-        .from('template_items')
-        .insert(
-          items.map((item) => ({
+      // Insert items sequentially to handle parent-child relationships
+      const templateItems = [];
+      const clientIdToDbIdMap = new Map<string, string>();
+      
+      for (const item of items) {
+        // Resolve parent_id from client-side ID to database ID
+        const resolvedParentId = item.parentId ? clientIdToDbIdMap.get(item.parentId) : null;
+        
+        const { data: insertedItem, error: itemError } = await supabase
+          .from('template_items')
+          .insert({
             template_id: id,
-            parent_id: item.parentId || null,
+            parent_id: resolvedParentId,
             type: item.type,
             label: item.label,
             section_name: item.sectionName || null,
             required: item.required,
             options: item.options,
+            report_enabled: item.reportEnabled,
+            report_recipient_id: item.reportRecipientId || null,
             order: item.order,
-          }))
-        )
-        .select();
-
-      if (itemsError) {
-        if (itemsError.message?.includes('user_not_found') || itemsError.message?.includes('JWT')) {
-          await handleAuthError(itemsError);
-          return null;
+          })
+          .select()
+          .single();
+        
+        if (itemError) {
+          if (itemError.message?.includes('user_not_found') || itemError.message?.includes('JWT')) {
+            await handleAuthError(itemError);
+            return null;
+          }
+          throw itemError;
         }
-        throw itemsError;
+        
+        templateItems.push(insertedItem);
+        // Map client-side ID to database ID for future parent references
+        clientIdToDbIdMap.set(item.id, insertedItem.id);
       }
+
 
       return { template, items: templateItems };
     }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { v4 as uuidv4 } from 'uuid';
 import { Plus, Trash2, GripVertical, ArrowLeft, FolderPlus, ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -14,7 +15,7 @@ type FormValues = {
   name: string;
   description: string;
   items: {
-    id?: string;
+    id: string;
     parentId?: string;
     type: TemplateItemType;
     label: string;
@@ -78,7 +79,12 @@ const TemplateDetailPage = () => {
           
           // Convert hierarchical items to flat structure for form
           const flatItems = flattenTemplateItems(templateData.items);
-          setValue('items', flatItems);
+          // Ensure all items have client-side IDs
+          const itemsWithIds = flatItems.map(item => ({
+            ...item,
+            id: item.id || uuidv4()
+          }));
+          setValue('items', itemsWithIds);
           
           // Expand all sections by default
           const sectionIndexes = flatItems
@@ -107,7 +113,7 @@ const TemplateDetailPage = () => {
         .sort((a, b) => a.order - b.order)
         .forEach(item => {
           result.push({
-            id: item.id,
+            id: item.id || uuidv4(),
             parentId: parentId,
             type: item.type,
             label: item.label,
@@ -177,6 +183,7 @@ const TemplateDetailPage = () => {
 
   const handleAddItem = (type: TemplateItemType, parentIndex?: number) => {
     const newItem = {
+      id: uuidv4(),
       parentId: parentIndex !== undefined ? fields[parentIndex].id : undefined,
       type,
       label: '',
