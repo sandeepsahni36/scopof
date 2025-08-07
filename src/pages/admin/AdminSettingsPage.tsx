@@ -188,6 +188,7 @@ const AdminSettingsPage = () => {
                     required: 'Company name is required',
                   })}
                   leftIcon={<Building2 className="text-gray-400" size={20} />}
+                  readOnly
                 />
                 
                 <Input
