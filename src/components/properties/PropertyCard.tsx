@@ -59,7 +59,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 overflow-hidden group">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 group">
       {/* Property Image Placeholder */}
       <div className="h-48 bg-gradient-to-br from-primary-100 to-primary-200 relative">
         <div className="absolute inset-0 flex items-center justify-center">
