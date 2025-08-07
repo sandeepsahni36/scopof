@@ -11,6 +11,7 @@ interface PropertyCardProps {
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete, isAdmin }) => {
+}
 -  const [showMenu, setShowMenu] = useState(false);
 +  const [showMenu, setShowMenu] = useState(false); // State to control dropdown visibility
    const [hasChecklist, setHasChecklist] = useState(false);
@@ -30,6 +31,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
              <div className="relative">
 -              <button
+     )
+     }
+   )
 +              <button // Button to toggle the dropdown menu
                  onClick={() => setShowMenu(!showMenu)}
                  className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
@@ -38,8 +42,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
                </button>
 
                {showMenu && (
+               )
+               }
 -                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
 +                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                    <button
                      onClick={() => {
                        onEdit(p
+                       )
+                     }
+                     }
