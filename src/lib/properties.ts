@@ -3,7 +3,12 @@ import { Property } from '../types';
 
 // Helper function to map database property to frontend Property type
 function mapDbPropertyToProperty(dbProperty: any): Property {
-  return {
+  console.log('=== MAPPING DB PROPERTY TO FRONTEND ===');
+  console.log('Input dbProperty:', dbProperty);
+  console.log('created_at value:', dbProperty.created_at);
+  console.log('updated_at value:', dbProperty.updated_at);
+  
+  const mapped = {
     id: dbProperty.id,
     companyId: dbProperty.admin_id,
     name: dbProperty.name,
@@ -15,6 +20,11 @@ function mapDbPropertyToProperty(dbProperty: any): Property {
     createdAt: dbProperty.created_at,
     updatedAt: dbProperty.updated_at,
   };
+  
+  console.log('Mapped property:', mapped);
+  console.log('=== END MAPPING ===');
+  
+  return mapped;
 }
 
 // Mock data for dev mode
@@ -254,7 +264,7 @@ export async function createProperty(propertyData: Omit<Property, 'id' | 'create
       throw error;
     }
 
-    return mapDbPropertyToProperty(data);
+    return data ? mapDbPropertyToProperty(data) : null;
   } catch (error: any) {
     console.error('Error creating property:', error);
     
