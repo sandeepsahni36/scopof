@@ -11,9 +11,7 @@ interface PropertyCardProps {
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete, isAdmin }) => {
-}
--  const [showMenu, setShowMenu] = useState(false);
-+  const [showMenu, setShowMenu] = useState(false); // State to control dropdown visibility
+  const [showMenu, setShowMenu] = useState(false); // State to control dropdown visibility
    const [hasChecklist, setHasChecklist] = useState(false);
    const [checklistLoading, setChecklistLoading] = useState(true);
 
