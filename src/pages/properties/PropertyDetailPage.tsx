@@ -5,10 +5,11 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Property, Template } from '../../types';
 import { useAuthStore } from '../../store/authStore';
-import { getProperty } from '../../lib/properties';
+import { getProperty, updateProperty } from '../../lib/properties';
 import { getTemplates } from '../../lib/templates';
 import { getPropertyChecklist, createPropertyChecklist, updatePropertyChecklist, deletePropertyChecklist, reorderChecklistTemplates, PropertyChecklist } from '../../lib/propertyChecklists';
 import { getInspectionsForProperty } from '../../lib/inspections';
+import PropertyForm, { PropertyFormData } from '../../components/properties/PropertyForm';
 import { toast } from 'sonner';
 
 const PropertyDetailPage = () => {
@@ -27,6 +28,8 @@ const PropertyDetailPage = () => {
   const [propertyInspections, setPropertyInspections] = useState<any[]>([]);
   const [inspectionsLoading, setInspectionsLoading] = useState(false);
   const [deletingInspections, setDeletingInspections] = useState<Set<string>>(new Set());
+  const [showPropertyForm, setShowPropertyForm] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -255,6 +258,37 @@ const PropertyDetailPage = () => {
     }
   };
 
+  const handleEditProperty = () => {
+    if (!isAdmin) {
+      toast.error('Only admins can edit properties');
+      return;
+    }
+    setShowPropertyForm(true);
+  };
+
+  const handleFormSubmit = async (data: PropertyFormData) => {
+    if (!property) return;
+
+    try {
+      setFormLoading(true);
+      const updatedProperty = await updateProperty(property.id, data);
+      if (updatedProperty) {
+        setProperty(updatedProperty);
+        toast.success('Property updated successfully');
+        setShowPropertyForm(false);
+      }
+    } catch (error: any) {
+      console.error('Error updating property:', error);
+      toast.error('Failed to update property');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleFormCancel = () => {
+    setShowPropertyForm(false);
+  };
+
   const getPropertyTypeIcon = (type: string) => {
     switch (type) {
       case 'villa':
@@ -337,10 +371,7 @@ const PropertyDetailPage = () => {
                 variant="secondary"
                 size="sm"
                 leftIcon={<Edit size={16} />}
-                onClick={() => {
-                  // TODO: Open edit modal
-                  toast.info('Edit functionality coming soon');
-                }}
+                onClick={handleEditProperty}
               >
                 Edit
               </Button>
@@ -924,6 +955,16 @@ const PropertyDetailPage = () => {
           )}
         </div>
       </div>
+
+      {/* Property Form Modal */}
+      {showPropertyForm && property && (
+        <PropertyForm
+          property={property}
+          onSubmit={handleFormSubmit}
+          onCancel={handleFormCancel}
+          loading={formLoading}
+        />
+      )}
     </div>
   );
 };
