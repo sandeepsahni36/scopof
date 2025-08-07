@@ -85,14 +85,14 @@ Deno.serve(async (req) => {
         value,
         notes,
         photo_urls,
+        report_recipient_id,
         template_items (
           id,
-          label,
-          report_recipient_id,
-          report_service_teams (
-            designation,
-            email
-          )
+          label
+        ),
+        report_service_teams (
+          designation,
+          email
         )
       `)
       .eq('inspection_id', inspectionId)
