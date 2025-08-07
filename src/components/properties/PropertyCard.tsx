@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MoreVertical, MapPin, Home, Building, Calendar, CheckCircle } from 'lucide-react';
 import { Property } from '../../types';
 import { getPropertyChecklists } from '../../lib/propertyChecklists';
+import { getPropertyTypeIcon } from '../../lib/utils';
 
 interface PropertyCardProps {
   property: Property;

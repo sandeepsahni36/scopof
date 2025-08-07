@@ -42,3 +42,16 @@ export function isImageValid(file: File) {
   
   return { valid: true, error: null };
 }
+
+export function getPropertyTypeIcon(type: string) {
+  switch (type) {
+    case 'villa':
+      return '🏖️';
+    case 'house':
+      return '🏠';
+    case 'condo':
+      return '🏢';
+    default:
+      return '🏠';
+  }
+}
