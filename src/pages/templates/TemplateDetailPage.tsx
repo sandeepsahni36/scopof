@@ -622,46 +622,6 @@ const TemplateDetailPage = () => {
                                                   />
                                                   <span className="ml-2 text-sm text-gray-900">Required</span>
                                                 </label>
-
-                                                <label className="flex items-center">
-                                                  <input
-                                                    type="checkbox"
-                                                    {...register(`items.${childIndex}.reportEnabled` as const)}
-                                                    className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                                  />
-                                                  <span className="ml-2 text-sm text-gray-900">Enable Reporting</span>
-                                                </label>
-                                              </div>
-                                            )}
-
-                                            {watch(`items.${childIndex}.reportEnabled`) && (
-                                              <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                  Report Recipient
-                                                </label>
-                                                <select
-                                                  {...register(`items.${childIndex}.reportRecipientId` as const, {
-                                                    required: 'Report recipient is required when reporting is enabled',
-                                                  })}
-                                                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                                >
-                                                  <option value="">Select a team...</option>
-                                                  {reportServiceTeams.map((team) => (
-                                                    <option key={team.id} value={team.id}>
-                                                      {team.designation} ({team.email})
-                                                    </option>
-                                                  ))}
-                                                </select>
-                                                {errors.items?.[childIndex]?.reportRecipientId && (
-                                                  <p className="mt-1 text-sm text-red-600">
-                                                    {errors.items[childIndex]?.reportRecipientId?.message}
-                                                  </p>
-                                                )}
-                                                {reportServiceTeams.length === 0 && (
-                                                  <p className="mt-1 text-sm text-amber-600">
-                                                    No teams available. Add teams in Company Settings first.
-                                                  </p>
-                                                )}
                                               </div>
                                             )}
 

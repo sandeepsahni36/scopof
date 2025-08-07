@@ -274,8 +274,7 @@ export async function updateInspectionItem(
   inspectionItemId: string,
   value: any,
   notes?: string,
-  photoUrls?: string[],
-  markedForReport?: boolean
+  photoUrls?: string[]
 ): Promise<InspectionItem | null> {
   try {
     const user = await validateUserSession();

@@ -1044,6 +1044,23 @@ const InspectionPage = () => {
                       />
                     </div>
                   )}
+                  
+                  {/* Mark for Report Option */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={item.markedForReport || false}
+                        onChange={(e) => handleItemUpdate(currentRoom.id, item.id, e.target.checked, 'markedForReport')}
+                        className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                      />
+                      <Flag className="ml-2 mr-1 h-4 w-4 text-red-500" />
+                      <span className="text-sm font-medium text-gray-900">Mark for Report</span>
+                    </label>
+                    <p className="mt-1 text-xs text-gray-500 ml-6">
+                      Check this box to send an email alert about this item when the inspection is completed
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
