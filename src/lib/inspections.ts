@@ -601,20 +601,6 @@ export async function deleteInspection(inspectionId: string): Promise<boolean> {
       // Continue with inspection deletion even if file cleanup fails
     }
 
-    // Delete the inspection (cascade should handle inspection_items and reports)
-    const { error } = await supabase
-      .from('inspections')
-      .delete()
-      .eq('id', inspectionId);
-
-    if (error) {
-      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-        await handleAuthError(error);
-        return false;
-      }
-      throw error;
-    }
-
     // Clean up files from MinIO storage
     if (filesToDelete && filesToDelete.length > 0) {
       const { deleteFile } = await import('./storage');
@@ -628,6 +614,20 @@ export async function deleteInspection(inspectionId: string): Promise<boolean> {
           // Continue with other files even if one fails
         }
       }
+    }
+
+    // Delete the inspection (cascade should handle inspection_items and reports)
+    const { error } = await supabase
+      .from('inspections')
+      .delete()
+      .eq('id', inspectionId);
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return false;
+      }
+      throw error;
     }
 
     return true;
