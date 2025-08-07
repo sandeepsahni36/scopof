@@ -1,3 +1,15 @@
+## [2025-01-31] - Fix Property Date Display in Detail View
+
+### Fixed
+- Fixed "Invalid Date" display on property detail page by applying `mapDbPropertyToProperty` transformation to `getProperty` function
+- Fixed date mapping in `getProperties` function to ensure all property lists show correct dates
+- Ensured all property CRUD operations consistently transform database snake_case fields to frontend camelCase fields
+
+### Technical Details
+- `getProperty` function now applies `mapDbPropertyToProperty` transformation to single property responses
+- `getProperties` function now maps all properties in the array using the transformation function
+- All property operations now consistently return properly formatted Property objects with valid date strings
+
 ## [2025-01-31] - Fix Property Creation Date Display
 
 ### Fixed
