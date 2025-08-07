@@ -160,6 +160,7 @@ export type InspectionItem = {
   value?: any; // JSON value for different input types
   notes?: string;
   photoUrls?: string[];
+  markedForReport?: boolean;
   order: number;
   createdAt: string;
   updatedAt: string;

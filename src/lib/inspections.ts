@@ -274,7 +274,8 @@ export async function updateInspectionItem(
   inspectionItemId: string,
   value: any,
   notes?: string,
-  photoUrls?: string[]
+  photoUrls?: string[],
+  markedForReport?: boolean
 ): Promise<InspectionItem | null> {
   try {
     const user = await validateUserSession();
@@ -305,6 +306,7 @@ export async function updateInspectionItem(
     const updateData: any = { value };
     if (notes !== undefined) updateData.notes = notes;
     if (photoUrls !== undefined) updateData.photo_urls = photoUrls;
+    if (markedForReport !== undefined) updateData.marked_for_report = markedForReport;
 
     const { data, error } = await supabase
       .from('inspection_items')
