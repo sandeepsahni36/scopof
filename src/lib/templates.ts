@@ -390,6 +390,9 @@ function buildItemHierarchy(flatItems: any[]): TemplateItem[] {
       sectionName: item.section_name,
       required: item.required,
       options: item.options,
+      reportEnabled: item.report_enabled,
+      maintenanceEmail: item.maintenance_email,
+      reportRecipientId: item.report_recipient_id,
       order: item.order,
       createdAt: item.created_at,
       updatedAt: item.updated_at,
@@ -527,9 +530,6 @@ export async function createTemplate(
             section_name: item.sectionName || null,
             required: item.required,
             options: item.options,
-            report_enabled: item.reportEnabled,
-            maintenance_email: null, // Deprecated field
-            report_recipient_id: item.reportRecipientId || null,
             order: item.order,
           }))
         )
@@ -671,9 +671,6 @@ export async function updateTemplate(
             section_name: item.sectionName || null,
             required: item.required,
             options: item.options,
-            report_enabled: item.reportEnabled,
-            maintenance_email: null, // Deprecated field
-            report_recipient_id: item.reportRecipientId || null,
             order: item.order,
           }))
         )

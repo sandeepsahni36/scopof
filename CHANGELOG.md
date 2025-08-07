@@ -1,5 +1,27 @@
 ## [Unreleased]
 
+### Added
+- Added in-inspection reporting functionality allowing inspectors to mark items for email alerts during inspections
+- Added "Mark for Report" checkbox for each inspection item with flag icon and descriptive text
+- Added new Supabase Edge Function `send-inspection-report-email` to handle automated email notifications
+- Added `marked_for_report` column to `inspection_items` table for tracking flagged items
+- Added automatic email sending when inspections are completed for all marked items
+- Added comprehensive email templates with inspection and item details for report recipients
+
+### Changed
+- Removed "Enable Reporting" checkbox from template editor - reporting decisions now made during inspections
+- Removed report recipient selection from template creation - uses existing template report_recipient_id
+- Email notifications now sent from `inspection-alerts@scopostay.com` with `noreply@scopostay.com` reply-to
+- Email subject format: "scopoStay Inspection Item (Property Name, Date, Item name)"
+- Inspection completion now triggers automatic email alerts for flagged items
+
+### Technical Details
+- New database column: `inspection_items.marked_for_report` (boolean, default false)
+- New Edge Function: `send-inspection-report-email` using Resend API
+- Email templates include property details, inspection info, and specific item details
+- Automatic email sending integrated into inspection completion workflow
+- Enhanced inspection item update function to handle marked_for_report field
+
 ### Fixed
 - Fixed file deletion order in inspection deletion to prevent "File not found" errors
 - Fixed property date display showing "Invalid Date" by properly mapping database snake_case fields to camelCase
