@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
             <p>Best regards,<br>The scopoStay Team</p>
         </div>
         <div class="email-footer">
-            <p>&copy; 2025 scopoStay. All rights reserved.</p>
+            <p>&copy; scopoStay. All rights reserved.</p>
             <p>If you no longer wish to receive these emails, you can <a href="#" style="color: #666666;">unsubscribe here</a>.</p>
         </div>
     </div>
