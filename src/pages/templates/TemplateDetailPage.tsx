@@ -347,10 +347,20 @@ const TemplateDetailPage = () => {
 
   const sortHierarchicalItems = (items: FormValues['items']): FormValues['items'] => {
     const result: FormValues['items'] = [];
+    
+    // Create a map of all valid item IDs
+    const validItemIds = new Set(items.map(item => item.id));
+    
+    // Clean up stale parentId references
+    const cleanedItems = items.map(item => ({
+      ...item,
+      parentId: item.parentId && validItemIds.has(item.parentId) ? item.parentId : undefined
+    }));
+    
     const itemMap = new Map<string, FormValues['items'][0]>();
     
     // Create a map of all items by ID
-    items.forEach(item => {
+    cleanedItems.forEach(item => {
       itemMap.set(item.id, item);
     });
     
@@ -359,12 +369,12 @@ const TemplateDetailPage = () => {
       result.push(item);
       
       // Find and add all direct children of this item
-      const children = items
+      const children = cleanedItems
         .filter(child => child.parentId === item.id)
         .sort((a, b) => {
           // Sort children by their current position in the original array
-          const aIndex = items.findIndex(i => i.id === a.id);
-          const bIndex = items.findIndex(i => i.id === b.id);
+          const aIndex = cleanedItems.findIndex(i => i.id === a.id);
+          const bIndex = cleanedItems.findIndex(i => i.id === b.id);
           return aIndex - bIndex;
         });
       
@@ -374,12 +384,12 @@ const TemplateDetailPage = () => {
     };
     
     // First, add all root items (items without parentId)
-    const rootItems = items
+    const rootItems = cleanedItems
       .filter(item => !item.parentId)
       .sort((a, b) => {
         // Sort root items by their current position in the original array
-        const aIndex = items.findIndex(i => i.id === a.id);
-        const bIndex = items.findIndex(i => i.id === b.id);
+        const aIndex = cleanedItems.findIndex(i => i.id === a.id);
+        const bIndex = cleanedItems.findIndex(i => i.id === b.id);
         return aIndex - bIndex;
       });
     
