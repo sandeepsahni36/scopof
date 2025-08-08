@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Save, CheckCircle, Clock, User, UserCheck, Building2, Camera, Flag } from 'lucide-react';
+import { validate as isValidUUID } from 'uuid';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getInspectionDetails, updateInspectionStatus } from '../../lib/inspections';
@@ -61,7 +62,16 @@ const InspectionPage = () => {
       }
 
       // Build display steps from inspection items
-      const steps = buildDisplaySteps(data.items);
+      // Filter out items with invalid UUIDs
+      const validItems = data.items.filter(item => {
+        if (!item.id || !isValidUUID(item.id)) {
+          console.warn('Filtering out inspection item with invalid ID:', item.id);
+          return false;
+        }
+        return true;
+      });
+      
+      const steps = buildDisplaySteps(validItems);
       setDisplaySteps(steps);
       
       console.log('Built display steps:', steps);
