@@ -1,6 +1,31 @@
 ## [Unreleased]
 
 ### Fixed
+- Fixed template editor drag-and-drop functionality to support moving items into and out of sections
+- Fixed separated items in template editor that were causing individual inspection steps instead of section-based flow
+- Resolved issue where items could not be dragged back into sections after being accidentally moved out
+- Fixed parent-child relationships in template items to ensure proper section grouping during inspections
+
+### Added
+- Added nested drag-and-drop support using multiple Droppable areas for sections and root items
+- Added SectionComponent for encapsulating section rendering with its own drop zone
+- Added ItemComponent for modular template item rendering
+- Added enhanced handleDragEnd logic to properly update parent-child relationships when items are moved
+- Added visual feedback for valid drop zones during drag operations
+
+### Changed
+- Refactored TemplateDetailPage to use modular components for better drag-and-drop handling
+- Template editor now uses separate Droppable areas for root items and each section's children
+- Drag operations now properly update parentId field when items are moved between sections and root level
+- Section expansion/collapse state is now maintained during drag operations
+
+### Technical Details
+- Implemented nested Droppable areas with unique IDs for each section
+- Enhanced drag-and-drop logic to handle cross-droppable moves with proper parent ID updates
+- Form field array is reconstructed after drag operations to maintain correct parent-child relationships
+- Section components manage their own child items while maintaining integration with main form state
+
+### Fixed
 - Fixed template foreign key constraint violation during template saving by implementing sequential item insertion
 - Fixed parent-child relationship handling in template items by mapping client-side IDs to database IDs
 - Resolved "template_items_parent_id_fkey" constraint violation when saving templates with sections and nested items

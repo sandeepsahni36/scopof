@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, GripVertical, ArrowLeft, FolderPlus, ChevronDown, ChevronRight, Users } from 'lucide-react';
+import { Plus, Trash2, GripVertical, ArrowLeft, FolderPlus } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { TemplateItemType, TemplateItem } from '../../types';
 import { getTemplate, createTemplate, updateTemplate } from '../../lib/templates';
 import { getReportServiceTeams, ReportServiceTeam } from '../../lib/reportServiceTeams';
+import SectionComponent from '../../components/templates/SectionComponent';
+import ItemComponent from '../../components/templates/ItemComponent';
 import { toast } from 'sonner';
 
 type FormValues = {
@@ -262,12 +264,51 @@ const TemplateDetailPage = () => {
     }
 
     // If dropped in the same position
-    if (destination.index === source.index) {
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
       return;
     }
 
-    // Move the item to the new position
-    move(source.index, destination.index);
+    console.log('Drag operation:', {
+      sourceDroppableId: source.droppableId,
+      destinationDroppableId: destination.droppableId,
+      sourceIndex: source.index,
+      destinationIndex: destination.index
+    });
+
+    // Handle different types of moves
+    if (source.droppableId === destination.droppableId) {
+      // Same droppable area - simple reorder
+      if (source.droppableId === 'template-items') {
+        // Root level reorder
+        move(source.index, destination.index);
+      } else {
+        // Section children reorder - need to find actual indices in fields array
+        const sourceItem = fields[source.index];
+        const destinationItem = fields[destination.index];
+        move(source.index, destination.index);
+      }
+    } else {
+      // Different droppable areas - need to update parent relationships
+      const draggedItem = fields[source.index];
+      
+      // Determine new parent ID
+      let newParentId = null;
+      if (destination.droppableId.startsWith('section-')) {
+        newParentId = destination.droppableId.replace('section-', '');
+      }
+      
+      // Update the item's parentId
+      setValue(`items.${source.index}.parentId`, newParentId);
+      
+      // Move the item in the array
+      move(source.index, destination.index);
+      
+      console.log('Updated parent relationship:', {
+        itemId: draggedItem.id,
+        oldParentId: draggedItem.parentId,
+        newParentId: newParentId
+      });
+    }
   };
 
   if (initialLoading) {
@@ -335,13 +376,26 @@ const TemplateDetailPage = () => {
 
           <div className="space-y-4">
             <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="template-items">
+              <Droppable droppableId="template-items" type="ITEM">
                 {(provided, snapshot) => (
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className={`space-y-4 ${snapshot.isDraggingOver ? 'bg-blue-50 rounded-lg p-2' : ''}`}
+                    className={`space-y-4 min-h-[200px] rounded-lg border-2 border-dashed transition-colors ${
+                      snapshot.isDraggingOver 
+                        ? 'border-primary-300 bg-primary-50' 
+                        : 'border-gray-200'
+                    }`}
                   >
+                    {fields.length === 0 && (
+                      <div className="flex items-center justify-center h-48 text-gray-400">
+                        <div className="text-center">
+                          <FolderPlus className="h-12 w-12 mx-auto mb-4" />
+                          <p className="text-lg font-medium">No items yet</p>
+                          <p className="text-sm">Add sections and items using the buttons below</p>
+                        </div>
+                      </div>
+                    )}
                     {fields.map((field, index) => {
                       const isSection = field.type === 'section';
                       const isChild = isChildOfSection(index);
@@ -349,336 +403,47 @@ const TemplateDetailPage = () => {
                       const sectionChildren = isSection ? getSectionChildren(index) : [];
 
                       // Don't render child items directly - they're rendered within sections
-                      if (isChild && !isSection) {
+                      if (isChild) {
                         return null;
                       }
 
-                      return (
-                        <Draggable key={field.id} draggableId={field.id || `item-${index}`} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              className={`border border-gray-200 rounded-lg transition-all duration-200 ${
-                                isSection ? 'bg-blue-50' : 'bg-white'
-                              } ${
-                                snapshot.isDragging ? 'shadow-lg rotate-2 scale-105' : 'shadow-sm'
-                              }`}
-                            >
-                              <div className="p-4">
-                                <div className="flex items-center justify-between mb-4">
-                                  <div className="flex items-center">
-                                    <div
-                                      {...provided.dragHandleProps}
-                                      className="cursor-move p-1 text-gray-400 hover:text-gray-600 mr-2 rounded hover:bg-gray-100 transition-colors"
-                                      title="Drag to reorder"
-                                    >
-                                      <GripVertical size={20} />
-                                    </div>
-                                    {isSection && (
-                                      <button
-                                        type="button"
-                                        onClick={() => toggleSection(index)}
-                                        className="p-1 text-gray-600 hover:text-gray-800 mr-2"
-                                      >
-                                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                      </button>
-                                    )}
-                                    <span className="text-sm font-medium text-gray-900">
-                                      {isSection ? 'Section' : field.type === 'divider' ? 'Divider' : `Item ${index + 1}`} - {field.type.replace('_', ' ')}
-                                      {isSection && ` (${sectionChildren.length} items)`}
-                                    </span>
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => remove(index)}
-                                    leftIcon={<Trash2 size={16} />}
-                                  >
-                                    Remove
-                                  </Button>
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-4">
-                                  {isSection ? (
-                                    <Input
-                                      label="Section Name"
-                                      error={errors.items?.[index]?.sectionName?.message}
-                                      {...register(`items.${index}.sectionName` as const, {
-                                        required: 'Section name is required',
-                                      })}
-                                      placeholder="Enter section name"
-                                    />
-                                  ) : field.type === 'divider' ? (
-                                    <div className="py-4">
-                                      <div className="border-t border-gray-300"></div>
-                                      <p className="text-sm text-gray-500 text-center mt-2">
-                                        Visual divider - no configuration needed
-                                      </p>
-                                    </div>
-                                  ) : (
-                                    <Input
-                                      label="Label"
-                                      error={errors.items?.[index]?.label?.message}
-                                      {...register(`items.${index}.label` as const, {
-                                        required: 'Label is required',
-                                      })}
-                                    />
-                                  )}
-
-                                  {!isSection && field.type !== 'divider' && (
-                                    <>
-                                      <div className="flex items-center space-x-4">
-                                        <label className="flex items-center">
-                                          <input
-                                            type="checkbox"
-                                            {...register(`items.${index}.required` as const)}
-                                            className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                          />
-                                          <span className="ml-2 text-sm text-gray-900">Required</span>
-                                        </label>
-
-                                        <label className="flex items-center">
-                                          <input
-                                            type="checkbox"
-                                            {...register(`items.${index}.reportEnabled` as const)}
-                                            className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                          />
-                                          <span className="ml-2 text-sm text-gray-900">Enable Reporting</span>
-                                        </label>
-                                      </div>
-
-                                      {watch(`items.${index}.reportEnabled`) && (
-                                        <div>
-                                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Report Recipient
-                                          </label>
-                                          <select
-                                            {...register(`items.${index}.reportRecipientId` as const, {
-                                              required: 'Report recipient is required when reporting is enabled',
-                                            })}
-                                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                          >
-                                            <option value="">Select a team...</option>
-                                            {reportServiceTeams.map((team) => (
-                                              <option key={team.id} value={team.id}>
-                                                {team.designation} ({team.email})
-                                              </option>
-                                            ))}
-                                          </select>
-                                          {errors.items?.[index]?.reportRecipientId && (
-                                            <p className="mt-1 text-sm text-red-600">
-                                              {errors.items[index]?.reportRecipientId?.message}
-                                            </p>
-                                          )}
-                                          {reportServiceTeams.length === 0 && (
-                                            <p className="mt-1 text-sm text-amber-600">
-                                              No teams available. Add teams in Company Settings first.
-                                            </p>
-                                          )}
-                                        </div>
-                                      )}
-
-                                      {(field.type === 'single_choice' || field.type === 'multiple_choice') && (
-                                        <div>
-                                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Options
-                                          </label>
-                                          <div className="space-y-2">
-                                            {(watch(`items.${index}.options`) || []).map((_, optionIndex) => (
-                                              <div key={optionIndex} className="flex items-center space-x-2">
-                                                <Input
-                                                  {...register(
-                                                    `items.${index}.options.${optionIndex}` as const,
-                                                    { required: 'Option is required' }
-                                                  )}
-                                                  placeholder={`Option ${optionIndex + 1}`}
-                                                />
-                                                <Button
-                                                  type="button"
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  onClick={() => removeOptionFromItem(index, optionIndex)}
-                                                  leftIcon={<Trash2 size={16} />}
-                                                />
-                                              </div>
-                                            ))}
-                                            <Button
-                                              type="button"
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => addOptionToItem(index)}
-                                              leftIcon={<Plus size={16} />}
-                                            >
-                                              Add Option
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-
-                                {/* Section Children */}
-                                {isSection && isExpanded && (
-                                  <div className="mt-6 pl-6 border-l-2 border-blue-200">
-                                    <div className="mb-4">
-                                      <h4 className="text-sm font-medium text-gray-700 mb-2">Section Items</h4>
-                                      <div className="flex flex-wrap gap-2">
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleAddItem('text', index)}
-                                          leftIcon={<Plus size={16} />}
-                                        >
-                                          Add Text Field
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleAddItem('single_choice', index)}
-                                          leftIcon={<Plus size={16} />}
-                                        >
-                                          Add Single Choice
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleAddItem('multiple_choice', index)}
-                                          leftIcon={<Plus size={16} />}
-                                        >
-                                          Add Multiple Choice
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleAddItem('photo', index)}
-                                          leftIcon={<Plus size={16} />}
-                                        >
-                                          Add Photo Upload
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleAddItem('divider', index)}
-                                          leftIcon={<Plus size={16} />}
-                                        >
-                                          Add Divider
-                                        </Button>
-                                      </div>
-                                    </div>
-
-                                    {/* Render section children */}
-                                    <div className="space-y-3">
-                                      {sectionChildren.map(({ field: childField, index: childIndex }) => (
-                                        <div key={childField.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-                                          <div className="flex items-center justify-between mb-4">
-                                            <div className="flex items-center">
-                                              <button
-                                                type="button"
-                                                className="cursor-move p-1 text-gray-400 hover:text-gray-600"
-                                              >
-                                                <GripVertical size={16} />
-                                              </button>
-                                              <span className="ml-2 text-sm font-medium text-gray-900">
-                                                {childField.type.replace('_', ' ')}
-                                              </span>
-                                            </div>
-                                            <Button
-                                              type="button"
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => remove(childIndex)}
-                                              leftIcon={<Trash2 size={16} />}
-                                            >
-                                              Remove
-                                            </Button>
-                                          </div>
-
-                                          <div className="grid grid-cols-1 gap-4">
-                                            {childField.type !== 'divider' ? (
-                                              <Input
-                                                label="Label"
-                                                error={errors.items?.[childIndex]?.label?.message}
-                                                {...register(`items.${childIndex}.label` as const, {
-                                                  required: 'Label is required',
-                                                })}
-                                              />
-                                            ) : (
-                                              <div className="py-4">
-                                                <div className="border-t border-gray-300"></div>
-                                                <p className="text-sm text-gray-500 text-center mt-2">
-                                                  Visual divider - no configuration needed
-                                                </p>
-                                              </div>
-                                            )}
-
-                                            {childField.type !== 'divider' && (
-                                              <div className="flex items-center space-x-4">
-                                                <label className="flex items-center">
-                                                  <input
-                                                    type="checkbox"
-                                                    {...register(`items.${childIndex}.required` as const)}
-                                                    className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                                  />
-                                                  <span className="ml-2 text-sm text-gray-900">Required</span>
-                                                </label>
-                                              </div>
-                                            )}
-
-                                            {(childField.type === 'single_choice' || childField.type === 'multiple_choice') && (
-                                              <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                  Options
-                                                </label>
-                                                <div className="space-y-2">
-                                                  {(watch(`items.${childIndex}.options`) || []).map((_, optionIndex) => (
-                                                    <div key={optionIndex} className="flex items-center space-x-2">
-                                                      <Input
-                                                        {...register(
-                                                          `items.${childIndex}.options.${optionIndex}` as const,
-                                                          { required: 'Option is required' }
-                                                        )}
-                                                        placeholder={`Option ${optionIndex + 1}`}
-                                                      />
-                                                      <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => removeOptionFromItem(childIndex, optionIndex)}
-                                                        leftIcon={<Trash2 size={16} />}
-                                                      />
-                                                    </div>
-                                                  ))}
-                                                  <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => addOptionToItem(childIndex)}
-                                                    leftIcon={<Plus size={16} />}
-                                                  >
-                                                    Add Option
-                                                  </Button>
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      );
+                      if (isSection) {
+                        return (
+                          <SectionComponent
+                            key={field.id}
+                            section={field}
+                            sectionIndex={index}
+                            children={sectionChildren}
+                            isExpanded={isExpanded}
+                            register={register}
+                            watch={watch}
+                            setValue={setValue}
+                            errors={errors}
+                            onRemove={remove}
+                            onToggleExpansion={toggleSection}
+                            onAddItem={handleAddItem}
+                            onAddOption={addOptionToItem}
+                            onRemoveOption={removeOptionFromItem}
+                            reportServiceTeams={reportServiceTeams}
+                          />
+                        );
+                      } else {
+                        return (
+                          <ItemComponent
+                            key={field.id}
+                            item={field}
+                            index={index}
+                            register={register}
+                            watch={watch}
+                            setValue={setValue}
+                            errors={errors}
+                            onRemove={remove}
+                            onAddOption={addOptionToItem}
+                            onRemoveOption={removeOptionFromItem}
+                            reportServiceTeams={reportServiceTeams}
+                          />
+                        );
+                      }
                     })}
                     {provided.placeholder}
                   </div>
