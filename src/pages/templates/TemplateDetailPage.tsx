@@ -406,6 +406,8 @@ const TemplateDetailPage = () => {
 
     // If dropped outside a valid droppable area
     if (!destination) {
+      return;
+    }
     console.log('=== DRAG AND DROP DEBUG START ===');
     console.log('Source:', source);
     console.log('Destination:', destination);
