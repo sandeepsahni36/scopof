@@ -161,6 +161,7 @@ const TemplateDetailPage = () => {
 
       // Convert flat items back to API format
       const apiItems = data.items.map((item, index) => ({
+        id: item.id, // Preserve the client-side ID for mapping
         parentId: item.parentId,
         type: item.type,
         label: item.label,
