@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, Upload, Flag, Users } from 'lucide-react';
+import { validate as isValidUUID } from 'uuid';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { uploadInspectionPhoto } from '../../lib/inspections';
@@ -160,17 +161,27 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       return;
     }
 
+    // Convert empty string UUIDs to null for database compatibility
+    const sanitizedUpdates = { ...updates };
+    if (sanitizedUpdates.report_recipient_id !== undefined) {
+      if (!sanitizedUpdates.report_recipient_id || 
+          sanitizedUpdates.report_recipient_id === '' || 
+          !isValidUUID(sanitizedUpdates.report_recipient_id)) {
+        sanitizedUpdates.report_recipient_id = null;
+      }
+    }
+
     try {
       await updateInspectionItem(
         item.id,
-        updates.value !== undefined ? updates.value : value,
-        updates.notes !== undefined ? updates.notes : notes,
-        updates.photo_urls !== undefined ? updates.photo_urls : photos,
-        updates.marked_for_report !== undefined ? updates.marked_for_report : markedForReport,
-        updates.report_recipient_id !== undefined ? updates.report_recipient_id : reportRecipientId
+        sanitizedUpdates.value !== undefined ? sanitizedUpdates.value : value,
+        sanitizedUpdates.notes !== undefined ? sanitizedUpdates.notes : notes,
+        sanitizedUpdates.photo_urls !== undefined ? sanitizedUpdates.photo_urls : photos,
+        sanitizedUpdates.marked_for_report !== undefined ? sanitizedUpdates.marked_for_report : markedForReport,
+        sanitizedUpdates.report_recipient_id !== undefined ? sanitizedUpdates.report_recipient_id : (reportRecipientId && isValidUUID(reportRecipientId) ? reportRecipientId : null)
       );
       
-      onUpdate(item.id, updates);
+      onUpdate(item.id, sanitizedUpdates);
     } catch (error: any) {
       console.error('Error saving inspection item:', error);
       toast.error('Failed to save changes');
