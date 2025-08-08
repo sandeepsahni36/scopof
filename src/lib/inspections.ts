@@ -332,8 +332,7 @@ export async function updateInspectionItem(
       .from('inspection_items')
       .update(updateData)
       .eq('id', inspectionItemId)
-      .select()
-      .single();
+      .select('id, inspection_id, template_item_id, value, notes, photo_urls, marked_for_report, report_recipient_id, order_index, created_at, updated_at');
 
     if (error) {
       if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
@@ -343,7 +342,7 @@ export async function updateInspectionItem(
       throw error;
     }
 
-    return data;
+    return data?.[0] || null;
   } catch (error: any) {
     console.error('Error updating inspection item:', error);
     
