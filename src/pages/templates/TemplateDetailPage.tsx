@@ -391,7 +391,15 @@ const TemplateDetailPage = () => {
     // Determine new parent ID based on destination
     let newParentId = undefined;
     if (destination.droppableId.startsWith('section-')) {
-      newParentId = destination.droppableId.replace('section-', '');
+      const targetSectionId = destination.droppableId.replace('section-', '');
+      // Find the actual section item to get its current ID
+      const targetSection = currentItems.find(field => field.id === targetSectionId);
+      if (targetSection) {
+        newParentId = targetSection.id;
+      } else {
+        console.error('Target section not found:', targetSectionId);
+        return;
+      }
     }
 
     // Update the item's parentId
