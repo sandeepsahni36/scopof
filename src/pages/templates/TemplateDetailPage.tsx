@@ -427,6 +427,8 @@ const TemplateDetailPage = () => {
       // Dragging from within a section
       const sectionId = source.droppableId.replace('section-', '');
       const sectionChildren = fields.filter(field => field.parentId === sectionId);
+      draggedItem = sectionChildren[source.index];
+    }
     // Find the source actual index in the fields array
     const sourceActualIndex = fields.findIndex(field => field.id === result.draggableId);
     
