@@ -296,20 +296,27 @@ const TemplateDetailPage = () => {
   const handleRemoveItem = (itemIndex: number) => {
     const itemToRemove = fields[itemIndex];
     
-    // If removing a section, clean up orphaned children
+    // If removing a section, atomically clean up orphaned children
     if (itemToRemove.type === 'section') {
       const sectionId = itemToRemove.id;
       
-      // Find all children of this section and move them to root level
-      fields.forEach((field, index) => {
-        if (field.parentId === sectionId) {
-          setValue(`items.${index}.parentId`, undefined);
-        }
-      });
+      // Create new items array with orphaned children moved to root level and section removed
+      const newItems = fields
+        .filter((_, index) => index !== itemIndex) // Remove the section
+        .map(field => {
+          // If this item was a child of the removed section, move it to root level
+          if (field.parentId === sectionId) {
+            return { ...field, parentId: undefined };
+          }
+          return field;
+        });
+      
+      // Update the entire items array atomically
+      setValue('items', newItems);
+    } else {
+      // For non-section items, just remove normally
+      remove(itemIndex);
     }
-    
-    // Remove the item
-    remove(itemIndex);
   };
 
   const toggleSection = (sectionIndex: number) => {
