@@ -233,7 +233,20 @@ export async function getInspectionDetails(inspectionId: string): Promise<{
         .single(),
       supabase
         .from('inspection_items')
-        .select('*, report_recipient_id')
+        .select(`
+          *,
+          report_recipient_id,
+          template_items (
+            id,
+            type,
+            label,
+            section_name,
+            parent_id,
+            required,
+            options,
+            report_enabled
+          )
+        `)
         .eq('inspection_id', inspectionId)
         .order('order_index')
     ]);
@@ -256,7 +269,10 @@ export async function getInspectionDetails(inspectionId: string): Promise<{
 
     return {
       inspection: inspectionResponse.data,
-      items: itemsResponse.data
+      items: itemsResponse.data.map(item => ({
+        ...item,
+        templateItem: item.template_items
+      }))
     };
   } catch (error: any) {
     console.error('Error fetching inspection details:', error);
