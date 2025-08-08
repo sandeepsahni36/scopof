@@ -144,6 +144,16 @@ const TemplateDetailPage = () => {
     try {
       setLoading(true);
 
+      console.log('=== TEMPLATE FORM SUBMIT DEBUG START ===');
+      console.log('Form data being submitted:', data);
+      console.log('Form items:', data.items);
+      console.log('Form items count:', data.items.length);
+      console.log('Form items with parentId:', data.items.filter(item => item.parentId).length);
+      
+      // Log each form item's parent-child relationship
+      data.items.forEach((item, index) => {
+        console.log(`Form Item ${index}: ${item.id} (parent: ${item.parentId || 'none'}) - ${item.label} (type: ${item.type})`);
+      });
       const templateData = {
         name: data.name,
         description: data.description || undefined,
@@ -162,19 +172,29 @@ const TemplateDetailPage = () => {
         order: index + 1,
       }));
 
+      console.log('API items being sent:', apiItems);
+      console.log('API items with parentId:', apiItems.filter(item => item.parentId).length);
+      
+      // Log each API item's parent-child relationship
+      apiItems.forEach((item, index) => {
+        console.log(`API Item ${index}: order=${item.order} (parent: ${item.parentId || 'none'}) - ${item.label} (type: ${item.type})`);
+      });
       if (isNew) {
+        console.log('Creating new template...');
         const result = await createTemplate(templateData, apiItems);
         if (result) {
           toast.success('Template created successfully');
           navigate('/dashboard/templates');
         }
       } else {
+        console.log('Updating existing template...');
         const result = await updateTemplate(id!, templateData, apiItems);
         if (result) {
           toast.success('Template updated successfully');
           navigate('/dashboard/templates');
         }
       }
+      console.log('=== TEMPLATE FORM SUBMIT DEBUG END ===');
     } catch (error: any) {
       console.error('Error saving template:', error);
       toast.error('Failed to save template');
