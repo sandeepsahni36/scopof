@@ -444,22 +444,67 @@ const TemplateDetailPage = () => {
     }
 
     // Update the parentId of the dragged item
-    update(sourceActualIndex, { ...draggedItem, parentId: newParentId });
-    console.log('Updated parentId for item at index:', sourceActualIndex);
-
-    // Calculate destination global index
+    // Create a new items array with atomic update
+    const newItems = [...fields];
+    
+    // Remove the dragged item from its current position
+    const draggedItemCopy = { ...draggedItem, parentId: newParentId };
+    newItems.splice(sourceActualIndex, 1);
+    
+    // Calculate the destination index in the new array
     let destinationGlobalIndex;
     
-    if (source.droppableId === destination.droppableId) {
-      // Moving within the same droppable area
-      destinationGlobalIndex = destination.index;
-      console.log('Moving within same droppable, destination index:', destinationGlobalIndex);
+    if (newParentId) {
+      // Moving into a section
+      const sectionIndex = newItems.findIndex(item => item.id === newParentId);
+      if (sectionIndex === -1) {
+        console.error('Section not found with ID:', newParentId);
+        return;
+      }
+      
+      // Find existing children of this section
+      const existingChildren = newItems.filter(item => item.parentId === newParentId);
+      
+      if (destination.index === 0) {
+        // Insert as first child (right after section header)
+        destinationGlobalIndex = sectionIndex + 1;
+      } else {
+        // Insert after the nth existing child
+        const targetChildIndex = Math.min(destination.index - 1, existingChildren.length - 1);
+        if (targetChildIndex >= 0 && existingChildren[targetChildIndex]) {
+          const targetChildGlobalIndex = newItems.findIndex(item => item.id === existingChildren[targetChildIndex].id);
+          destinationGlobalIndex = targetChildGlobalIndex + 1;
+        } else {
+          destinationGlobalIndex = sectionIndex + 1;
+        }
+      }
     } else {
-      // Moving between different droppable areas
-      if (newParentId) {
-        // Moving into a section
-        const sectionHeaderGlobalIndex = fields.findIndex(field => field.id === newParentId);
-        const currentSectionChildren = fields.filter(field => 
+      // Moving to root level
+      const rootItems = newItems.filter(item => !item.parentId);
+      
+      if (destination.index === 0) {
+        destinationGlobalIndex = 0;
+      } else {
+        const targetRootIndex = Math.min(destination.index - 1, rootItems.length - 1);
+        if (targetRootIndex >= 0 && rootItems[targetRootIndex]) {
+          const targetRootGlobalIndex = newItems.findIndex(item => item.id === rootItems[targetRootIndex].id);
+          destinationGlobalIndex = targetRootGlobalIndex + 1;
+        } else {
+          destinationGlobalIndex = newItems.length;
+        }
+      }
+    }
+    
+    // Insert the item at the calculated position
+    newItems.splice(destinationGlobalIndex, 0, draggedItemCopy);
+    
+    // Sort the items hierarchically to ensure proper order
+    const sortedItems = sortHierarchicalItems(newItems);
+    
+    console.log('Final sorted items:', sortedItems.map(f => ({ id: f.id, label: f.label, parentId: f.parentId })));
+    
+    // Update the form with the new items array atomically
+    setValue('items', sortedItems);
           field.parentId === newParentId && field.id !== draggedItem.id
         );
         
