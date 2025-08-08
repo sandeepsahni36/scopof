@@ -505,68 +505,6 @@ const TemplateDetailPage = () => {
     
     // Update the form with the new items array atomically
     setValue('items', sortedItems);
-          field.parentId === newParentId && field.id !== draggedItem.id
-        );
-        
-        if (destination.index === 0) {
-          // First child in section - place right after section header
-          destinationGlobalIndex = sectionHeaderGlobalIndex + 1;
-        } else {
-          // Find the global index of the child that should be before this item
-          const targetChildIndex = Math.min(destination.index - 1, currentSectionChildren.length - 1);
-          const targetChild = currentSectionChildren[targetChildIndex];
-          if (targetChild) {
-            const targetChildGlobalIndex = fields.findIndex(field => field.id === targetChild.id);
-            destinationGlobalIndex = targetChildGlobalIndex + 1;
-          } else {
-            destinationGlobalIndex = sectionHeaderGlobalIndex + 1;
-          }
-        }
-        
-        console.log('Moving into section, calculated destination index:', destinationGlobalIndex);
-      } else {
-        // Moving to root level
-        const rootItems = fields.filter(field => !field.parentId && field.id !== draggedItem.id);
-        
-        if (destination.index === 0) {
-          destinationGlobalIndex = 0;
-        } else {
-          const targetRootIndex = Math.min(destination.index - 1, rootItems.length - 1);
-          const targetRootItem = rootItems[targetRootIndex];
-          if (targetRootItem) {
-            const targetRootGlobalIndex = fields.findIndex(field => field.id === targetRootItem.id);
-            destinationGlobalIndex = targetRootGlobalIndex + 1;
-          } else {
-            destinationGlobalIndex = fields.length - 1;
-          }
-        }
-        
-        console.log('Moving to root level, calculated destination index:', destinationGlobalIndex);
-      }
-    }
-
-    // Perform the move operation
-    if (sourceActualIndex !== destinationGlobalIndex) {
-      move(sourceActualIndex, destinationGlobalIndex);
-      console.log('Moved item from index', sourceActualIndex, 'to index', destinationGlobalIndex);
-    }
-
-    // Update order properties for all items
-    const currentFieldsAfterMove = fields; // This will be updated after the move
-    setTimeout(() => {
-      // Use setTimeout to ensure the move operation has completed
-      const finalSortedFields = sortHierarchicalItems(fields);
-      console.log('Final sorted fields for order update:', finalSortedFields.map(f => ({ id: f.id, label: f.label, parentId: f.parentId })));
-      
-      finalSortedFields.forEach((item, index) => {
-        const actualIndex = fields.findIndex(field => field.id === item.id);
-        if (actualIndex !== -1) {
-          update(actualIndex, { ...fields[actualIndex], order: index + 1 });
-        }
-      });
-      
-      console.log('Order properties updated for all items');
-    }, 0);
     
     console.log('=== DRAG AND DROP DEBUG END ===');
   };
