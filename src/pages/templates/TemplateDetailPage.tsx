@@ -406,65 +406,58 @@ const TemplateDetailPage = () => {
 
     // If dropped outside a valid droppable area
     if (!destination) {
-      return;
-    }
+    console.log('=== DRAG AND DROP DEBUG START ===');
+    console.log('Source:', source);
+    console.log('Destination:', destination);
+    console.log('Current fields before drag:', fields.map(f => ({ id: f.id, label: f.label, parentId: f.parentId })));
 
-    // If dropped in the same position
-    if (destination.droppableId === source.droppableId && destination.index === source.index) {
-      return;
-    }
-
-    // Create a mutable copy of the current fields
-    const currentItems = [...fields];
-    
-    // Get the actual item being dragged
+    // Find the dragged item
     let draggedItem;
-    let sourceActualIndex;
-
     if (source.droppableId === 'template-items') {
       // Dragging from root level
       draggedItem = rootDraggableItems[source.index];
-      sourceActualIndex = getActualFieldIndex(draggedItem);
     } else if (source.droppableId.startsWith('section-')) {
       // Dragging from within a section
       const sectionId = source.droppableId.replace('section-', '');
-      const sectionChildren = currentItems.filter(field => field.parentId === sectionId);
+      const sectionChildren = fields.filter(field => field.parentId === sectionId);
       draggedItem = sectionChildren[source.index];
-      sourceActualIndex = getActualFieldIndex(draggedItem);
     }
 
-    if (!draggedItem || sourceActualIndex === -1) {
+    if (!draggedItem) {
       console.error('Could not find dragged item');
       return;
     }
 
-    // Remove the dragged item from the array
-    const itemToMove = currentItems[sourceActualIndex];
-    currentItems.splice(sourceActualIndex, 1);
+    console.log('Dragged item found:', { id: draggedItem.id, label: draggedItem.label, currentParentId: draggedItem.parentId });
 
     // Determine new parent ID based on destination
     let newParentId = undefined;
     if (destination.droppableId.startsWith('section-')) {
       newParentId = destination.droppableId.replace('section-', '');
+      console.log('Moving item into section with ID:', newParentId);
+    } else {
+      console.log('Moving item to root level');
     }
 
-    // Update the item's parentId
-    const updatedItem = { ...itemToMove, parentId: newParentId };
+    // Create new items array with updated parentId
+    const newItems = fields.map(field => {
+      if (field.id === draggedItem.id) {
+        return { ...field, parentId: newParentId };
+      }
+      return field;
+    });
 
-    // Add the updated item back to the array (position doesn't matter, we'll sort it)
-    currentItems.push(updatedItem);
-    
-    // Sort the entire array to maintain hierarchical structure
-    const sortedItems = sortHierarchicalItems(currentItems);
-    
-    // Re-assign order property based on final sorted position
-    const finalItems = sortedItems.map((item, index) => ({
-      ...item,
-      order: index + 1
-    }));
+    console.log('Items after parentId update:', newItems.map(f => ({ id: f.id, label: f.label, parentId: f.parentId })));
 
-    // Update the entire form state atomically
-    setValue('items', finalItems);
+    // Sort the items to maintain hierarchical structure
+    const sortedItems = sortHierarchicalItems(newItems);
+    
+    console.log('Items after sorting:', sortedItems.map(f => ({ id: f.id, label: f.label, parentId: f.parentId })));
+
+    // Update the form state
+    setValue('items', sortedItems);
+    
+    console.log('=== DRAG AND DROP DEBUG END ===');
   };
 
   if (initialLoading) {
