@@ -1,66 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { validate as isValidUUID } from 'uuid';
-import { Camera, Check, X, AlertTriangle, Save, Send, Clock, Upload, Trash2, Play, Pause, ArrowLeft, ArrowRight, UserCheck, User, Flag } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, CheckCircle, Clock, User, UserCheck, Building2, Camera, Flag } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import SignatureCanvas from 'react-signature-canvas';
-import { getInspectionDetails, updateInspectionItem, updateInspectionStatus, uploadInspectionPhoto } from '../../lib/inspections';
+import { getInspectionDetails, updateInspectionStatus } from '../../lib/inspections';
 import { generateInspectionReport } from '../../lib/reports';
-import { getReportServiceTeams, ReportServiceTeam } from '../../lib/reportServiceTeams';
-import { toast } from 'sonner';
+import { getProperty } from '../../lib/properties';
 import { supabase } from '../../lib/supabase';
+import InspectionItemRenderer from '../../components/inspections/InspectionItemRenderer';
+import SignatureCanvas from 'react-signature-canvas';
+import { toast } from 'sonner';
 
-type InspectionItem = {
-  id: string;
-  type: 'text' | 'photo' | 'single_choice' | 'multiple_choice';
-  label: string;
-  value: string | boolean | string[] | null;
-  photos?: string[];
-  notes?: string;
-  required?: boolean;
-  options?: string[];
-  markedForReport?: boolean;
-  reportRecipientId?: string;
-};
-
-type Room = {
-  id: string;
-  name: string;
-  items: InspectionItem[];
-};
+interface DisplayStep {
+  type: 'section' | 'items';
+  sectionName?: string;
+  items: any[];
+}
 
 const InspectionPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [primaryContactSignature, setPrimaryContactSignature] = useState<any>(null);
-  const [inspectorSignature, setInspectorSignature] = useState<any>(null);
-  const [primaryContactName, setPrimaryContactName] = useState('');
-  const [inspectorName, setInspectorName] = useState('');
+  const [inspection, setInspection] = useState<any>(null);
   const [property, setProperty] = useState<any>(null);
+  const [displaySteps, setDisplaySteps] = useState<DisplayStep[]>([]);
+  const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [completing, setCompleting] = useState(false);
-  const [inspection, setInspection] = useState<any>(null);
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [showSignatures, setShowSignatures] = useState(false);
+  const [clientPresent, setClientPresent] = useState(false);
   
-  // Timer state
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Photo upload state
-  const [uploadingPhotos, setUploadingPhotos] = useState<Set<string>>(new Set());
-  const [signedPhotoUrls, setSignedPhotoUrls] = useState<Map<string, string>>(new Map());
-  const [loadingPhotoUrls, setLoadingPhotoUrls] = useState<Set<string>>(new Set());
-  
-  // Client present state for signature page
-  const [clientPresentOnSignaturePage, setClientPresentOnSignaturePage] = useState(false);
-  
-  // Report service teams state
-  const [reportServiceTeams, setReportServiceTeams] = useState<ReportServiceTeam[]>([]);
+  // Signature refs
+  const inspectorSignatureRef = useRef<SignatureCanvas>(null);
+  const clientSignatureRef = useRef<SignatureCanvas>(null);
 
   useEffect(() => {
     if (id) {
@@ -68,99 +40,31 @@ const InspectionPage = () => {
     }
   }, [id]);
 
-  useEffect(() => {
-    loadReportServiceTeams();
-  }, []);
-  useEffect(() => {
-    // Start timer when component mounts
-    const now = new Date();
-    setStartTime(now);
-    setIsTimerRunning(true);
-    
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isTimerRunning && startTime) {
-      timerRef.current = setInterval(() => {
-        const now = new Date();
-        const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-        setElapsedTime(elapsed);
-      }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [isTimerRunning, startTime]);
-
-  const loadReportServiceTeams = async () => {
-    try {
-      const teamsData = await getReportServiceTeams();
-      if (teamsData) {
-        setReportServiceTeams(teamsData);
-      }
-    } catch (error: any) {
-      console.error('Error loading report service teams:', error);
-      // Don't show error toast as this is not critical for inspection functionality
-    }
-  };
-
   const loadInspectionData = async (inspectionId: string) => {
     try {
       setLoading(true);
-      console.log('Loading inspection data for ID:', inspectionId);
       const data = await getInspectionDetails(inspectionId);
       
-      if (data) {
-        console.log('Inspection data loaded:', {
-          inspectorName: data.inspection.inspector_name,
-          primaryContactName: data.inspection.primary_contact_name,
-          clientPresent: data.inspection.client_present_for_signature
-        });
-        
-        setInspection(data.inspection);
-        setPrimaryContactName(data.inspection.primary_contact_name || '');
-        setInspectorName(data.inspection.inspector_name || '');
-        setClientPresentOnSignaturePage(data.inspection.client_present_for_signature || false);
-        
-        console.log('=== INSPECTION DATA LOADED ===');
-        console.log('Inspector name from DB:', data.inspection.inspector_name);
-        console.log('Primary contact name from DB:', data.inspection.primary_contact_name);
-        console.log('Client present from DB:', data.inspection.client_present_for_signature);
-        console.log('=== END INSPECTION DATA ===');
-        
-        // Load property data for report generation
-        if (data.inspection.property_id) {
-          const { getProperty } = await import('../../lib/properties');
-          const propertyData = await getProperty(data.inspection.property_id);
-          if (propertyData) {
-            setProperty(propertyData);
-            console.log('Property data loaded for inspection:', propertyData.name);
-          }
-        }
-        
-        // Build rooms from actual inspection items and template data
-        const rooms = await buildRoomsFromInspectionData(data.inspection, data.items);
-        
-        setRooms(rooms);
-        
-        // Load signed URLs for all photos
-        await loadSignedPhotoUrls(rooms);
-      } else {
+      if (!data) {
         toast.error('Inspection not found');
         navigate('/dashboard');
+        return;
       }
+
+      setInspection(data.inspection);
+      setClientPresent(data.inspection.client_present_for_signature || false);
+
+      // Load property data
+      const propertyData = await getProperty(data.inspection.property_id);
+      if (propertyData) {
+        setProperty(propertyData);
+      }
+
+      // Build display steps from inspection items
+      const steps = buildDisplaySteps(data.items);
+      setDisplaySteps(steps);
+      
+      console.log('Built display steps:', steps);
     } catch (error: any) {
       console.error('Error loading inspection:', error);
       toast.error('Failed to load inspection');
@@ -170,569 +74,179 @@ const InspectionPage = () => {
     }
   };
 
-  const loadSignedPhotoUrls = async (rooms: Room[]) => {
-    const { getSignedUrlForFile } = await import('../../lib/storage');
-    const urlMap = new Map<string, string>();
-    const loadingSet = new Set<string>();
+  const buildDisplaySteps = (items: any[]): DisplayStep[] => {
+    const steps: DisplayStep[] = [];
+    const processedSections = new Set<string>();
     
-    console.log('=== LOADING SIGNED PHOTO URLS ===');
-    console.log('Total rooms:', rooms.length);
+    // Group items by their parent (section) or as individual items
+    const itemsByParent = new Map<string | null, any[]>();
     
-    for (const room of rooms) {
-      for (const item of room.items) {
-        if (item.photos && item.photos.length > 0) {
-          console.log(`Processing ${item.photos.length} photos for item: ${item.label}`);
-          for (const photoUrl of item.photos) {
-            // Extract file key from MinIO URL
-            const fileKey = extractFileKeyFromUrl(photoUrl);
-            console.log('=== PHOTO PREVIEW PROCESSING ===');
-            console.log('Original photo URL from database:', photoUrl);
-            console.log('Extracted file key:', fileKey);
-            console.log('=== CRITICAL DEBUG: fileKey value before if condition ===');
-            console.log('fileKey type:', typeof fileKey);
-            console.log('fileKey value:', fileKey);
-            console.log('fileKey is truthy:', !!fileKey);
-            console.log('About to call getSignedUrlForFile with fileKey:', fileKey);
-            console.log('=== END CRITICAL DEBUG ===');
-            
-            if (fileKey) {
-              loadingSet.add(photoUrl);
-              try {
-                console.log('Calling getSignedUrlForFile with file key:', fileKey);
-                const signedUrl = await getSignedUrlForFile(fileKey);
-                console.log('Signed URL generation result:', signedUrl ? 'SUCCESS' : 'FAILED');
-                console.log('Generated signed URL:', signedUrl);
-                
-                if (signedUrl) {
-                  urlMap.set(photoUrl, signedUrl);
-                  console.log('Stored signed URL in map for original URL:', photoUrl);
-                  console.log('Map now contains entries:', urlMap.size);
-                } else {
-                  console.error('Failed to generate signed URL for file key:', fileKey);
-                }
-              } catch (error) {
-                console.error('=== SIGNED URL GENERATION ERROR ===');
-                console.error('Error getting signed URL for photo URL:', photoUrl);
-                console.error('File key that failed:', fileKey);
-                console.error('Error details:', {
-                  message: error.message,
-                  stack: error.stack,
-                  fileKey: fileKey,
-                  originalUrl: photoUrl
-                });
-                console.error('=== END SIGNED URL GENERATION ERROR ===');
-              }
-              loadingSet.delete(photoUrl);
-            } else {
-              console.error('=== FILE KEY EXTRACTION FAILED ===');
-              console.error('Could not extract file key from photo URL:', photoUrl);
-              console.error('This photo will not have a signed URL generated');
-              console.error('=== END FILE KEY EXTRACTION FAILED ===');
-            }
-            console.log('=== END PHOTO PREVIEW PROCESSING ===');
-          }
-        }
-      }
-    }
-    
-    console.log('=== FINAL SIGNED URL MAP ===');
-    console.log('Total signed URLs generated:', urlMap.size);
-    console.log('Map entries:', Array.from(urlMap.entries()));
-    console.log('=== END SIGNED URL MAP ===');
-    
-    setSignedPhotoUrls(urlMap);
-    setLoadingPhotoUrls(loadingSet);
-  };
-
-  const extractFileKeyFromUrl = (url: string): string | null => {
-    try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/');
+    items.forEach(item => {
+      const templateItem = item.template_items || item.templateItem;
+      if (!templateItem) return;
       
-      // Find the bucket name and extract everything after it
-      const bucketIndex = pathParts.findIndex(part => part === 'storage-files');
-      if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
-        const fileKey = pathParts.slice(bucketIndex + 1).join('/');
-        console.log('Extracted file key from URL:', fileKey);
-        return fileKey;
+      const parentId = templateItem.parent_id;
+      if (!itemsByParent.has(parentId)) {
+        itemsByParent.set(parentId, []);
       }
-      
-      return null;
-    } catch (error) {
-      console.error('Error extracting file key from URL:', error);
-      return null;
-    }
-  };
+      itemsByParent.get(parentId)!.push(item);
+    });
 
-  const handleClientPresentToggle = async (isPresent: boolean) => {
-    setClientPresentOnSignaturePage(isPresent);
+    // Process root-level items first
+    const rootItems = itemsByParent.get(null) || [];
     
-    // Update the database
-    try {
-      const { error } = await supabase
-        .from('inspections')
-        .update({ client_present_for_signature: isPresent })
-        .eq('id', inspection.id);
+    rootItems.forEach(item => {
+      const templateItem = item.template_items || item.templateItem;
       
-      if (error) {
-        console.error('Error updating client present status:', error);
-        toast.error('Failed to update client present status');
-      }
-    } catch (error) {
-      console.error('Error updating client present status:', error);
-    }
-  };
-
-  const buildRoomsFromInspectionData = async (inspection: any, inspectionItems: any[]): Promise<Room[]> => {
-    try {
-      // Log all inspection item IDs that we received from the database
-      console.log('=== INSPECTION ITEMS RECEIVED FROM DATABASE ===');
-      console.log('Total inspection items:', inspectionItems.length);
-      console.log('Inspection item IDs:', inspectionItems.map(item => ({
-        id: item.id,
-        templateItemId: item.template_item_id,
-        isValidUUID: isValidUUID(item.id)
-      })));
-      console.log('=== END INSPECTION ITEMS DEBUG ===');
-
-      // Check if propertyChecklistId exists before querying
-      if (!inspection.property_checklist_id) {
-        console.warn('No property checklist ID found for inspection:', inspection.id);
-        // Return signature room only if no checklist is attached
-        return [{ id: 'signature', name: 'Signature', items: [] }];
-      }
-
-      // Get the checklist templates to understand the structure
-      const { data: checklistTemplates, error } = await supabase
-        .from('property_checklist_templates')
-        .select(`
-          template_id,
-          order_index,
-          templates!inner(
-            id,
-            name,
-            template_items(
-              id,
-              type,
-              label,
-              required,
-              options,
-              report_enabled,
-              maintenance_email,
-              report_recipient_id,
-              order,
-              parent_id,
-              section_name
-            )
-          )
-        `)
-        .eq('property_checklist_id', inspection.property_checklist_id)
-        .order('order_index');
-
-      if (error) {
-        console.error('Error fetching checklist templates:', error);
-        // Return signature room only if we can't load templates
-        return [{ id: 'signature', name: 'Signature', items: [] }];
-      }
-
-      const rooms: Room[] = [];
-      const roomMap = new Map<string, Room>();
-
-      // Process each template in the checklist
-      for (const checklistTemplate of checklistTemplates) {
-        const template = checklistTemplate.templates;
-        if (!template || !template.template_items) continue;
-
-        // Group items by section or use template name as room
-        for (const templateItem of template.template_items) {
-          const roomName = templateItem.section_name || template.name;
-          
-          if (!roomMap.has(roomName)) {
-            roomMap.set(roomName, {
-              id: roomName.toLowerCase().replace(/\s+/g, '-'),
-              name: roomName,
-              items: [],
-            });
-          }
-
-          const room = roomMap.get(roomName)!;
-          
-          // Find the corresponding inspection item
-          const inspectionItem = inspectionItems.find(
-            item => item.template_item_id === templateItem.id
-          );
-
-          // Add UUID validation check
-          if (!inspectionItem || !isValidUUID(inspectionItem.id)) {
-            console.warn(`=== SKIPPING INVALID INSPECTION ITEM ===`);
-            console.warn(`Template item ID: ${templateItem.id}`);
-            console.warn(`Inspection item found: ${!!inspectionItem}`);
-            console.warn(`Inspection item ID: ${inspectionItem?.id}`);
-            console.warn(`Is valid UUID: ${inspectionItem?.id ? isValidUUID(inspectionItem.id) : 'N/A'}`);
-            console.warn(`=== END SKIP WARNING ===`);
-            continue; // Skip to the next templateItem
-          }
-          
-          // Convert template item to inspection item format
-          const item: InspectionItem = {
-            id: inspectionItem.id, // Always use inspection item ID
-            type: templateItem.type as any,
-            label: templateItem.label,
-            value: inspectionItem.value || getDefaultValue(templateItem.type),
-            photos: inspectionItem.photo_urls || [],
-            notes: inspectionItem.notes || '',
-            required: templateItem.required || false,
-            options: templateItem.options || undefined,
-            markedForReport: inspectionItem.marked_for_report || false,
-            reportRecipientId: inspectionItem.report_recipient_id || undefined,
-          };
-
-          console.log('=== SUCCESSFULLY PROCESSING INSPECTION ITEM ===');
-          console.log('Template item ID:', templateItem.id);
-          console.log('Inspection item ID:', inspectionItem.id);
-          console.log('Inspection item ID is valid UUID:', isValidUUID(inspectionItem.id));
-          console.log('Item label:', item.label);
-          console.log('Item ID being used in frontend:', item.id);
-          console.log('Room name:', roomName);
-          console.log('=== END SUCCESSFUL PROCESSING ===');
-
-          room.items.push(item);
-        }
-      }
-
-      // Convert map to array, filter out empty rooms, and sort items within each room
-      const sortedRooms = Array.from(roomMap.values())
-        .filter(room => room.items.length > 0) // Only include rooms with items
-        .map(room => ({
-        ...room,
-        items: room.items.sort((a, b) => {
-          // Find the template items to get their order
-          const templateA = checklistTemplates
-            ?.flatMap(ct => ct.templates?.template_items || [])
-            .find(ti => inspectionItems.find(ii => ii.id === a.id)?.templateItemId === ti.id);
-          const templateB = checklistTemplates
-            ?.flatMap(ct => ct.templates?.template_items || [])
-            .find(ti => inspectionItems.find(ii => ii.id === b.id)?.templateItemId === ti.id);
-          
-          return (templateA?.order || 0) - (templateB?.order || 0);
-        }),
-      }));
-
-      // Check if we have any actual inspection items
-      const totalItems = sortedRooms.reduce((total, room) => total + room.items.length, 0);
-      
-      if (totalItems === 0) {
-        console.warn('No inspection items found in checklist templates');
-        // Add an empty checklist room to inform the user
-        return [
-          {
-            id: 'empty-checklist',
-            name: 'Empty Checklist',
-            items: [],
-          },
-          {
-            id: 'signature',
-            name: 'Signature',
-            items: [],
-          }
-        ];
-      }
-      // Add signature room at the end
-      sortedRooms.push({
-        id: 'signature',
-        name: 'Signature',
-        items: [],
-      });
-
-      return sortedRooms;
-    } catch (error) {
-      console.error('Error building rooms from inspection data:', error);
-      // Return signature room only as fallback
-      return [{ id: 'signature', name: 'Signature', items: [] }];
-    }
-  };
-
-  const getDefaultValue = (type: string) => {
-    switch (type) {
-      case 'text':
-        return '';
-      case 'single_choice':
-        return null;
-      case 'multiple_choice':
-        return [];
-      case 'photo':
-        return null;
-      default:
-        return null;
-    }
-  };
-
-  const handlePhotoUpload = async (roomId: string, itemId: string, files: FileList) => {
-    if (!files.length || !inspection) return;
-
-    const file = files[0];
-    
-    // Validate file
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-    
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      toast.error('Image must be less than 5MB');
-      return;
-    }
-
-    try {
-      setUploadingPhotos(prev => new Set(prev).add(itemId));
-      
-      const photoUrl = await uploadInspectionPhoto(file, inspection.id, itemId);
-      
-      if (photoUrl) {
-        setRooms(rooms.map(room => {
-          if (room.id === roomId) {
-            return {
-              ...room,
-              items: room.items.map(item => {
-                if (item.id === itemId) {
-                  const currentPhotos = item.photos || [];
-                  return {
-                    ...item,
-                    photos: [...currentPhotos, photoUrl],
-                  };
-                }
-                return item;
-              }),
-            };
-          }
-          return room;
-        }));
+      if (templateItem.type === 'section') {
+        // This is a section - collect all its children
+        const sectionChildren = itemsByParent.get(templateItem.id) || [];
         
-        toast.success('Photo uploaded successfully');
+        if (sectionChildren.length > 0) {
+          steps.push({
+            type: 'section',
+            sectionName: templateItem.section_name || templateItem.label,
+            items: sectionChildren
+          });
+        }
+        
+        processedSections.add(templateItem.id);
+      } else {
+        // This is a standalone item (not in a section)
+        steps.push({
+          type: 'items',
+          items: [item]
+        });
       }
-    } catch (error: any) {
-      console.error('Error uploading photo:', error);
-      toast.error('Failed to upload photo');
-    } finally {
-      setUploadingPhotos(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(itemId);
-        return newSet;
-      });
+    });
+
+    // Process any orphaned items (items that reference a parent that doesn't exist)
+    itemsByParent.forEach((children, parentId) => {
+      if (parentId && !processedSections.has(parentId)) {
+        // These are orphaned items - add them as individual steps
+        children.forEach(item => {
+          steps.push({
+            type: 'items',
+            items: [item]
+          });
+        });
+      }
+    });
+
+    return steps;
+  };
+
+  const handleItemUpdate = (itemId: string, updates: any) => {
+    // Update local state if needed
+    console.log('Item updated:', itemId, updates);
+  };
+
+  const handleNext = () => {
+    if (currentStep < displaySteps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      // Last step - show signatures
+      setShowSignatures(true);
     }
   };
 
-  const handleRemovePhoto = (roomId: string, itemId: string, photoIndex: number) => {
-    setRooms(rooms.map(room => {
-      if (room.id === roomId) {
-        return {
-          ...room,
-          items: room.items.map(item => {
-            if (item.id === itemId) {
-              const newPhotos = [...(item.photos || [])];
-              newPhotos.splice(photoIndex, 1);
-              return {
-                ...item,
-                photos: newPhotos,
-              };
-            }
-            return item;
-          }),
-        };
-      }
-      return room;
-    }));
-  };
-
-  const handleItemUpdate = async (roomId: string, itemId: string, value: any, field: string = 'value') => {
-    setRooms(rooms.map(room => {
-      if (room.id === roomId) {
-        return {
-          ...room,
-          items: room.items.map(item => {
-            if (item.id === itemId) {
-              return {
-                ...item,
-                [field]: value,
-              };
-            }
-            return item;
-          }),
-        };
-      }
-      return room;
-    }));
-
-    // Auto-save the change
-    try {
-      if (field === 'value') {
-        await updateInspectionItem(itemId, value);
-      } else if (field === 'notes') {
-        await updateInspectionItem(itemId, null, value);
-      } else if (field === 'markedForReport') {
-        await updateInspectionItem(itemId, undefined, undefined, undefined, value);
-      }
-    } catch (error) {
-      console.error('Error auto-saving item:', error);
+  const handlePrevious = () => {
+    if (showSignatures) {
+      setShowSignatures(false);
+    } else if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
     }
   };
 
-  const handleReportRecipientUpdate = async (roomId: string, itemId: string, recipientId: string) => {
-    setRooms(rooms.map(room => {
-      if (room.id === roomId) {
-        return {
-          ...room,
-          items: room.items.map(item => {
-            if (item.id === itemId) {
-              return {
-                ...item,
-                reportRecipientId: recipientId,
-              };
-            }
-            return item;
-          }),
-        };
-      }
-      return room;
-    }));
-
-    // Auto-save the change
-    try {
-      await updateInspectionItem(itemId, undefined, undefined, undefined, undefined, recipientId);
-    } catch (error) {
-      console.error('Error auto-saving report recipient:', error);
-    }
-  };
-  const handleSaveInspection = async () => {
+  const handleSaveProgress = async () => {
     try {
       setSaving(true);
-      // Save all current data
-      toast.success('Inspection saved successfully');
-    } catch (error) {
-      toast.error('Failed to save inspection');
+      // Auto-save is handled by individual item renderers
+      toast.success('Progress saved');
+    } catch (error: any) {
+      console.error('Error saving progress:', error);
+      toast.error('Failed to save progress');
     } finally {
       setSaving(false);
     }
   };
 
-  const toggleTimer = () => {
-    setIsTimerRunning(!isTimerRunning);
-  };
-
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  };
-
   const handleCompleteInspection = async () => {
-    if (!inspection) return;
-
-    // Validate signatures based on inspection type and client presence
-    const isCheckIn = inspection.inspectionType === 'check_in';
-    const isCheckOut = inspection.inspectionType === 'check_out';
-    const isMoveIn = inspection.inspectionType === 'move_in';
-    const isMoveOut = inspection.inspectionType === 'move_out';
-    const isRealEstate = isMoveIn || isMoveOut;
-    const clientPresentForSignature = clientPresentOnSignaturePage;
-
-    if (isCheckIn && (!primaryContactSignature || !inspectorSignature)) {
-      toast.error('Both guest and inspector signatures are required for check-in inspections');
-      return;
-    }
-
-    if ((isCheckOut || isMoveOut) && !inspectorSignature) {
-      toast.error('Inspector signature is required to complete the inspection');
-      return;
-    }
-
-    if (isMoveIn && !inspectorSignature) {
-      toast.error('Inspector signature is required for move-in inspections');
-      return;
-    }
-
-    if (isRealEstate && clientPresentOnSignaturePage && !primaryContactSignature) {
-      toast.error('Client signature is required when client is present');
-      return;
-    }
-
     try {
       setCompleting(true);
-      
-      // Stop timer
-      setIsTimerRunning(false);
-      const endTime = new Date();
-      const totalDuration = Math.floor((endTime.getTime() - (startTime?.getTime() || 0)) / 1000);
-      
-      // Get signatures as data URLs
-      const primaryContactSignatureDataUrl = primaryContactSignature ? primaryContactSignature.toDataURL() : null;
-      const inspectorSignatureDataUrl = inspectorSignature ? inspectorSignature.toDataURL() : null;
-      
+
+      // Get signatures
+      const inspectorSignature = inspectorSignatureRef.current?.toDataURL();
+      const clientSignature = clientPresent ? clientSignatureRef.current?.toDataURL() : undefined;
+
+      if (!inspectorSignature) {
+        toast.error('Inspector signature is required');
+        return;
+      }
+
+      if (clientPresent && !clientSignature) {
+        toast.error('Client signature is required when client is present');
+        return;
+      }
+
+      const endTime = new Date().toISOString();
+      const startTime = new Date(inspection.start_time);
+      const durationSeconds = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+
       // Update inspection status
       await updateInspectionStatus(
         inspection.id,
         'completed',
-        primaryContactSignatureDataUrl,
-        inspectorSignatureDataUrl,
-        endTime.toISOString(),
-        totalDuration
+        clientSignature,
+        inspectorSignature,
+        endTime,
+        durationSeconds
       );
-      
-      // Generate PDF report
+
+      // Generate report
       const reportData = {
         inspection: {
           ...inspection,
-          propertyName: property?.name || 'Unknown Property',
-          inspectorName,
-          primaryContactName,
+          propertyName: property?.name,
         },
-        rooms: rooms.filter(room => room.name !== 'Signature'),
-        primaryContactName,
-        inspectorName,
-        startTime: startTime?.toISOString(),
-        endTime: endTime.toISOString(),
-        duration: totalDuration,
-        primaryContactSignature: primaryContactSignatureDataUrl,
-        inspectorSignature: inspectorSignatureDataUrl,
+        rooms: displaySteps,
+        primaryContactName: inspection.primary_contact_name || '',
+        inspectorName: inspection.inspector_name || '',
+        startTime: inspection.start_time,
+        endTime,
+        duration: durationSeconds,
+        primaryContactSignature: clientSignature,
+        inspectorSignature,
       };
-      
+
       const reportUrl = await generateInspectionReport(reportData);
-      
+
       if (reportUrl) {
-        toast.success('Inspection completed and report generated!');
-      } else {
-        toast.success('Inspection completed successfully!');
+        toast.success('Inspection completed and report generated');
       }
-      
-      // Send inspection report emails for marked items
+
+      // Send email alerts for marked items
       try {
-        console.log('Triggering inspection report email function for inspection:', inspection.id);
-        const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-inspection-report-email', {
-          body: {
-            inspectionId: inspection.id,
-          },
+        const { data, error } = await supabase.functions.invoke('send-inspection-report-email', {
+          body: { inspectionId: inspection.id },
         });
 
-        if (emailError) {
-          console.error('Error sending inspection report emails:', emailError);
+        if (error) {
+          console.error('Error sending email alerts:', error);
           toast.error('Inspection completed but failed to send email alerts');
         } else {
-          console.log('Inspection report email function result:', emailResult);
-          if (emailResult?.stats?.emailsSent > 0) {
-            toast.success(`Inspection completed! ${emailResult.stats.emailsSent} email alert(s) sent.`);
+          const emailsSent = data?.stats?.emailsSent || 0;
+          if (emailsSent > 0) {
+            toast.success(`Inspection completed! ${emailsSent} email alert(s) sent.`);
+          } else {
+            toast.success('Inspection completed successfully');
           }
         }
       } catch (emailError) {
-        console.error('Error invoking inspection report email function:', emailError);
+        console.error('Error invoking email function:', emailError);
         toast.error('Inspection completed but failed to send email alerts');
       }
-      
-      // Redirect to dashboard
+
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Error completing inspection:', error);
@@ -742,30 +256,17 @@ const InspectionPage = () => {
     }
   };
 
-  const canProceedToNext = () => {
-    const currentRoom = rooms[currentStep];
-    if (!currentRoom || currentRoom.name === 'Signature') return true;
-    
-    return currentRoom.items.every(item => {
-      if (!item.required) return true;
-      
-      if (item.type === 'text') {
-        return item.value && (item.value as string).trim() !== '';
-      } else if (item.type === 'photo') {
-        return item.photos && item.photos.length > 0;
-      } else if (item.type === 'single_choice') {
-        return item.value !== null && item.value !== '';
-      } else if (item.type === 'multiple_choice') {
-        return Array.isArray(item.value) && item.value.length > 0;
-      }
-      
-      return true;
-    });
+  const clearSignature = (type: 'inspector' | 'client') => {
+    if (type === 'inspector') {
+      inspectorSignatureRef.current?.clear();
+    } else {
+      clientSignatureRef.current?.clear();
+    }
   };
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading inspection...</p>
@@ -774,458 +275,292 @@ const InspectionPage = () => {
     );
   }
 
-  const currentRoom = rooms[currentStep];
-  const isLastStep = currentStep === rooms.length - 1;
-  const isFirstStep = currentStep === 0;
-  const isShortTermRental = inspection?.inspectionType === 'check_in' || inspection?.inspectionType === 'check_out';
-  const isCheckIn = inspection?.inspectionType === 'check_in';
-  const isMoveIn = inspection?.inspectionType === 'move_in';
-  const requiresPrimaryContactSignature = isCheckIn;
-  
-  const getContactLabel = () => {
-    if (isShortTermRental) return 'Guest';
-    return 'Client';
-  };
+  if (!inspection || displaySteps.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900">Inspection not found</h1>
+          <Button className="mt-4" onClick={() => navigate('/dashboard')}>
+            Back to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const currentDisplayStep = displaySteps[currentStep];
+  const totalSteps = displaySteps.length;
+  const progressPercentage = Math.round(((currentStep + 1) / totalSteps) * 100);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header with Timer */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Property Inspection</h1>
-          
-          {/* Timer */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center bg-white rounded-lg border border-gray-200 px-4 py-2">
-              <Clock className="h-5 w-5 text-gray-500 mr-2" />
-              <span className="font-mono text-lg font-semibold text-gray-900">
-                {formatTime(elapsedTime)}
-              </span>
-              <button
-                onClick={toggleTimer}
-                className="ml-3 p-1 rounded-full hover:bg-gray-100"
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                leftIcon={<ArrowLeft size={16} />}
+                onClick={() => navigate('/dashboard')}
+                className="mr-4"
               >
-                {isTimerRunning ? (
-                  <Pause className="h-4 w-4 text-gray-600" />
-                ) : (
-                  <Play className="h-4 w-4 text-gray-600" />
-                )}
-              </button>
+                Exit
+              </Button>
+              <div className="flex items-center">
+                <Building2 className="h-6 w-6 text-primary-600 mr-2" />
+                <span className="text-lg font-semibold text-gray-900">Property Inspection</span>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-900">
-              {currentRoom?.name || 'Loading...'} ({currentStep + 1} of {rooms.length})
-            </span>
-            <span className="text-sm font-medium text-gray-500">
-              {Math.round(((currentStep + 1) / rooms.length) * 100)}% Complete
-            </span>
-          </div>
-          <div className="h-2 bg-gray-200 rounded-full">
-            <div
-              className="h-2 bg-primary-600 rounded-full transition-all duration-300"
-              style={{ width: `${((currentStep + 1) / rooms.length) * 100}%` }}
-            />
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center text-sm text-gray-500">
+                <Clock className="w-4 h-4 mr-1" />
+                <span id="inspection-timer">0:00</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Save size={16} />}
+                onClick={handleSaveProgress}
+                isLoading={saving}
+              >
+                Save Progress
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Room content */}
-      <div className="space-y-6">
-        {currentRoom?.name === 'Empty Checklist' ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="text-center py-8">
-              <AlertTriangle className="mx-auto h-16 w-16 text-amber-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Empty Checklist</h3>
-              <p className="text-gray-600 mb-4">
-                The checklist for this property doesn't contain any inspection items. 
-                You'll need to add items to your templates before conducting inspections.
-              </p>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-                <h4 className="text-sm font-medium text-amber-800 mb-2">What you can do:</h4>
-                <ul className="text-sm text-amber-700 space-y-1 text-left">
-                  <li>• Go to Templates and edit your existing templates</li>
-                  <li>• Add inspection items like text fields, photo uploads, or choice questions</li>
-                  <li>• Save the template and return to start a new inspection</li>
-                </ul>
-              </div>
-              <div className="flex justify-center space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/dashboard/templates')}
-                >
-                  Edit Templates
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/dashboard/properties')}
-                >
-                  Back to Properties
-                </Button>
-              </div>
+      {/* Progress Bar */}
+      {!showSignatures && (
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {currentDisplayStep?.type === 'section' 
+                  ? currentDisplayStep.sectionName 
+                  : `Step ${currentStep + 1}`
+                } ({currentStep + 1} of {totalSteps})
+              </h2>
+              <span className="text-sm text-gray-500">{progressPercentage}% Complete</span>
             </div>
-          </div>
-        ) : currentRoom?.name === 'Signature' ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
-            <h2 className="text-xl font-semibold text-gray-900">Complete Inspection</h2>
-            
-            {/* Display Names (Read-only) */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Inspection Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Inspector</label>
-                  <p className="mt-1 text-sm text-gray-900">{inspectorName || 'Not specified'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">{getContactLabel()}</label>
-                  <p className="mt-1 text-sm text-gray-900">{primaryContactName || 'Not specified'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Client Present Checkbox for Real Estate */}
-            {!isShortTermRental && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={clientPresentOnSignaturePage}
-                    onChange={(e) => handleClientPresentToggle(e.target.checked)}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm font-medium text-gray-900">Client is Present for Signature</span>
-                </label>
-                <p className="mt-1 text-xs text-gray-500">
-                  Check this box if the client is present and will provide a signature
-                </p>
-              </div>
-            )}
-
-            {/* Inspector Signature */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Inspector Signature *
-              </label>
-              <div className="border border-gray-300 rounded-lg overflow-hidden bg-white flex justify-center">
-                <SignatureCanvas
-                  ref={(ref) => setInspectorSignature(ref)}
-                  canvasProps={{
-                    width: 320,
-                    height: 320,
-                    style: { background: 'white' }
-                  }}
-                />
-              </div>
-              <div className="mt-2 flex justify-end">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => inspectorSignature?.clear()}
-                >
-                  Clear Inspector Signature
-                </Button>
-              </div>
-            </div>
-
-            {/* Primary Contact Signature (conditional) */}
-            {(requiresPrimaryContactSignature || (clientPresentOnSignaturePage && !isShortTermRental)) && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {getContactLabel()} Signature *
-                </label>
-                <div className="border border-gray-300 rounded-lg overflow-hidden bg-white flex justify-center">
-                  <SignatureCanvas
-                    ref={(ref) => setPrimaryContactSignature(ref)}
-                    canvasProps={{
-                      width: 320,
-                      height: 320,
-                      style: { background: 'white' }
-                    }}
-                  />
-                </div>
-                <div className="mt-2 flex justify-end">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => primaryContactSignature?.clear()}
-                  >
-                    Clear {getContactLabel()} Signature
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Signature Requirements</h4>
-              <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Inspector signature is always required</li>
-                {isShortTermRental ? (
-                  <>
-                    {isCheckIn && <li>• Guest signature is required for check-in inspections</li>}
-                    {!isCheckIn && <li>• Guest signature is not required for check-out inspections</li>}
-                  </>
-                ) : (
-                  <>
-                    <li>• Client signature is required only if "Client is Present" is checked</li>
-                    <li>• Use the checkbox above to indicate if the client is present for signing</li>
-                  </>
-                )}
-              </ul>
-            </div>
-          </div>
-        ) : (
-          currentRoom?.items.map((item) => (
-            <div key={item.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {item.label}
-                    {item.required && <span className="text-red-500 ml-1">*</span>}
-                  </h3>
-                  
-                  {item.type === 'single_choice' && (
-                    <div className="space-y-2">
-                      {item.options?.map((option, index) => (
-                        <label key={index} className="flex items-center">
-                          <input
-                            type="radio"
-                            name={item.id}
-                            value={option}
-                            checked={item.value === option}
-                            onChange={(e) => handleItemUpdate(currentRoom.id, item.id, e.target.value)}
-                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                          />
-                          <span className="ml-2 text-sm text-gray-700">{option}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {item.type === 'multiple_choice' && (
-                    <div className="space-y-2">
-                      {item.options?.map((option, index) => (
-                        <label key={index} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            value={option}
-                            checked={Array.isArray(item.value) && item.value.includes(option)}
-                            onChange={(e) => {
-                              const currentValues = Array.isArray(item.value) ? item.value : [];
-                              const newValues = e.target.checked
-                                ? [...currentValues, option]
-                                : currentValues.filter(v => v !== option);
-                              handleItemUpdate(currentRoom.id, item.id, newValues);
-                            }}
-                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                          />
-                          <span className="ml-2 text-sm text-gray-700">{option}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {item.type === 'photo' && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {item.photos?.map((photo, index) => (
-                          <div key={index} className="relative group">
-                            {loadingPhotoUrls.has(photo) ? (
-                              <div className="w-40 h-40 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
-                              </div>
-                            ) : (
-                            <img
-                              src={signedPhotoUrls.get(photo) || photo}
-                              alt={`Photo ${index + 1}`}
-                              className="w-40 h-40 object-cover rounded-lg border border-gray-200"
-                              onError={(e) => {
-                                console.error('=== PHOTO PREVIEW ERROR ===');
-                                console.error('Failed to load photo preview for:', photo);
-                                console.error('Signed URL attempted:', signedPhotoUrls.get(photo));
-                                console.error('Fallback original URL:', photo);
-                                console.error('Image element src attribute:', e.currentTarget.src);
-                                console.error('Image element naturalWidth:', e.currentTarget.naturalWidth);
-                                console.error('Image element naturalHeight:', e.currentTarget.naturalHeight);
-                                console.error('Image element complete:', e.currentTarget.complete);
-                                console.error('Error event details:', {
-                                  type: e.type,
-                                  target: e.target,
-                                  currentTarget: e.currentTarget
-                                });
-                                console.error('All signed URLs in map:', Array.from(signedPhotoUrls.entries()));
-                                console.error('=== END PHOTO PREVIEW ERROR ===');
-                                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDEyQzIxIDEzLjEgMjAuMSAxNCAyMCAxNEg0QzIuOSAxNCAyIDEzLjEgMiAxMlY2QzIgNC45IDIuOSA0IDQgNEgyMEMyMS4xIDQgMjIgNC45IDIyIDZWMTJaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0iI0Y5RkFGQiIvPgo8cGF0aCBkPSJNOSA5QzEwLjEgOSAxMSA4LjEgMTEgN0MxMSA1LjkgMTAuMSA1IDkgNUM3LjkgNSA3IDUuOSA3IDdDNyA4LjEgNy45IDkgOSA5WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMjEgMTVMMTggMTJMMTUgMTVNOSAxNUw2IDEyTDMgMTUiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+';
-                              }}
-                            />
-                            )}
-                            <button
-                              onClick={() => handleRemovePhoto(currentRoom.id, item.id, index)}
-                              className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        ))}
-                        
-                        <label className="flex flex-col items-center justify-center w-40 h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors">
-                          <div className="flex flex-col items-center justify-center">
-                            {uploadingPhotos.has(item.id) ? (
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
-                            ) : (
-                              <>
-                                <Camera size={20} className="text-gray-400 mb-1" />
-                                <span className="text-xs text-gray-500 text-center">Take Photo</span>
-                              </>
-                            )}
-                          </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={(e) => e.target.files && handlePhotoUpload(currentRoom.id, item.id, e.target.files)}
-                            className="hidden"
-                            disabled={uploadingPhotos.has(item.id)}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {item.type === 'text' && (
-                    <textarea
-                      className="mt-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                      rows={3}
-                      value={item.value as string || ''}
-                      onChange={(e) => handleItemUpdate(currentRoom.id, item.id, e.target.value)}
-                      placeholder="Enter notes here..."
-                    />
-                  )}
-                  
-                  {(item.type === 'single_choice' || item.type === 'multiple_choice' || item.type === 'photo') && (
-                    <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                      <textarea
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                        rows={2}
-                        value={item.notes || ''}
-                        onChange={(e) => handleItemUpdate(currentRoom.id, item.id, e.target.value, 'notes')}
-                        placeholder="Add any additional notes..."
-                      />
-                    </div>
-                  )}
-                  
-                  {/* Mark for Report Option */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={item.markedForReport || false}
-                        onChange={(e) => handleItemUpdate(currentRoom.id, item.id, e.target.checked, 'markedForReport')}
-                        className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                      />
-                      <Flag className="ml-2 mr-1 h-4 w-4 text-red-500" />
-                      <span className="text-sm font-medium text-gray-900">Mark for Report</span>
-                    </label>
-                    <p className="mt-1 text-xs text-gray-500 ml-6">
-                      Check this box to send an email alert about this item when the inspection is completed
-                    </p>
-                    
-                    {/* Report Recipient Dropdown */}
-                    {item.markedForReport && (
-                      <div className="mt-3 ml-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Report Recipient *
-                        </label>
-                        <select
-                          value={item.reportRecipientId || ''}
-                          onChange={(e) => handleReportRecipientUpdate(currentRoom.id, item.id, e.target.value)}
-                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          required={item.markedForReport}
-                        >
-                          <option value="">Select a team...</option>
-                          {reportServiceTeams.map((team) => (
-                            <option key={team.id} value={team.id}>
-                              {team.designation} ({team.email})
-                            </option>
-                          ))}
-                        </select>
-                        {reportServiceTeams.length === 0 && (
-                          <p className="mt-1 text-xs text-amber-600">
-                            No teams available. Add teams in Company Settings first.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Navigation buttons */}
-      <div className="mt-8 flex justify-between items-center">
-        <Button
-          variant="secondary"
-          onClick={() => setCurrentStep(currentStep - 1)}
-          disabled={isFirstStep}
-          leftIcon={<ArrowLeft size={16} />}
-        >
-          Previous
-        </Button>
-        
-        <div className="flex space-x-3">
-          <Button
-            variant="outline"
-            leftIcon={<Save size={16} />}
-            onClick={handleSaveInspection}
-            isLoading={saving}
-          >
-            Save Progress
-          </Button>
-          
-          {isLastStep ? (
-            <Button
-              leftIcon={<Send size={16} />}
-              onClick={handleCompleteInspection}
-              disabled={completing}
-              isLoading={completing}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Complete Inspection
-            </Button>
-          ) : (
-            <Button
-              onClick={() => setCurrentStep(currentStep + 1)}
-              disabled={!canProceedToNext()}
-              rightIcon={<ArrowRight size={16} />}
-            >
-              Next
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Required fields warning */}
-      {!canProceedToNext() && !isLastStep && (
-        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="flex">
-            <AlertTriangle className="h-5 w-5 text-amber-400 mt-0.5 mr-2" />
-            <div>
-              <h4 className="text-sm font-medium text-amber-800">Required fields missing</h4>
-              <p className="text-sm text-amber-700 mt-1">
-                Please complete all required fields before proceeding to the next section.
-              </p>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progressPercentage}%` }}
+              />
             </div>
           </div>
         </div>
       )}
+
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {showSignatures ? (
+          /* Signature Page */
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <div className="text-center mb-8">
+              <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Complete Inspection</h2>
+              <p className="text-gray-600">Please provide signatures to finalize the inspection</p>
+            </div>
+
+            {/* Inspection Summary */}
+            <div className="bg-gray-50 rounded-lg p-6 mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Inspection Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">Property:</span>
+                  <span className="ml-2 text-gray-600">{property?.name}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Type:</span>
+                  <span className="ml-2 text-gray-600 capitalize">
+                    {inspection.inspection_type?.replace('_', '-')}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Inspector:</span>
+                  <span className="ml-2 text-gray-600">{inspection.inspector_name}</span>
+                </div>
+                {inspection.primary_contact_name && (
+                  <div>
+                    <span className="font-medium text-gray-700">Contact:</span>
+                    <span className="ml-2 text-gray-600">{inspection.primary_contact_name}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Client Present Checkbox */}
+            <div className="mb-8">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={clientPresent}
+                  onChange={(e) => setClientPresent(e.target.checked)}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm font-medium text-gray-900">
+                  Client is present for signature
+                </span>
+              </label>
+              <p className="mt-1 text-xs text-gray-500">
+                Check this if the client/guest is available to sign the inspection report
+              </p>
+            </div>
+
+            {/* Signatures */}
+            <div className="space-y-8">
+              {/* Inspector Signature */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <UserCheck className="w-5 h-5 mr-2" />
+                    Inspector Signature
+                  </h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => clearSignature('inspector')}
+                  >
+                    Clear
+                  </Button>
+                </div>
+                <div className="border-2 border-gray-300 rounded-lg bg-white flex justify-center">
+                  <SignatureCanvas
+                    ref={inspectorSignatureRef}
+                    canvasProps={{
+                      width: 320,
+                      height: 320,
+                      className: 'signature-canvas'
+                    }}
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  Inspector: {inspection.inspector_name}
+                </p>
+              </div>
+
+              {/* Client Signature (conditional) */}
+              {clientPresent && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <User className="w-5 h-5 mr-2" />
+                      {inspection.inspection_type?.includes('check') ? 'Guest' : 'Client'} Signature
+                    </h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => clearSignature('client')}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  <div className="border-2 border-gray-300 rounded-lg bg-white flex justify-center">
+                    <SignatureCanvas
+                      ref={clientSignatureRef}
+                      canvasProps={{
+                        width: 320,
+                        height: 320,
+                        className: 'signature-canvas'
+                      }}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    {inspection.inspection_type?.includes('check') ? 'Guest' : 'Client'}: {inspection.primary_contact_name || 'Present'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Complete Button */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <div className="flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={handlePrevious}
+                  leftIcon={<ArrowLeft size={16} />}
+                >
+                  Back to Inspection
+                </Button>
+                <Button
+                  onClick={handleCompleteInspection}
+                  isLoading={completing}
+                  leftIcon={<CheckCircle size={16} />}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Complete Inspection
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Inspection Steps */
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            {currentDisplayStep && (
+              <div className="space-y-8">
+                {/* Section Header (if this is a section step) */}
+                {currentDisplayStep.type === 'section' && currentDisplayStep.sectionName && (
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                      {currentDisplayStep.sectionName}
+                    </h2>
+                    <p className="text-gray-600">
+                      Complete all items in this section
+                    </p>
+                  </div>
+                )}
+
+                {/* Render all items for this step */}
+                <div className="space-y-8">
+                  {currentDisplayStep.items.map((item, index) => (
+                    <div key={item.id} className="border-b border-gray-100 pb-8 last:border-b-0 last:pb-0">
+                      <InspectionItemRenderer
+                        item={item}
+                        inspectionId={inspection.id}
+                        onUpdate={handleItemUpdate}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div className="flex justify-between items-center pt-8 border-t border-gray-200">
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 0 && !showSignatures}
+                leftIcon={<ArrowLeft size={16} />}
+              >
+                Previous
+              </Button>
+
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={handleSaveProgress}
+                  isLoading={saving}
+                  leftIcon={<Save size={16} />}
+                >
+                  Save Progress
+                </Button>
+                <Button
+                  onClick={handleNext}
+                  rightIcon={<ArrowRight size={16} />}
+                >
+                  {currentStep === totalSteps - 1 ? 'Complete Inspection' : 'Next'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
