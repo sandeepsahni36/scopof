@@ -419,17 +419,6 @@ const TemplateDetailPage = () => {
     console.log('Current fields before drag:', fields.map(f => ({ id: f.id, label: f.label, parentId: f.parentId })));
 
     // Find the dragged item
-    let draggedItem;
-    if (source.droppableId === 'template-items') {
-      // Dragging from root level
-      draggedItem = rootDraggableItems[source.index];
-    } else if (source.droppableId.startsWith('section-')) {
-      // Dragging from within a section
-      const sectionId = source.droppableId.replace('section-', '');
-      const sectionChildren = fields.filter(field => field.parentId === sectionId);
-      draggedItem = sectionChildren[source.index];
-    }
-    // Find the source actual index in the fields array
     const sourceActualIndex = fields.findIndex(field => field.id === result.draggableId);
     
     if (sourceActualIndex === -1) {
