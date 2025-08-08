@@ -539,13 +539,7 @@ const TemplateDetailPage = () => {
                     {fields.length === 0 && (
                       <div className="flex items-center justify-center h-48 text-gray-400">
                         <div className="text-center">
-                          <FolderPlus className="h-12 w
-                  )
-                  }
-              )
-              }
-  )
-}-12 mx-auto mb-4" />
+                          <FolderPlus className="h-12 w-12 mx-auto mb-4" />
                           <p className="text-lg font-medium">No items yet</p>
                           <p className="text-sm">Add sections and items using the buttons below</p>
                         </div>
