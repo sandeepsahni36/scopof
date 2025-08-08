@@ -204,8 +204,9 @@ const TemplateDetailPage = () => {
   };
 
   const handleAddItem = (type: TemplateItemType, parentIndex?: number) => {
+    const newItemId = uuidv4();
     const newItem = {
-      id: uuidv4(),
+      id: newItemId,
       parentId: parentIndex !== undefined ? fields[parentIndex].id : undefined,
       type,
       label: '',
@@ -215,6 +216,13 @@ const TemplateDetailPage = () => {
       reportEnabled: false,
       reportRecipientId: undefined,
     };
+
+    console.log('Adding new item:', {
+      id: newItemId,
+      parentId: newItem.parentId,
+      type: type,
+      parentIndex: parentIndex
+    });
 
     if (parentIndex !== undefined) {
       // Add after the parent section and its children
