@@ -162,7 +162,7 @@ const TemplateDetailPage = () => {
       // Convert flat items back to API format
       const apiItems = data.items.map((item, index) => ({
         id: item.id, // Preserve the client-side ID for mapping
-        parentId: item.parentId,
+        parentId: item.parentId || undefined, // Ensure undefined instead of null
         type: item.type,
         label: item.label,
         sectionName: item.sectionName,
@@ -180,6 +180,36 @@ const TemplateDetailPage = () => {
       apiItems.forEach((item, index) => {
         console.log(`API Item ${index}: order=${item.order} (parent: ${item.parentId || 'none'}) - ${item.label} (type: ${item.type})`);
       });
+      
+      // Log parent-child relationships to debug mapping issues
+      console.log('=== PARENT-CHILD RELATIONSHIP DEBUG ===');
+      const parentChildMap = new Map<string, string[]>();
+      apiItems.forEach(item => {
+        if (item.parentId) {
+          if (!parentChildMap.has(item.parentId)) {
+            parentChildMap.set(item.parentId, []);
+          }
+          parentChildMap.get(item.parentId)!.push(item.id);
+        }
+      });
+      
+      console.log('Parent-child relationships:');
+      parentChildMap.forEach((children, parentId) => {
+        const parentItem = apiItems.find(item => item.id === parentId);
+        console.log(`Parent: ${parentId} (${parentItem?.label || 'NOT FOUND'}) -> Children: [${children.join(', ')}]`);
+      });
+      
+      // Check for orphaned children (children whose parents don't exist)
+      const allParentIds = new Set(apiItems.map(item => item.id));
+      const orphanedChildren = apiItems.filter(item => item.parentId && !allParentIds.has(item.parentId));
+      if (orphanedChildren.length > 0) {
+        console.error('ORPHANED CHILDREN DETECTED:', orphanedChildren.map(child => ({
+          id: child.id,
+          label: child.label,
+          parentId: child.parentId
+        })));
+      }
+      console.log('=== END PARENT-CHILD RELATIONSHIP DEBUG ===');
       if (isNew) {
         console.log('Creating new template...');
         const result = await createTemplate(templateData, apiItems);
