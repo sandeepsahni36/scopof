@@ -161,6 +161,23 @@
 - Fixed property date display showing "Invalid Date" by properly mapping database snake_case fields to camelCase
 - Applied date field mapping to all property operations (get, create, update)
 
+## 2025-01-17
+
+### Fixed
+- Fixed nested drag and drop functionality in template editor
+- Resolved "Cannot read properties of undefined (reading 'id')" error in SectionComponent
+- Items can now be properly dragged into and out of sections
+- Improved template editor stability and user experience
+
+### Changed
+- Refactored SectionComponent and ItemComponent to work with parent-managed Draggable wrappers
+- Enhanced handleDragEnd logic to support cross-section item movement
+- Updated template editor to use multiple droppable areas for better organization
+
+## 2025-01-16
+
+### Added
+
 ## [2025-01-31] - Fix Property Date Display in Detail View
 
 ### Fixed
