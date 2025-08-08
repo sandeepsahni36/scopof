@@ -248,12 +248,19 @@ const TemplateDetailPage = () => {
     const sectionId = fields[sectionIndex].id;
     return fields
       .map((field, index) => ({ field, index }))
-      .filter(({ field }) => field.parentId === sectionId);
+      .filter(({ field }) => field.parentId === sectionId)
+      .map(({ field, index }) => ({ item: field, index }));
   };
 
   const isChildOfSection = (itemIndex: number) => {
     return fields[itemIndex].parentId !== undefined;
   };
+
+  const getActualFieldIndex = (item: any) => {
+    return fields.findIndex(field => field.id === item.id);
+  };
+
+  const rootDraggableItems = fields.filter(field => !field.parentId);
 
   const handleDragEnd = (result: DropResult) => {
     const { destination, source } = result;
@@ -268,47 +275,72 @@ const TemplateDetailPage = () => {
       return;
     }
 
-    console.log('Drag operation:', {
-      sourceDroppableId: source.droppableId,
-      destinationDroppableId: destination.droppableId,
-      sourceIndex: source.index,
-      destinationIndex: destination.index
-    });
+    // Get the actual item being dragged
+    let draggedItem;
+    let sourceActualIndex;
 
-    // Handle different types of moves
-    if (source.droppableId === destination.droppableId) {
-      // Same droppable area - simple reorder
-      if (source.droppableId === 'template-items') {
-        // Root level reorder
-        move(source.index, destination.index);
+    if (source.droppableId === 'template-items') {
+      // Dragging from root level
+      draggedItem = rootDraggableItems[source.index];
+      sourceActualIndex = getActualFieldIndex(draggedItem);
+    } else if (source.droppableId.startsWith('section-')) {
+      // Dragging from within a section
+      const sectionId = source.droppableId.replace('section-', '');
+      const sectionChildren = fields.filter(field => field.parentId === sectionId);
+      draggedItem = sectionChildren[source.index];
+      sourceActualIndex = getActualFieldIndex(draggedItem);
+    }
+
+    if (!draggedItem || sourceActualIndex === -1) {
+      console.error('Could not find dragged item');
+      return;
+    }
+
+    // Determine new parent ID based on destination
+    let newParentId = null;
+    if (destination.droppableId.startsWith('section-')) {
+      newParentId = destination.droppableId.replace('section-', '');
+    }
+
+    // Update the item's parentId
+    setValue(`items.${sourceActualIndex}.parentId`, newParentId);
+
+    // Calculate the new insertion index in the flat fields array
+    let newInsertionIndex;
+
+    if (destination.droppableId === 'template-items') {
+      // Moving to root level
+      if (destination.index === 0) {
+        newInsertionIndex = 0;
       } else {
-        // Section children reorder - need to find actual indices in fields array
-        const sourceItem = fields[source.index];
-        const destinationItem = fields[destination.index];
-        move(source.index, destination.index);
+        const targetRootItem = rootDraggableItems[destination.index - 1];
+        const targetActualIndex = getActualFieldIndex(targetRootItem);
+        newInsertionIndex = targetActualIndex + 1;
       }
     } else {
-      // Different droppable areas - need to update parent relationships
-      const draggedItem = fields[source.index];
+      // Moving to a section
+      const targetSectionId = destination.droppableId.replace('section-', '');
+      const sectionIndex = fields.findIndex(field => field.id === targetSectionId);
       
-      // Determine new parent ID
-      let newParentId = null;
-      if (destination.droppableId.startsWith('section-')) {
-        newParentId = destination.droppableId.replace('section-', '');
+      if (destination.index === 0) {
+        // Insert right after the section
+        newInsertionIndex = sectionIndex + 1;
+      } else {
+        // Find the target child item and insert after it
+        const sectionChildren = fields.filter(field => field.parentId === targetSectionId);
+        const targetChild = sectionChildren[destination.index - 1];
+        const targetChildActualIndex = getActualFieldIndex(targetChild);
+        newInsertionIndex = targetChildActualIndex + 1;
       }
-      
-      // Update the item's parentId
-      setValue(`items.${source.index}.parentId`, newParentId);
-      
-      // Move the item in the array
-      move(source.index, destination.index);
-      
-      console.log('Updated parent relationship:', {
-        itemId: draggedItem.id,
-        oldParentId: draggedItem.parentId,
-        newParentId: newParentId
-      });
     }
+
+    // Adjust insertion index if moving within the same array
+    if (sourceActualIndex < newInsertionIndex) {
+      newInsertionIndex--;
+    }
+
+    // Perform the move
+    move(sourceActualIndex, newInsertionIndex);
   };
 
   if (initialLoading) {
@@ -396,54 +428,57 @@ const TemplateDetailPage = () => {
                         </div>
                       </div>
                     )}
-                    {fields.map((field, index) => {
+                    {rootDraggableItems.map((field, rootIndex) => {
+                      const actualFieldIndex = getActualFieldIndex(field);
                       const isSection = field.type === 'section';
-                      const isChild = isChildOfSection(index);
-                      const isExpanded = expandedSections.has(index);
-                      const sectionChildren = isSection ? getSectionChildren(index) : [];
+                      const isExpanded = expandedSections.has(actualFieldIndex);
+                      const sectionChildren = isSection ? getSectionChildren(actualFieldIndex) : [];
 
-                      // Don't render child items directly - they're rendered within sections
-                      if (isChild) {
-                        return null;
-                      }
-
-                      if (isSection) {
-                        return (
-                          <SectionComponent
-                            key={field.id}
-                            section={field}
-                            sectionIndex={index}
-                            children={sectionChildren}
-                            isExpanded={isExpanded}
-                            register={register}
-                            watch={watch}
-                            setValue={setValue}
-                            errors={errors}
-                            onRemove={remove}
-                            onToggleExpansion={toggleSection}
-                            onAddItem={handleAddItem}
-                            onAddOption={addOptionToItem}
-                            onRemoveOption={removeOptionFromItem}
-                            reportServiceTeams={reportServiceTeams}
-                          />
-                        );
-                      } else {
-                        return (
-                          <ItemComponent
-                            key={field.id}
-                            item={field}
-                            index={index}
-                            register={register}
-                            watch={watch}
-                            setValue={setValue}
-                            errors={errors}
-                            onRemove={remove}
-                            onAddOption={addOptionToItem}
-                            onRemoveOption={removeOptionFromItem}
-                            reportServiceTeams={reportServiceTeams}
-                          />
-                        );
-                      }
+                      return (
+                        <Draggable key={field.id} draggableId={field.id} index={rootIndex}>
+                          {(provided, snapshot) => {
+                            if (isSection) {
+                              return (
+                                <SectionComponent
+                                  section={field}
+                                  sectionIndex={actualFieldIndex}
+                                  children={sectionChildren}
+                                  isExpanded={isExpanded}
+                                  provided={provided}
+                                  snapshot={snapshot}
+                                  register={register}
+                                  watch={watch}
+                                  setValue={setValue}
+                                  errors={errors}
+                                  onRemove={remove}
+                                  onToggleExpansion={toggleSection}
+                                  onAddItem={handleAddItem}
+                                  onAddOption={addOptionToItem}
+                                  onRemoveOption={removeOptionFromItem}
+                                  reportServiceTeams={reportServiceTeams}
+                                />
+                              );
+                            } else {
+                              return (
+                                <ItemComponent
+                                  item={field}
+                                  index={actualFieldIndex}
+                                  provided={provided}
+                                  snapshot={snapshot}
+                                  register={register}
+                                  watch={watch}
+                                  setValue={setValue}
+                                  errors={errors}
+                                  onRemove={remove}
+                                  onAddOption={addOptionToItem}
+                                  onRemoveOption={removeOptionFromItem}
+                                  reportServiceTeams={reportServiceTeams}
+                                />
+                              );
+                            }
+                          }}
+                        </Draggable>
+                      );
                     })}
                     {provided.placeholder}
                   </div>
