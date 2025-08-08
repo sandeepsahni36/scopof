@@ -345,6 +345,50 @@ const TemplateDetailPage = () => {
     return fields.findIndex(field => field.id === item.id);
   };
 
+  const sortHierarchicalItems = (items: FormValues['items']): FormValues['items'] => {
+    const result: FormValues['items'] = [];
+    const itemMap = new Map<string, FormValues['items'][0]>();
+    
+    // Create a map of all items by ID
+    items.forEach(item => {
+      itemMap.set(item.id, item);
+    });
+    
+    // Helper function to add an item and its children recursively
+    const addItemWithChildren = (item: FormValues['items'][0]) => {
+      result.push(item);
+      
+      // Find and add all direct children of this item
+      const children = items
+        .filter(child => child.parentId === item.id)
+        .sort((a, b) => {
+          // Sort children by their current position in the original array
+          const aIndex = items.findIndex(i => i.id === a.id);
+          const bIndex = items.findIndex(i => i.id === b.id);
+          return aIndex - bIndex;
+        });
+      
+      children.forEach(child => {
+        addItemWithChildren(child);
+      });
+    };
+    
+    // First, add all root items (items without parentId)
+    const rootItems = items
+      .filter(item => !item.parentId)
+      .sort((a, b) => {
+        // Sort root items by their current position in the original array
+        const aIndex = items.findIndex(i => i.id === a.id);
+        const bIndex = items.findIndex(i => i.id === b.id);
+        return aIndex - bIndex;
+      });
+    
+    rootItems.forEach(rootItem => {
+      addItemWithChildren(rootItem);
+    });
+    
+    return result;
+  };
   const rootDraggableItems = fields.filter(field => !field.parentId);
 
   const handleDragEnd = (result: DropResult) => {
@@ -391,55 +435,26 @@ const TemplateDetailPage = () => {
     // Determine new parent ID based on destination
     let newParentId = undefined;
     if (destination.droppableId.startsWith('section-')) {
-      const targetSectionId = destination.droppableId.replace('section-', '');
-      // Find the actual section item to get its current ID
-      const targetSection = currentItems.find(field => field.id === targetSectionId);
-      if (targetSection) {
-        newParentId = targetSection.id;
-      } else {
-        console.error('Target section not found:', targetSectionId);
-        return;
-      }
+      newParentId = destination.droppableId.replace('section-', '');
     }
 
     // Update the item's parentId
     const updatedItem = { ...itemToMove, parentId: newParentId };
 
-    // Calculate the new insertion index in the updated array
-    let newInsertionIndex;
-
-    if (destination.droppableId === 'template-items') {
-      // Moving to root level
-      if (destination.index === 0) {
-        newInsertionIndex = 0;
-      } else {
-        const rootItems = currentItems.filter(field => !field.parentId);
-        const targetRootItem = rootItems[destination.index - 1];
-        const targetActualIndex = currentItems.findIndex(field => field.id === targetRootItem.id);
-        newInsertionIndex = targetActualIndex + 1;
-      }
-    } else {
-      // Moving to a section
-      const targetSectionId = destination.droppableId.replace('section-', '');
-      const sectionIndex = currentItems.findIndex(field => field.id === targetSectionId);
-      
-      if (destination.index === 0) {
-        // Insert right after the section
-        newInsertionIndex = sectionIndex + 1;
-      } else {
-        // Find the target child item and insert after it
-        const sectionChildren = currentItems.filter(field => field.parentId === targetSectionId);
-        const targetChild = sectionChildren[destination.index - 1];
-        const targetChildActualIndex = currentItems.findIndex(field => field.id === targetChild.id);
-        newInsertionIndex = targetChildActualIndex + 1;
-      }
-    }
-
-    // Insert the updated item at the new position
-    currentItems.splice(newInsertionIndex, 0, updatedItem);
+    // Add the updated item back to the array (position doesn't matter, we'll sort it)
+    currentItems.push(updatedItem);
+    
+    // Sort the entire array to maintain hierarchical structure
+    const sortedItems = sortHierarchicalItems(currentItems);
+    
+    // Re-assign order property based on final sorted position
+    const finalItems = sortedItems.map((item, index) => ({
+      ...item,
+      order: index + 1
+    }));
 
     // Update the entire form state atomically
-    setValue('items', currentItems);
+    setValue('items', finalItems);
   };
 
   if (initialLoading) {
