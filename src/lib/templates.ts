@@ -526,11 +526,6 @@ export async function createTemplate(
 
     console.log('Template created successfully:', template);
     // Create template items with hierarchy support
-      console.log('Items after topological sort:', sortedItems);
-      console.log('Sort order comparison:');
-      sortedItems.forEach((item, index) => {
-        console.log(`  ${index}: ${item.id} (parent: ${item.parentId || 'none'}) - ${item.label}`);
-      });
     if (items.length > 0) {
       // Insert items sequentially to handle parent-child relationships
       const templateItems = [];
@@ -739,11 +734,6 @@ export async function updateTemplate(
     if (items.length > 0) {
       // Insert items sequentially to handle parent-child relationships
       const templateItems = [];
-      console.log('Items after topological sort:', sortedItems);
-      console.log('Sort order comparison:');
-      sortedItems.forEach((item, index) => {
-        console.log(`  ${index}: ${item.id} (parent: ${item.parentId || 'none'}) - ${item.label}`);
-      });
       const clientIdToDbIdMap = new Map<string, string>();
       console.log('Starting sequential item insertion...');
       
