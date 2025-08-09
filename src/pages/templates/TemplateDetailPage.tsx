@@ -211,10 +211,23 @@ const TemplateDetailPage = () => {
   };
 
   const handleAddItem = (type: TemplateItemType, parentIndex?: number) => {
+    const currentItems = watch('items') || [];
     const newItemId = uuidv4();
+    
+    let parentId: string | undefined;
+    
+    if (parentIndex !== undefined) {
+      const parentItem = currentItems[parentIndex];
+      if (!parentItem || parentItem.type !== 'section') {
+        console.error('Invalid parent for new item:', { parentIndex, parentItem });
+        return;
+      }
+      parentId = parentItem.id;
+    }
+    
     const newItem = {
       id: newItemId,
-      parentId: parentIndex !== undefined ? fields[parentIndex].id : undefined,
+      parentId: parentId,
       type,
       label: '',
       sectionName: type === 'section' ? '' : undefined,
@@ -226,20 +239,28 @@ const TemplateDetailPage = () => {
 
     console.log('Adding new item:', {
       id: newItemId,
-      parentId: newItem.parentId,
+      parentId: parentId,
       type: type,
       parentIndex: parentIndex
     });
 
+    let newItems: FormValues['items'];
+    
     if (parentIndex !== undefined) {
-      // Add after the parent section and its children
-      const insertIndex = findInsertIndexAfterSection(parentIndex);
-      append(newItem);
-      // Move the new item to the correct position
-      move(fields.length, insertIndex);
+      // Insert after the parent section and its existing children
+      const insertIndex = findInsertIndexAfterSectionInArray(parentIndex, currentItems);
+      newItems = [
+        ...currentItems.slice(0, insertIndex),
+        newItem,
+        ...currentItems.slice(insertIndex)
+      ];
     } else {
-      append(newItem);
+      // Add to the end for root level items
+      newItems = [...currentItems, newItem];
     }
+    
+    // Update form atomically
+    setValue('items', newItems, { shouldDirty: true });
   };
 
 
