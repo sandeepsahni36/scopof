@@ -206,14 +206,6 @@ const TemplateDetailPage = () => {
       
       // Check for orphaned children (children whose parents don't exist)
       const allParentIds = new Set(apiItems.map(item => item.id));
-      const orphanedChildren = apiItems.filter(item => item.parentId && !allParentIds.has(item.parentId));
-      if (orphanedChildren.length > 0) {
-        console.error('ORPHANED CHILDREN DETECTED:', orphanedChildren.map(child => ({
-          id: child.id,
-          label: child.label,
-          parentId: child.parentId
-        })));
-      }
       console.log('=== END PARENT-CHILD RELATIONSHIP DEBUG ===');
       if (isNew) {
         console.log('Creating new template...');
@@ -275,16 +267,56 @@ const TemplateDetailPage = () => {
     const sectionId = fields[sectionIndex].id;
     let insertIndex = sectionIndex + 1;
     
-    // Find the end of this section's children
-    for (let i = sectionIndex + 1; i < fields.length; i++) {
-      if (fields[i].parentId === sectionId) {
-        insertIndex = i + 1;
-      } else {
-        break;
+    const currentItems = watch('items') || [];
+    const newItemId = uuidv4();
+    
+    let parentId: string | undefined;
+    
+    if (parentIndex !== undefined) {
+      const parentItem = currentItems[parentIndex];
+      if (!parentItem || parentItem.type !== 'section') {
+        console.error('Invalid parent for new item:', { parentIndex, parentItem });
+        return;
       }
+      parentId = parentItem.id;
     }
     
-    return insertIndex;
+    const newItem = {
+      id: newItemId,
+      parentId: parentId,
+      type,
+      label: '',
+      sectionName: type === 'section' ? '' : undefined,
+      required: false,
+      options: type === 'single_choice' || type === 'multiple_choice' ? [''] : undefined,
+      reportEnabled: false,
+      reportRecipientId: undefined,
+    };
+
+    console.log('Adding new item:', {
+      id: newItemId,
+      parentId: parentId,
+      type: type,
+      parentIndex: parentIndex
+    });
+
+    let newItems: FormValues['items'];
+    
+    if (parentIndex !== undefined) {
+      // Insert after the parent section and its existing children
+      const insertIndex = findInsertIndexAfterSectionInArray(parentIndex, currentItems);
+      newItems = [
+        ...currentItems.slice(0, insertIndex),
+        newItem,
+        ...currentItems.slice(insertIndex)
+      ];
+    } else {
+      // Add to the end for root level items
+      newItems = [...currentItems, newItem];
+    }
+    
+    // Update form atomically
+    setValue('items', newItems, { shouldDirty: true });
   };
 
   const addOptionToItem = (itemIndex: number) => {
@@ -299,28 +331,72 @@ const TemplateDetailPage = () => {
   };
 
   const handleRemoveItem = (itemIndex: number) => {
-    const itemToRemove = fields[itemIndex];
+    // Get current items from form state
+    const currentItems = watch('items') || [];
+    const itemToRemove = currentItems[itemIndex];
     
-    // If removing a section, atomically clean up orphaned children
+    if (!itemToRemove) {
+      console.error('Item to remove not found at index:', itemIndex);
+      return;
+    }
+    
+    console.log('Removing item:', { id: itemToRemove.id, type: itemToRemove.type, label: itemToRemove.label });
+    
+    let newItems: FormValues['items'];
+    
     if (itemToRemove.type === 'section') {
+      // When removing a section, move all children to root level
       const sectionId = itemToRemove.id;
       
-      // Create new items array with orphaned children moved to root level and section removed
-      const newItems = fields
+      newItems = currentItems
         .filter((_, index) => index !== itemIndex) // Remove the section
-        .map(field => {
-          // If this item was a child of the removed section, move it to root level
-          if (field.parentId === sectionId) {
-            return { ...field, parentId: undefined };
+        .map(item => {
+          // Move children of removed section to root level
+          if (item.parentId === sectionId) {
+            console.log('Moving child to root level:', { id: item.id, label: item.label });
+            return { ...item, parentId: undefined };
           }
-          return field;
+          return item;
         });
-      
-      // Update the entire items array atomically
-      setValue('items', newItems);
     } else {
-      // For non-section items, just remove normally
-      remove(itemIndex);
+      // For non-section items, just remove the item
+      newItems = currentItems.filter((_, index) => index !== itemIndex);
+    }
+    
+    // Validate no orphaned children exist after removal
+    const allItemIds = new Set(newItems.map(item => item.id));
+    const orphanedChildren = newItems.filter(item => 
+      item.parentId && !allItemIds.has(item.parentId)
+    );
+    
+    if (orphanedChildren.length > 0) {
+      console.error('Orphaned children would be created, fixing:', orphanedChildren);
+      // Move orphaned children to root level
+      newItems = newItems.map(item => {
+        if (item.parentId && !allItemIds.has(item.parentId)) {
+          return { ...item, parentId: undefined };
+        }
+        return item;
+      });
+    }
+    
+    // Update the form atomically
+    setValue('items', newItems, { shouldDirty: true });
+    
+    // Update expanded sections if we removed a section
+    if (itemToRemove.type === 'section') {
+      const newExpanded = new Set(expandedSections);
+      newExpanded.delete(itemIndex);
+      // Update indices for remaining sections
+      const updatedExpanded = new Set<number>();
+      newExpanded.forEach(index => {
+        if (index > itemIndex) {
+          updatedExpanded.add(index - 1);
+        } else {
+          updatedExpanded.add(index);
+        }
+      });
+      setExpandedSections(updatedExpanded);
     }
   };
 
