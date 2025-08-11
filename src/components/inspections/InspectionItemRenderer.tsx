@@ -46,6 +46,14 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
 
   // Debounced save effect
   useEffect(() => {
+    // Don't auto-save if there are no changes
+    const hasChanges = value !== item.value || 
+                      notes !== (item.notes || '') || 
+                      markedForReport !== (item.marked_for_report || false) || 
+                      reportRecipientId !== (item.report_recipient_id || '');
+    
+    if (!hasChanges) return;
+    
     const timeoutId = setTimeout(() => {
       if (!saving) {
         debouncedSave();
@@ -121,18 +129,17 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
   const debouncedSave = async () => {
     if (saving) return;
     
+    // Only save if there are actual changes to prevent unnecessary database calls
+    const hasChanges = value !== item.value || 
+                      notes !== (item.notes || '') || 
+                      markedForReport !== (item.marked_for_report || false) || 
+                      reportRecipientId !== (item.report_recipient_id || '');
+    
+    if (!hasChanges) return;
+    
     try {
       setSaving(true);
-      
-      // Only save if there are actual changes to prevent unnecessary database calls
-      const hasChanges = value !== item.value || 
-                        notes !== (item.notes || '') || 
-                        markedForReport !== (item.marked_for_report || false) || 
-                        reportRecipientId !== (item.report_recipient_id || '');
-      
-      if (hasChanges) {
-        await saveChanges({});
-      }
+      await saveChanges({});
     } catch (error) {
       console.error('Error in debounced save:', error);
       // Don't show toast for timeout errors to avoid spam
@@ -326,7 +333,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
                     className={`p-2 rounded-lg border-2 transition-all text-sm font-medium ${
                       isSelected
                         ? 'border-gray-800 shadow-md scale-105'
-                        : 'border-gray-300 hover:border-gray-400 hover:shadow-sm'
+                        : 'border-gray-300 hover:border-gray-400 hover:shadow-sm opacity-70'
                     }`}
                     style={{ 
                       backgroundColor: isSelected ? optionData.color : `${optionData.color}40`,
@@ -366,7 +373,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
                     className={`p-2 rounded-lg border-2 transition-all text-sm font-medium ${
                       isSelected
                         ? 'border-gray-800 shadow-md scale-105'
-                        : 'border-gray-300 hover:border-gray-400 hover:shadow-sm'
+                        : 'border-gray-300 hover:border-gray-400 hover:shadow-sm opacity-70'
                     }`}
                     style={{ 
                       backgroundColor: isSelected ? optionData.color : `${optionData.color}40`,
