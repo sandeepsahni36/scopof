@@ -1,5 +1,4 @@
-  ChevronLeft,
-import { 
+  import { 
   ChevronLeft,
   LogOut,
   AlertTriangle,
@@ -8,6 +7,10 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
 import BottomNavigation from '../components/layout/BottomNavigation';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 // Import navigation items for desktop sidebar
 import {
@@ -15,6 +18,7 @@ import {
   LayoutTemplate,
   FileText,
   Settings,
+  Building2,
 } from 'lucide-react';
 import { NavItem } from '../types';
 
@@ -74,6 +78,22 @@ const DashboardLayout = () => {
           }}
           transition={{
             duration: 0.3,
+          }}
+          className="bg-white border-r border-gray-200 flex flex-col"
+        >
+          <div className="p-4">
+            <div className="flex items-center">
+              <Link to="/dashboard" className="flex items-center">
+                <AnimatePresence>
+                  {!isCollapsed && (
+                    <motion.span
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 'auto' }}
+                      exit={{ opacity: 0, width: 0 }}
+                      className="ml-2 font-semibold text-gray-900"
+                    >
+                      Dashboard
+                    </motion.span>
                   )}
                 </AnimatePresence>
               </Link>
@@ -83,5 +103,15 @@ const DashboardLayout = () => {
               >
                 <ChevronLeft
                   size={20}
-import { 
                   className={`transform transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`}
+                />
+              </button>
+            </div>
+          </div>
+        </motion.aside>
+      </div>
+    </div>
+  );
+};
+
+export default DashboardLayout;
