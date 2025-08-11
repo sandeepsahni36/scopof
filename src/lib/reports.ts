@@ -567,25 +567,137 @@ async function addPhotoToPdf(
 // Helper function to extract file key from URL
 function extractFileKeyFromUrl(url: string): string | null {
   try {
+    console.log('Extracting file key from URL:', url);
     const urlObj = new URL(url);
     const pathParts = urlObj.pathname.split('/');
+    console.log('URL path parts:', pathParts);
+
+    // For MinIO URLs like: https://minio.example.com/bucket-name/company/inspections/...
+    // The file key is everything after the bucket name
+    let fileKey = null;
     
-    // For MinIO URLs, the file key is everything after the bucket name
-    const bucketIndex = pathParts.findIndex(part => part === 'storage-files' || part.includes('bucket'));
-    
-    if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
-      return pathParts.slice(bucketIndex + 1).join('/');
+    // Try different patterns to extract file key
+    if (pathParts.length > 2) {
+      // Skip the first empty element and bucket name, take the rest
+      fileKey = pathParts.slice(2).join('/');
+    } else if (pathParts.length > 1) {
+      fileKey = pathParts.slice(1).join('/');
     }
     
-    // Fallback: try to extract from the path
-    if (pathParts.length > 1) {
-      return pathParts.slice(1).join('/');
-    }
-    
-    return null;
+    console.log('Extracted file key:', fileKey);
+    return fileKey;
   } catch (error) {
     console.error('Error extracting file key from URL:', error);
     return null;
+  }
+}
+
+// Helper function to format duration from seconds
+function formatDuration(durationSeconds: number): string {
+  if (!durationSeconds || durationSeconds <= 0) {
+    return 'N/A';
+  }
+  
+  const hours = Math.floor(durationSeconds / 3600);
+  const minutes = Math.floor((durationSeconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else {
+    return `${minutes}m`;
+  }
+}
+
+// Helper function to add a photo to the PDF with proper error handling
+async function addPhotoToPdf(
+  pdf: any, 
+  photo: { url: string; label: string; fileKey?: string }, 
+  x: number, 
+  y: number, 
+  width: number, 
+  height: number
+) {
+  try {
+    console.log('Adding photo to PDF:', {
+      url: photo.url,
+      fileKey: photo.fileKey,
+      position: { x, y, width, height }
+    });
+
+    let imageDataUrl: string | null = null;
+
+    // Try to get signed URL if we have a file key
+    if (photo.fileKey) {
+      try {
+        console.log('Getting signed URL for file key:', photo.fileKey);
+        const signedUrl = await getSignedUrlForFile(photo.fileKey);
+        console.log('Received signed URL:', signedUrl ? 'Success' : 'Failed');
+        
+        if (signedUrl) {
+          console.log('Loading image from signed URL');
+          imageDataUrl = await loadImageAsDataUrl(signedUrl);
+          console.log('Image loaded from signed URL:', imageDataUrl ? 'Success' : 'Failed');
+        }
+      } catch (error) {
+        console.error('Error getting signed URL for photo:', error);
+      }
+    }
+
+    // Fallback to original URL if signed URL failed
+    if (!imageDataUrl) {
+      try {
+        console.log('Fallback: Loading image from original URL');
+        imageDataUrl = await loadImageAsDataUrl(photo.url);
+        console.log('Image loaded from original URL:', imageDataUrl ? 'Success' : 'Failed');
+      } catch (error) {
+        console.error('Error loading photo from original URL:', error);
+      }
+    }
+
+    if (imageDataUrl) {
+      console.log('Adding image to PDF at position:', { x, y, width, height });
+      // Add photo to PDF
+      pdf.addImage(imageDataUrl, 'JPEG', x, y, width, height);
+      
+      // Add clickable link to original image
+      if (photo.fileKey) {
+        try {
+          const signedUrl = await getSignedUrlForFile(photo.fileKey);
+          if (signedUrl) {
+            pdf.link(x, y, width, height, { url: signedUrl });
+          }
+        } catch (error) {
+          console.error('Error creating photo link:', error);
+        }
+      }
+      console.log('Photo successfully added to PDF');
+    } else {
+      console.warn('No image data available, drawing placeholder');
+      // Fallback: draw placeholder rectangle
+      pdf.setDrawColor('#CCCCCC');
+      pdf.setFillColor('#F5F5F5');
+      pdf.rect(x, y, width, height, 'FD');
+      
+      // Add "Image not available" text
+      pdf.setFontSize(8);
+      pdf.setTextColor('#666666');
+      pdf.text('Image not', x + width/2, y + height/2 - 2, { align: 'center' });
+      pdf.text('available', x + width/2, y + height/2 + 2, { align: 'center' });
+      pdf.setTextColor('#000000');
+    }
+  } catch (error) {
+    console.error('Error adding photo to PDF:', error);
+    
+    // Draw error placeholder
+    pdf.setDrawColor('#FF0000');
+    pdf.setFillColor('#FFE5E5');
+    pdf.rect(x, y, width, height, 'FD');
+    
+    pdf.setFontSize(8);
+    pdf.setTextColor('#FF0000');
+    pdf.text('Error loading', x + width/2, y + height/2 - 2, { align: 'center' });
+    pdf.text('image', x + width/2, y + height/2 + 2, { align: 'center' });
+    pdf.setTextColor('#000000');
   }
 }
 
