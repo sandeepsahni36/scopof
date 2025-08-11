@@ -193,4 +193,26 @@ const AdminSettingsPage = () => {
       }
 
       // Update admin record with new logo URL
-      const { data: adminData, error: adminError } = await su
+      const { data: adminData, error: adminError } = await supabase
+        .from('admin')
+        .update({ logo_url: uploadResult.url })
+        .eq('id', company?.id)
+        .select()
+        .single();
+
+      if (adminError) {
+        throw new Error(adminError.message);
+      }
+
+      // Update logo preview and refresh auth store
+      setLogoPreview(uploadResult.url);
+      await initialize();
+      
+      toast.success('Logo uploaded successfully');
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      toast.error(error.message || 'Failed to upload logo');
+    } finally {
+      setLogoUploading(false);
+    }
+  };
