@@ -654,6 +654,8 @@ async function addPhotoToPdf(
       fileKey: photo.fileKey,
       position: { x, y, width, height }
     });
+  }
+}
 
 async function saveReportRecord(reportData: any, reportUrl: string, fileKey: string) {
   try {
