@@ -54,6 +54,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
 
     return () => clearTimeout(timeoutId);
   }, [value, notes, markedForReport, reportRecipientId]);
+  
   const loadReportServiceTeams = async () => {
     try {
       const teams = await getReportServiceTeams();
@@ -142,6 +143,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       setSaving(false);
     }
   };
+  
   const handleValueChange = async (newValue: any) => {
     setValue(newValue);
   };
@@ -162,7 +164,6 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
   };
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const target = event.target; // Capture target before async operations
     const target = event.target; // Capture target before async operations
     const file = event.target.files?.[0];
     if (!file) return;
@@ -186,8 +187,6 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       setUploading(false);
       // Reset the input
       if (target) {
-        target.value = '';
-      }
         target.value = '';
       }
     }
