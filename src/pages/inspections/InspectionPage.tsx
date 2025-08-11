@@ -266,11 +266,21 @@ const InspectionPage = () => {
         inspectorName: inspection.inspector_name || '',
         startTime: inspection.start_time,
         endTime,
-        duration: durationSeconds,
+        durationSeconds: durationSeconds,
         primaryContactSignature: clientSignature,
         inspectorSignature,
       };
 
+      console.log('Report data being sent to generateInspectionReport:', {
+        inspectionId: reportData.inspection.id,
+        propertyName: reportData.inspection.propertyName,
+        startTime: reportData.startTime,
+        endTime: reportData.endTime,
+        durationSeconds: reportData.durationSeconds,
+        roomsCount: reportData.rooms?.length || 0,
+        hasInspectorSignature: !!reportData.inspectorSignature,
+        hasPrimaryContactSignature: !!reportData.primaryContactSignature
+      });
       const reportUrl = await generateInspectionReport(reportData);
 
       if (reportUrl) {
