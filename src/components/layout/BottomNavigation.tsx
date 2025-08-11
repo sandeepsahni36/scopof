@@ -2,6 +2,45 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Home, 
+  Building2, 
+  LayoutTemplate, 
+  FileText, 
+  Settings 
+} from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import { NavItem } from '../../types';
+
+const mainNavItems: NavItem[] = [
+  { title: 'Dashboard', href: '/dashboard', icon: 'Home' },
+  { title: 'Properties', href: '/dashboard/properties', icon: 'Building2' },
+  { title: 'Templates', href: '/dashboard/templates', icon: 'LayoutTemplate' },
+  { title: 'Reports', href: '/dashboard/reports', icon: 'FileText' },
+];
+
+const adminNavItems: NavItem[] = [
+  { title: 'Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
+];
+
+const IconMap: Record<string, React.ReactNode> = {
+  Home: <Home size={20} />,
+  Building2: <Building2 size={20} />,
+  LayoutTemplate: <LayoutTemplate size={20} />,
+  FileText: <FileText size={20} />,
+  Settings: <Settings size={20} />,
+};
+
+const BottomNavigation = () => {
+  const { isAdmin } = useAuthStore();
+  const navItems = isAdmin ? [...mainNavItems, ...adminNavItems] : mainNavItems;
+
+  return (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <nav className="flex">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.href}
+            to={item.href}
+            className={({ isActive }) =>
               `flex flex-col items-center justify-center text-xs font-medium transition-colors min-w-0 flex-1 py-2 px-1 rounded-lg mx-0.5 ${
                 isActive
                   ? 'text-primary-600 bg-primary-50'
