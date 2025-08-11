@@ -2,6 +2,27 @@
 
 ## [Latest] - 2025-01-31
 
+### Changed
+- **Admin Navigation Consolidation**: Merged User Management and Subscription pages into Company Settings
+  - Company Settings now features three tabs: Company Info, User Management, and Subscription
+  - Simplified admin navigation with single entry point for all company-related settings
+  - Improved user experience with consolidated settings interface
+  - Removed separate routes for `/dashboard/admin/users` and `/dashboard/admin/subscription`
+  - Updated navigation menus to reflect new consolidated structure
+
+### Removed
+- **Separate Admin Pages**: Removed standalone UserManagementPage and SubscriptionPage components
+- **Navigation Items**: Removed "User Management" and "Subscription" from admin navigation menus
+- **Redundant Routes**: Cleaned up routing structure by removing duplicate admin routes
+
+### Technical Improvements
+- Consolidated three separate admin pages into a single, tabbed interface
+- Maintained all existing functionality while improving organization
+- Preserved authentication flow and Stripe integration without changes
+- Enhanced code maintainability by reducing component duplication
+
+## [Latest] - 2025-01-31
+
 ### Added
 - **Company Logo Upload**: Admins and owners can now upload company logos in Company Settings
   - Maximum file size: 300KB

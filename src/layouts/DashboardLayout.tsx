@@ -18,8 +18,6 @@ import {
   LayoutTemplate,
   FileText,
   Settings,
-  Users,
-  CreditCard,
 } from 'lucide-react';
 import { NavItem } from '../types';
 
@@ -32,8 +30,6 @@ const mainNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { title: 'Company Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
-  { title: 'User Management', href: '/dashboard/admin/users', icon: 'Users' },
-  { title: 'Subscription', href: '/dashboard/admin/subscription', icon: 'CreditCard' },
 ];
 
 const IconMap: Record<string, React.ReactNode> = {
@@ -42,8 +38,6 @@ const IconMap: Record<string, React.ReactNode> = {
   LayoutTemplate: <LayoutTemplate size={20} />,
   FileText: <FileText size={20} />,
   Settings: <Settings size={20} />,
-  Users: <Users size={20} />,
-  CreditCard: <CreditCard size={20} />,
 };
 
 const DashboardLayout = () => {

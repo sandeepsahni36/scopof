@@ -27,8 +27,6 @@ import TemplateDetailPage from './pages/templates/TemplateDetailPage';
 import ReportsPage from './pages/reports/ReportsPage';
 import ReportDetailPage from './pages/reports/ReportDetailPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
-import UserManagementPage from './pages/admin/UserManagementPage';
-import SubscriptionPage from './pages/admin/SubscriptionPage';
 import InspectionPage from './pages/inspections/InspectionPage';
 import StartInspectionPage from './pages/inspections/StartInspectionPage';
 
@@ -193,22 +191,6 @@ function App() {
               element={
                 <AdminRoute>
                   <AdminSettingsPage />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="admin/users" 
-              element={
-                <AdminRoute>
-                  <UserManagementPage />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="admin/subscription" 
-              element={
-                <AdminRoute>
-                  <SubscriptionPage />
                 </AdminRoute>
               } 
             />

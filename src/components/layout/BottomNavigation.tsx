@@ -6,8 +6,6 @@ import {
   LayoutTemplate,
   FileText,
   Settings,
-  Users,
-  CreditCard,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { NavItem } from '../../types';
@@ -19,8 +17,6 @@ const IconMap: Record<string, React.ReactNode> = {
   LayoutTemplate: <LayoutTemplate size={20} />,
   FileText: <FileText size={20} />,
   Settings: <Settings size={20} />,
-  Users: <Users size={20} />,
-  CreditCard: <CreditCard size={20} />,
 };
 
 const mainNavItems: NavItem[] = [
@@ -32,7 +28,6 @@ const mainNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { title: 'Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
-  { title: 'Subscription', href: '/dashboard/admin/subscription', icon: 'CreditCard' }
 ];
 
 const BottomNavigation = () => {
