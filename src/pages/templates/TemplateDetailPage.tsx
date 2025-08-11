@@ -232,6 +232,30 @@ const TemplateDetailPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Panel - Field Types */}
           <div className="lg:col-span-1">
+            {/* Template Basic Info */}
+            <div className="bg-white shadow rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Template Information</h3>
+              <div className="space-y-4">
+                <Input
+                  label="Template Name"
+                  error={errors.name?.message}
+                  {...register('name', { required: 'Template name is required' })}
+                />
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    {...register('description')}
+                    rows={3}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Optional description for this template..."
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white shadow rounded-lg p-6 sticky top-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Field Types</h3>
               <div className="space-y-3">
@@ -301,32 +325,9 @@ const TemplateDetailPage = () => {
 
           {/* Center Panel - Template Form and Items */}
           <div className="lg:col-span-1">
-            <div className="space-y-6">
-              {/* Template Basic Info */}
-              <div className="bg-white shadow rounded-lg p-6">
-                <div className="space-y-4">
-                  <Input
-                    label="Template Name"
-                    error={errors.name?.message}
-                    {...register('name', { required: 'Template name is required' })}
-                  />
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      {...register('description')}
-                      rows={3}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="Optional description for this template..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Template Items */}
-              <div className="bg-white shadow rounded-lg p-6">
+            {/* Template Items */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <div className="space-y-6">
                 <div className="mb-6">
                   <h2 className="text-lg font-medium text-gray-900">Template Items</h2>
                   <p className="mt-1 text-sm text-gray-500">
