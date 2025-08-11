@@ -6,6 +6,65 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Helper function to extract file key from URL
+function extractFileKeyFromUrl(url: string, minioBucketName: string): string | null {
+  try {
+    console.log('Email: Extracting file key from URL:', url);
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    console.log('Email: URL path parts:', pathParts);
+    
+    let fileKey = '';
+    const bucketIndex = pathParts.findIndex(part => part.includes('storage-files') || part === minioBucketName);
+    if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+      fileKey = pathParts.slice(bucketIndex + 1).join('/');
+    } else if (pathParts.length > 2) {
+      // Fallback: skip first two parts (empty and bucket)
+      fileKey = pathParts.slice(2).join('/');
+    }
+    
+    console.log('Email: Extracted file key:', fileKey);
+    return fileKey;
+  } catch (error) {
+    console.error('Email: Error extracting file key from URL:', error);
+    return null;
+  }
+}
+
+// Helper function to get signed URL for photos in emails
+async function getSignedUrlForEmail(fileKey: string, supabaseUrl: string, supabaseServiceKey: string): Promise<string | null> {
+  try {
+    console.log('Email: Getting signed URL for file key:', fileKey);
+    
+    // Call storage API with service role key
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/storage-api/download/${fileKey}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log('Email: Storage API response status:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Email: Storage API error:', errorData);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log('Email: Signed URL generated successfully');
+    return data.fileUrl;
+  } catch (error) {
+    console.error('Email: Error getting signed URL:', error);
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -22,6 +81,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const resendApiKey = Deno.env.get("RESEND_API_KEY") || "";
+    const minioBucketName = Deno.env.get("MINIO_BUCKET_NAME") || "storage-files";
     const fromEmail = "inspection-alerts@scopostay.com";
 
     if (!supabaseUrl || !supabaseServiceKey || !resendApiKey) {
@@ -162,6 +222,67 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Process photos for email embedding
+        let photosHtml = '';
+        let photosText = '';
+        
+        if (item.photo_urls && item.photo_urls.length > 0) {
+          console.log(`Email: Processing ${item.photo_urls.length} photos for item ${item.id}`);
+          
+          const photoPromises = item.photo_urls.map(async (photoUrl: string, index: number) => {
+            try {
+              const fileKey = extractFileKeyFromUrl(photoUrl, minioBucketName);
+              if (!fileKey) {
+                console.warn(`Email: Could not extract file key from URL: ${photoUrl}`);
+                return null;
+              }
+              
+              const signedUrl = await getSignedUrlForEmail(fileKey, supabaseUrl, supabaseServiceKey);
+              if (!signedUrl) {
+                console.warn(`Email: Could not get signed URL for file key: ${fileKey}`);
+                return null;
+              }
+              
+              return {
+                url: signedUrl,
+                index: index + 1,
+                label: `${templateItem.label} - Photo ${index + 1}`
+              };
+            } catch (error) {
+              console.error(`Email: Error processing photo ${index + 1}:`, error);
+              return null;
+            }
+          });
+          
+          const photoResults = await Promise.all(photoPromises);
+          const validPhotos = photoResults.filter(photo => photo !== null);
+          
+          console.log(`Email: Successfully processed ${validPhotos.length}/${item.photo_urls.length} photos`);
+          
+          if (validPhotos.length > 0) {
+            // Create HTML for photos
+            photosHtml = `
+              <div style="margin: 20px 0;">
+                <h4 style="color: #374151; margin-bottom: 10px;">Attached Photos:</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                  ${validPhotos.map(photo => `
+                    <div style="text-align: center;">
+                      <img src="${photo.url}" alt="${photo.label}" style="max-width: 100%; height: auto; border: 1px solid #E5E7EB; border-radius: 8px; display: block; margin: 0 auto;">
+                      <p style="margin: 5px 0 0 0; font-size: 12px; color: #6B7280;">${photo.label}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+            
+            // Create text version for photos
+            photosText = `\nAttached Photos:\n${validPhotos.map(photo => `- ${photo.label}: ${photo.url}`).join('\n')}`;
+          } else {
+            photosHtml = '<p style="color: #6B7280; font-style: italic;">Photos were attached but could not be loaded for display.</p>';
+            photosText = '\nPhotos: Attached but could not be loaded for display.';
+          }
+        }
+
         // Construct email content
         const emailHtml = `
 <!DOCTYPE html>
@@ -221,66 +342,6 @@ Deno.serve(async (req) => {
         .detail-row {
             display: flex;
             justify-content: space-between;
-            // Process photos for email embedding
-            let photosHtml = '';
-            let photosText = '';
-            
-            if (item.photo_urls && item.photo_urls.length > 0) {
-              console.log(`Email: Processing ${item.photo_urls.length} photos for item ${item.id}`);
-              
-              const photoPromises = item.photo_urls.map(async (photoUrl: string, index: number) => {
-                try {
-                  const fileKey = extractFileKeyFromUrl(photoUrl);
-                  if (!fileKey) {
-                    console.warn(`Email: Could not extract file key from URL: ${photoUrl}`);
-                    return null;
-                  }
-                  
-                  const signedUrl = await getSignedUrlForEmail(fileKey);
-                  if (!signedUrl) {
-                    console.warn(`Email: Could not get signed URL for file key: ${fileKey}`);
-                    return null;
-                  }
-                  
-                  return {
-                    url: signedUrl,
-                    index: index + 1,
-                    label: `${templateItem.label} - Photo ${index + 1}`
-                  };
-                } catch (error) {
-                  console.error(`Email: Error processing photo ${index + 1}:`, error);
-                  return null;
-                }
-              });
-              
-              const photoResults = await Promise.all(photoPromises);
-              const validPhotos = photoResults.filter(photo => photo !== null);
-              
-              console.log(`Email: Successfully processed ${validPhotos.length}/${item.photo_urls.length} photos`);
-              
-              if (validPhotos.length > 0) {
-                // Create HTML for photos
-                photosHtml = `
-                  <div style="margin: 20px 0;">
-                    <h4 style="color: #374151; margin-bottom: 10px;">Attached Photos:</h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                      ${validPhotos.map(photo => `
-                        <div style="text-align: center;">
-                          <img src="${photo.url}" alt="${photo.label}" style="max-width: 100%; height: auto; border: 1px solid #E5E7EB; border-radius: 8px; display: block; margin: 0 auto;">
-                          <p style="margin: 5px 0 0 0; font-size: 12px; color: #6B7280;">${photo.label}</p>
-                        </div>
-                      `).join('')}
-                    </div>
-                  </div>
-                `;
-                
-                // Create text version for photos
-                photosText = `\nAttached Photos:\n${validPhotos.map(photo => `- ${photo.label}: ${photo.url}`).join('\n')}`;
-              } else {
-                photosHtml = '<p style="color: #6B7280; font-style: italic;">Photos were attached but could not be loaded for display.</p>';
-                photosText = '\nPhotos: Attached but could not be loaded for display.';
-              }
-            }
             margin-bottom: 10px;
             padding-bottom: 10px;
             border-bottom: 1px solid #E5E7EB;
@@ -377,6 +438,8 @@ Deno.serve(async (req) => {
                 ` : ''}
             </div>
 
+            ${photosHtml}
+
             <p>This item was flagged by the inspector during the inspection and requires your attention. Please review the details above and take appropriate action.</p>
 
             <p style="margin-top: 30px;">
@@ -422,63 +485,7 @@ ${photosText}
 
 This item was flagged by the inspector during the inspection and requires your attention. Please review the details above and take appropriate action.
 
-        // Helper function to extract file key from URL
-        function extractFileKeyFromUrl(url: string): string | null {
-          try {
-            console.log('Email: Extracting file key from URL:', url);
-            const urlObj = new URL(url);
-            const pathParts = urlObj.pathname.split('/');
-            console.log('Email: URL path parts:', pathParts);
-            const bucketIndex = pathParts.findIndex(part => part.includes('storage-files') || part === minioBucketName);
-            if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
-            ${photosHtml}
-              fileKey = pathParts.slice(bucketIndex + 1).join('/');
-            } else if (pathParts.length > 2) {
-              // Fallback: skip first two parts (empty and bucket)
-              fileKey = pathParts.slice(2).join('/');
-            }
-            
-            console.log('Email: Extracted file key:', fileKey);
-            return fileKey;
-          } catch (error) {
-            console.error('Email: Error extracting file key from URL:', error);
-            return null;
-          }
-        }
-
-        // Helper function to get signed URL for photos in emails
-        async function getSignedUrlForEmail(fileKey: string): Promise<string | null> {
-          try {
-            console.log('Email: Getting signed URL for file key:', fileKey);
-            
-            // Call storage API with service role key
-            const response = await fetch(
-              `${supabaseUrl}/functions/v1/storage-api/download/${fileKey}`,
-              {
-                method: 'GET',
-                headers: {
-                  'Authorization': `Bearer ${supabaseServiceKey}`,
-                  'Content-Type': 'application/json',
-                },
-              }
-            );
-
-            console.log('Email: Storage API response status:', response.status);
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              console.error('Email: Storage API error:', errorData);
-              return null;
-            }
 NEXT STEPS:
-            const data = await response.json();
-            console.log('Email: Signed URL generated successfully');
-            return data.fileUrl;
-          } catch (error) {
-            console.error('Email: Error getting signed URL:', error);
-            return null;
-          }
-        }
 • Review the item details and photos
 • Contact the inspector if clarification is needed
 • Take appropriate corrective action
