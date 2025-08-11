@@ -252,6 +252,10 @@ export async function getTemplates(searchTerm?: string, categoryId?: string) {
 
       // Apply search filter
       if (searchTerm) {
+      }
+    }
+  }
+}
 
 export async function getTemplate(id: string) {
   try {
