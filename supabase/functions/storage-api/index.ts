@@ -548,7 +548,6 @@ serve(async (req) => {
         try {
           // Check if this is a service role request by looking at the token
          const isServiceRoleRequest = token === supabaseServiceKey;
-          const isServiceRoleRequest = token === supabaseServiceKey;
           console.log("Auth check:", { isServiceRoleRequest, tokenLength: token.length });
           
           if (!isServiceRoleRequest) {
