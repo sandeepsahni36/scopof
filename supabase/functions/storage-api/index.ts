@@ -675,18 +675,6 @@ serve(async (req) => {
           }
           return new Response(JSON.stringify({
             message: "File URL generated successfully",
-          try {
-            console.log("Testing presigned URL accessibility...");
-            const testResponse = await fetch(presignedUrl, { method: 'HEAD' });
-            console.log("Presigned URL test result:", {
-              status: testResponse.status,
-              statusText: testResponse.statusText,
-              ok: testResponse.ok,
-              headers: Object.fromEntries(testResponse.headers.entries())
-            });
-          } catch (testError) {
-            console.error("Presigned URL test failed:", testError?.message);
-          }
             fileUrl: presignedUrl
           }), {
             status: 200,
