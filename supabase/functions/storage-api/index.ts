@@ -514,17 +514,31 @@ serve(async (req) => {
           });
         }
 
+        console.log("=== DOWNLOAD ENDPOINT DEBUG START ===");
+        console.log("Full request URL:", req.url);
+        console.log("Path segments:", pathSegments);
+        console.log("Cleaned segments:", cleanedSegments);
+
         // Extract fileKey from URL path - handle both direct calls and function calls
         let fileKey;
         if (pathSegments.includes('storage-api')) {
           // Called via /functions/v1/storage-api/download/filekey
           const downloadIndex = pathSegments.findIndex(segment => segment === 'download');
           fileKey = pathSegments.slice(downloadIndex + 1).join('/');
+          console.log("Download via storage-api path, downloadIndex:", downloadIndex);
+          console.log("FileKey extraction method: storage-api");
         } else {
           // Direct call to download endpoint
           fileKey = pathSegments.slice(2).join('/');
+          console.log("Download via direct path");
+          console.log("FileKey extraction method: direct");
         }
         
+        console.log("Extracted fileKey:", fileKey);
+        console.log("FileKey type:", typeof fileKey);
+        console.log("FileKey length:", fileKey?.length || 0);
+        console.log("FileKey is empty:", !fileKey);
+
         if (!fileKey) {
           console.error("Download: No file key extracted from path:", pathSegments);
           return new Response(JSON.stringify({
@@ -549,8 +563,15 @@ serve(async (req) => {
           // Check if this is a service role request by looking at the token
          const isServiceRoleRequest = token === supabaseServiceKey;
           console.log("Auth check:", { isServiceRoleRequest, tokenLength: token.length });
+          console.log("Token comparison:", {
+            tokenStart: token.substring(0, 20),
+            serviceKeyStart: supabaseServiceKey.substring(0, 20),
+            tokensMatch: token === supabaseServiceKey
+          });
           
           if (!isServiceRoleRequest) {
+            console.log("User request: Checking file authorization for admin:", userContext.adminId);
+            
             // Verify user authorization to access this file
             const { data: fileMetadata, error: metaError } = await supabase
               .from('file_metadata')
@@ -558,8 +579,19 @@ serve(async (req) => {
               .eq('file_key', fileKey)
               .single();
 
+            console.log("File metadata query result:", {
+              found: !!fileMetadata,
+              error: metaError?.message,
+              fileAdminId: fileMetadata?.admin_id,
+              userAdminId: userContext.adminId
+            });
             if (metaError || !fileMetadata) {
               console.warn(`DB: File metadata not found for ${fileKey}:`, metaError?.message);
+              console.log("File metadata error details:", {
+                code: metaError?.code,
+                details: metaError?.details,
+                hint: metaError?.hint
+              });
               return new Response(JSON.stringify({
                 error: "File not found or unauthorized"
               }), {
@@ -573,6 +605,11 @@ serve(async (req) => {
 
             if (fileMetadata.admin_id !== userContext.adminId) {
               console.warn(`Auth: Unauthorized access attempt for file ${fileKey} by admin ${userContext.adminId}`);
+              console.log("Authorization mismatch:", {
+                fileAdminId: fileMetadata.admin_id,
+                userAdminId: userContext.adminId,
+                fileKey: fileKey
+              });
               return new Response(JSON.stringify({
                 error: "Forbidden: You do not have access to this file"
               }), {
@@ -583,6 +620,8 @@ serve(async (req) => {
                 }
               });
             }
+            
+            console.log("File authorization successful for user");
           } else {
             console.log("Service role request: Skipping file authorization check");
           }
@@ -590,11 +629,31 @@ serve(async (req) => {
           // Generate a pre-signed URL for secure, temporary access
           // The URL will allow direct download from MinIO without proxying through the Edge Function
           console.log("Generating presigned URL for:", { bucket: minioBucketName, fileKey });
-          const presignedUrl = await minioClient.presignedGetObject(
-            minioBucketName, 
-            fileKey, 
-            60 * 60 // 60 minutes expiry to prevent "Request has expired" errors
-          );
+          console.log("MinIO client configuration:", {
+            endpoint: minioUrl.hostname,
+            port: parseInt(minioUrl.port) || (minioUrl.protocol === 'https:' ? 443 : 80),
+            useSSL: minioUrl.protocol === 'https:',
+            bucketName: minioBucketName
+          });
+          
+          let presignedUrl;
+          try {
+            console.log("Calling minioClient.presignedGetObject...");
+            presignedUrl = await minioClient.presignedGetObject(
+              minioBucketName, 
+              fileKey, 
+              60 * 60 // 60 minutes expiry to prevent "Request has expired" errors
+            );
+            console.log("MinIO presignedGetObject call successful");
+          } catch (minioPresignError) {
+            console.error("MinIO presignedGetObject failed:", {
+              message: minioPresignError?.message,
+              stack: minioPresignError?.stack,
+              name: minioPresignError?.name,
+              code: minioPresignError?.code
+            });
+            throw minioPresignError;
+          }
 
           console.log("=== PRESIGNED URL GENERATION ===");
           console.log("MinIO bucket:", minioBucketName);
@@ -609,8 +668,25 @@ serve(async (req) => {
           });
           console.log("=== END PRESIGNED URL GENERATION ===");
 
+          // Validate the generated URL
+          if (!presignedUrl || !presignedUrl.startsWith('http')) {
+            console.error("Invalid presigned URL generated:", presignedUrl);
+            throw new Error("Invalid presigned URL generated by MinIO");
+          }
           return new Response(JSON.stringify({
             message: "File URL generated successfully",
+          try {
+            console.log("Testing presigned URL accessibility...");
+            const testResponse = await fetch(presignedUrl, { method: 'HEAD' });
+            console.log("Presigned URL test result:", {
+              status: testResponse.status,
+              statusText: testResponse.statusText,
+              ok: testResponse.ok,
+              headers: Object.fromEntries(testResponse.headers.entries())
+            });
+          } catch (testError) {
+            console.error("Presigned URL test failed:", testError?.message);
+          }
             fileUrl: presignedUrl
           }), {
             status: 200,
@@ -627,6 +703,14 @@ serve(async (req) => {
             fileKey,
             bucket: minioBucketName
           });
+          console.error("MinIO error details:", {
+            name: minioError?.name,
+            code: minioError?.code,
+            statusCode: minioError?.statusCode,
+            region: minioError?.region,
+            bucketName: minioError?.bucketName,
+            objectName: minioError?.objectName
+          });
           return new Response(JSON.stringify({
             error: `Failed to generate file URL: ${minioError?.message}`
           }), {
@@ -637,6 +721,8 @@ serve(async (req) => {
             }
           });
         }
+        
+        console.log("=== DOWNLOAD ENDPOINT DEBUG END ===");
       }
 
       case "delete": {
