@@ -5,7 +5,8 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuthStore } from '../../store/authStore';
 import { getReportServiceTeams, createReportServiceTeam, updateReportServiceTeam, deleteReportServiceTeam, ReportServiceTeam } from '../../lib/reportServiceTeams';
-import { uploadFile, isImageValid, resizeAndOptimizeImage } from '../../lib/storage';
+import { uploadFile } from '../../lib/storage';
+import { isImageValid, resizeAndOptimizeImage } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
