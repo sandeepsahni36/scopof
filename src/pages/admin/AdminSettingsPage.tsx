@@ -23,7 +23,8 @@ import {
   AlertTriangle,
   Download,
   ArrowRight,
-  LogOut
+  LogOut,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -493,6 +494,16 @@ const AdminSettingsPage = () => {
           </p>
         </div>
         <div className="flex items-center space-x-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open('https://scopostay.com/support', '_blank')}
+            leftIcon={<HelpCircle size={16} />}
+            className="text-primary-600 hover:text-primary-700 border-primary-200 hover:border-primary-300"
+          >
+            <span className="hidden sm:inline">Support</span>
+            <span className="sm:hidden">Help</span>
+          </Button>
           <Button
             variant="outline"
             size="sm"
