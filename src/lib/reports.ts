@@ -1,5 +1,6 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { uploadFile } from './storage';
+import { getSignedUrlForFile } from './storage';
 import jsPDF from 'jspdf';
 
 // Mock data for dev mode
@@ -211,7 +212,8 @@ async function createPDFReport(reportData: any): Promise<Blob> {
   // Add header with logo and branding
   function addHeader() {
     // Header background with brand color
-    pdf.setFillColor(reportData.brandColor || '#2563EB');
+    const brandColor = hexToRgb(reportData.brandColor || '#2563EB');
+    pdf.setFillColor(brandColor.r, brandColor.g, brandColor.b);
     pdf.rect(0, 0, pdf.internal.pageSize.width, 40, 'F');
 
     // Add logo if available
@@ -302,7 +304,14 @@ async function createPDFReport(reportData: any): Promise<Blob> {
     pdf.text(step.name, 20, yPosition);
     yPosition += 12;
 
-    // Process items in this section
+    // Collect all photos for this section
+    const sectionPhotos: Array<{
+      url: string;
+      label: string;
+      fileKey?: string;
+    }> = [];
+
+    // Process items in this section to collect photos and other data
     for (const item of step.items || []) {
       const templateItem = item.template_items || item.templateItem;
       
@@ -346,14 +355,89 @@ async function createPDFReport(reportData: any): Promise<Blob> {
         yPosition += noteLines.length * 5;
       }
 
-      // Photos
+      // Collect photos for this item
       if (item.photo_urls && item.photo_urls.length > 0) {
+        for (const photoUrl of item.photo_urls) {
+          const fileKey = extractFileKeyFromUrl(photoUrl);
+          sectionPhotos.push({
+            url: photoUrl,
+            label: templateItem.label,
+            fileKey: fileKey || undefined,
+          });
+        }
+        
         pdf.setFont('helvetica', 'normal');
-        pdf.text(`Photos: ${item.photo_urls.length} attached`, 30, yPosition);
+        pdf.text(`Photos: ${item.photo_urls.length} attached (see below)`, 30, yPosition);
         yPosition += 6;
       }
 
       yPosition += 5; // Space between items
+    }
+
+    // Add photos section for this step if there are any photos
+    if (sectionPhotos.length > 0) {
+      yPosition += 10;
+      
+      // Check if we need a new page for photos
+      if (yPosition > 200) {
+        pdf.addPage();
+        addHeader();
+        yPosition = 60;
+      }
+
+      // Photos section header
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`${step.name} - Photos`, 25, yPosition);
+      yPosition += 10;
+
+      // Display photos in 3 columns
+      const photosPerRow = 3;
+      const photoWidth = 50;
+      const photoHeight = 40;
+      const photoSpacing = 10;
+      const startX = 25;
+      const labelHeight = 8;
+
+      for (let i = 0; i < sectionPhotos.length; i++) {
+        const photo = sectionPhotos[i];
+        const row = Math.floor(i / photosPerRow);
+        const col = i % photosPerRow;
+        
+        const photoX = startX + col * (photoWidth + photoSpacing);
+        const photoY = yPosition + row * (photoHeight + labelHeight + 15);
+
+        // Check if we need a new page
+        if (photoY + photoHeight + labelHeight > 270) {
+          pdf.addPage();
+          addHeader();
+          yPosition = 60;
+          
+          // Recalculate positions for new page
+          const newRow = Math.floor(i / photosPerRow) - Math.floor(i / photosPerRow);
+          const newPhotoY = yPosition + newRow * (photoHeight + labelHeight + 15);
+          
+          await addPhotoToPdf(pdf, photo, photoX, newPhotoY, photoWidth, photoHeight);
+          
+          // Add label under photo
+          pdf.setFontSize(8);
+          pdf.setFont('helvetica', 'normal');
+          const labelLines = pdf.splitTextToSize(photo.label, photoWidth);
+          pdf.text(labelLines, photoX + photoWidth/2, newPhotoY + photoHeight + 5, { align: 'center' });
+        } else {
+          await addPhotoToPdf(pdf, photo, photoX, photoY, photoWidth, photoHeight);
+          
+          // Add label under photo
+          pdf.setFontSize(8);
+          pdf.setFont('helvetica', 'normal');
+          const labelLines = pdf.splitTextToSize(photo.label, photoWidth);
+          pdf.text(labelLines, photoX + photoWidth/2, photoY + photoHeight + 5, { align: 'center' });
+        }
+      }
+
+      // Update yPosition to account for all photo rows
+      const totalRows = Math.ceil(sectionPhotos.length / photosPerRow);
+      yPosition += totalRows * (photoHeight + labelHeight + 15) + 10;
     }
 
     yPosition += 10; // Space between sections
@@ -401,6 +485,108 @@ async function createPDFReport(reportData: any): Promise<Blob> {
   addPageNumbers(pdf);
 
   return pdf.output('blob');
+}
+
+// Helper function to add a photo to the PDF
+async function addPhotoToPdf(
+  pdf: any, 
+  photo: { url: string; label: string; fileKey?: string }, 
+  x: number, 
+  y: number, 
+  width: number, 
+  height: number
+) {
+  try {
+    let imageDataUrl: string | null = null;
+
+    // Try to get signed URL if we have a file key
+    if (photo.fileKey) {
+      try {
+        const signedUrl = await getSignedUrlForFile(photo.fileKey);
+        if (signedUrl) {
+          imageDataUrl = await loadImageAsDataUrl(signedUrl);
+        }
+      } catch (error) {
+        console.error('Error getting signed URL for photo:', error);
+      }
+    }
+
+    // Fallback to original URL if signed URL failed
+    if (!imageDataUrl) {
+      try {
+        imageDataUrl = await loadImageAsDataUrl(photo.url);
+      } catch (error) {
+        console.error('Error loading photo from original URL:', error);
+      }
+    }
+
+    if (imageDataUrl) {
+      // Add photo to PDF
+      pdf.addImage(imageDataUrl, 'JPEG', x, y, width, height);
+      
+      // Add clickable link to original image
+      if (photo.fileKey) {
+        try {
+          const signedUrl = await getSignedUrlForFile(photo.fileKey);
+          if (signedUrl) {
+            pdf.link(x, y, width, height, { url: signedUrl });
+          }
+        } catch (error) {
+          console.error('Error creating photo link:', error);
+        }
+      }
+    } else {
+      // Fallback: draw placeholder rectangle
+      pdf.setDrawColor('#CCCCCC');
+      pdf.setFillColor('#F5F5F5');
+      pdf.rect(x, y, width, height, 'FD');
+      
+      // Add "Image not available" text
+      pdf.setFontSize(8);
+      pdf.setTextColor('#666666');
+      pdf.text('Image not', x + width/2, y + height/2 - 2, { align: 'center' });
+      pdf.text('available', x + width/2, y + height/2 + 2, { align: 'center' });
+      pdf.setTextColor('#000000');
+    }
+  } catch (error) {
+    console.error('Error adding photo to PDF:', error);
+    
+    // Draw error placeholder
+    pdf.setDrawColor('#FF0000');
+    pdf.setFillColor('#FFE5E5');
+    pdf.rect(x, y, width, height, 'FD');
+    
+    pdf.setFontSize(8);
+    pdf.setTextColor('#FF0000');
+    pdf.text('Error loading', x + width/2, y + height/2 - 2, { align: 'center' });
+    pdf.text('image', x + width/2, y + height/2 + 2, { align: 'center' });
+    pdf.setTextColor('#000000');
+  }
+}
+
+// Helper function to extract file key from URL
+function extractFileKeyFromUrl(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    
+    // For MinIO URLs, the file key is everything after the bucket name
+    const bucketIndex = pathParts.findIndex(part => part === 'storage-files' || part.includes('bucket'));
+    
+    if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+      return pathParts.slice(bucketIndex + 1).join('/');
+    }
+    
+    // Fallback: try to extract from the path
+    if (pathParts.length > 1) {
+      return pathParts.slice(1).join('/');
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting file key from URL:', error);
+    return null;
+  }
 }
 
 async function saveReportRecord(reportData: any, reportUrl: string, fileKey: string) {
@@ -517,4 +703,14 @@ async function loadImageAsDataUrl(imageUrl: string): Promise<string | null> {
     console.error('Error loading image as data URL:', error);
     return null;
   }
+}
+
+// Helper function to convert hex color to RGB
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 37, g: 99, b: 235 }; // Default blue
 }

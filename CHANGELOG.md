@@ -81,6 +81,41 @@ const DashboardLayout = () => {
           }}
           className="bg-white border-r border-gray-200 hidden md:flex md:flex-col flex-shrink-0 z-40"
         >
+## Version 2.1.0 - Enhanced PDF Report Branding
+
+### New Features
+- **Tiered PDF Report Branding System**
+  - Professional and Enterprise tiers can customize logo, brand colors, and report backgrounds
+  - Starter tier users get default scopoStay branding with watermarks
+  - Company logos appear in headers on all PDF pages
+  - Page numbering ("Page X of Y") on bottom left of all pages
+
+- **Photo Integration in PDF Reports**
+  - Photos are now properly embedded in PDF reports
+  - Images grouped by template/section (Bedroom, Living Room, etc.)
+  - 3-column photo layout with dynamic row adjustment
+  - Photo labels displayed under each image
+  - Clickable links to original high-resolution images
+  - Graceful fallbacks for missing or corrupted images
+
+- **Enhanced Image Processing**
+  - Converted from WebP to JPEG format for better PDF compatibility
+  - Optimized image compression and resizing
+  - Improved error handling for image loading and processing
+
+### UI Improvements
+- **Admin Settings Page Enhancements**
+  - Clear tier-based feature restrictions for starter users
+  - Visual indicators for upgrade requirements on restricted features
+  - Disabled controls for starter tier users with helpful upgrade messaging
+  - Proper validation and error handling for logo uploads
+
+### Technical Improvements
+- Enhanced PDF generation with proper image loading and embedding
+- Improved error handling for logo and branding asset loading
+- Added comprehensive tier-based feature gating throughout the application
+- Optimized PDF file structure with consistent page layouts
+
   - Visual indicators for upgrade requirements on restricted features
   - Disabled controls for starter tier users with helpful upgrade messaging
   - Proper validation and error handling for logo uploads
