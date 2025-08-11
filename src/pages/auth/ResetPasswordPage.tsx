@@ -42,12 +42,12 @@ const ResetPasswordPage = () => {
   };
   
   return (
-    <div>
-      <h2 className="text-center text-2xl font-bold leading-9 tracking-tight text-gray-900 mb-6">
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-center text-xl sm:text-2xl font-bold leading-tight tracking-tight text-gray-900">
         Create new password
       </h2>
       
-      <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <Input
           label="New password"
           type="password"
@@ -77,8 +77,8 @@ const ResetPasswordPage = () => {
           Reset password
         </Button>
         
-        <div className="text-center">
-          <Link to="/login" className="text-sm font-medium text-primary-600 hover:text-primary-500">
+        <div className="text-center mt-4">
+          <Link to="/login" className="text-xs sm:text-sm font-medium text-primary-600 hover:text-primary-500">
             Back to login
           </Link>
         </div>

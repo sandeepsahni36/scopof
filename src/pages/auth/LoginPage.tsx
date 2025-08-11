@@ -111,12 +111,12 @@ const LoginPage = () => {
   }, [location]);
   
   return (
-    <div>
-      <h2 className="text-center text-2xl font-bold leading-9 tracking-tight text-gray-900 mb-6">
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-center text-xl sm:text-2xl font-bold leading-tight tracking-tight text-gray-900">
         Sign in to your account
       </h2>
       
-      <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <Input
           label="Email address"
           type="email"
@@ -161,29 +161,29 @@ const LoginPage = () => {
               id="remember-me"
               name="remember-me"
               type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              className="h-4 w-4 sm:h-5 sm:w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
             />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+            <label htmlFor="remember-me" className="ml-2 block text-xs sm:text-sm text-gray-900">
               Remember me
             </label>
           </div>
           
-          <div className="text-sm">
-            <Link to="/forgot-password" className="font-medium text-primary-600 hover:text-primary-500">
+          <div className="text-xs sm:text-sm">
+            <Link to="/forgot-password" className="font-medium text-primary-600 hover:text-primary-500 whitespace-nowrap">
               Forgot your password?
             </Link>
           </div>
         </div>
         
         {needsConfirmation && (
-          <div className="text-center bg-amber-50 p-3 rounded-md">
-            <p className="text-sm text-amber-800 mb-2">
+          <div className="text-center bg-amber-50 p-2 sm:p-3 rounded-md">
+            <p className="text-xs sm:text-sm text-amber-800 mb-2">
               Please confirm your email address before logging in.
             </p>
             <button
               type="button"
               onClick={handleResendConfirmation}
-              className="text-sm font-medium text-amber-800 underline"
+              className="text-xs sm:text-sm font-medium text-amber-800 underline"
               disabled={loading}
             >
               Resend confirmation email
@@ -196,18 +196,18 @@ const LoginPage = () => {
         </Button>
       </form>
       
-      <div className="mt-6">
+      <div className="mt-4 sm:mt-6">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300" />
           </div>
-          <div className="relative flex justify-center text-sm">
+          <div className="relative flex justify-center text-xs sm:text-sm">
             <span className="bg-white px-2 text-gray-500">Or</span>
           </div>
         </div>
         
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+        <div className="mt-4 sm:mt-6 text-center">
+          <p className="text-xs sm:text-sm text-gray-600">
             Don't have an account?{' '}
             <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
               Sign up

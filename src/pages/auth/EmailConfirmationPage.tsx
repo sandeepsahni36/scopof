@@ -35,38 +35,38 @@ const EmailConfirmationPage = () => {
   }
 
   return (
-    <div>
-      <h2 className="text-center text-2xl font-bold leading-9 tracking-tight text-gray-900 mb-6">
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-center text-xl sm:text-2xl font-bold leading-tight tracking-tight text-gray-900">
         Check your email
       </h2>
 
-      <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
+      <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm border border-gray-200">
         <div className="flex flex-col items-center">
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-100">
-            <Mail className="h-6 w-6 text-primary-600" />
+          <div className="mx-auto h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center rounded-full bg-primary-100">
+            <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-primary-600" />
           </div>
           
-          <p className="mt-4 text-center text-gray-600">
+          <p className="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-gray-600">
             We've sent a confirmation email to{' '}
             <span className="font-medium text-gray-900">{email}</span>
           </p>
           
-          <p className="mt-2 text-sm text-center text-gray-500">
+          <p className="mt-2 text-xs text-center text-gray-500">
             Please verify your email address by following the instructions sent to your email.
             {registrationType === 'trial' && ' After confirmation, you\'ll be able to start your 14-day free trial.'}
             {registrationType === 'no_trial' && ' After confirmation, you\'ll be able to choose your plan and get started.'}
           </p>
         </div>
 
-        <div className="mt-8 space-y-4">
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-900">Didn't receive the email?</h3>
-            <p className="mt-2 text-sm text-gray-500">
+        <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-900">Didn't receive the email?</h3>
+            <p className="mt-1 sm:mt-2 text-xs text-gray-500">
               Check your spam folder or click the button below to resend the confirmation email.
             </p>
             <Button
               variant="link"
-              className="mt-2 p-0"
+              className="mt-1 sm:mt-2 p-0 text-xs sm:text-sm"
               onClick={handleResendEmail}
               isLoading={resending}
             >
@@ -74,7 +74,7 @@ const EmailConfirmationPage = () => {
             </Button>
           </div>
 
-          <p className="text-sm text-center text-gray-500">
+          <p className="text-xs text-center text-gray-500">
             You can close this page after verifying your email address.
           </p>
         </div>
