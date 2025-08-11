@@ -37,47 +37,62 @@ const IconMap: Record<string, React.ReactNode> = {
   Building2: <Building2 size={20} />,
   LayoutTemplate: <LayoutTemplate size={20} />,
   FileText: <FileText size={20} />,
-function generateMockPDFReport(reportData: any): string {
+  Settings: <Settings size={20} />,
 };
 
-const DashboardLayout = () => {
+function generateMockPDFReport(reportData: any): string {
   // Return a mock URL for development
   return 'https://example.com/mock-report.pdf';
+}
+
+const DashboardLayout = () => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { user, company, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Mock trial data - replace with actual logic
+  const isTrialExpired = false;
+  const trialDaysRemaining = 7;
+  const showTrialWarning = trialDaysRemaining <= 7 && trialDaysRemaining > 0;
+  const isAdmin = user?.role === 'admin';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleUpgradeClick = () => {
+    // Handle upgrade logic
+    console.log('Upgrade clicked');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
       <div className="flex min-h-screen">
         {/* Sidebar - Push Layout for Desktop */}
-        <motion.aside
-          initial={false}
-          animate={{ 
-            width: isCollapsed ? '5rem' : '16rem',
-          }}
-          transition={{
-            duration: 0.3,
-            ease: 'easeInOut',
-          }}
+        <aside
           className="bg-white border-r border-gray-200 hidden md:flex md:flex-col flex-shrink-0 z-40"
+          style={{ width: isCollapsed ? '5rem' : '16rem' }}
         >
-        report_type: 'inspection'
-                      className="h-8 w-8 flex-shrink-0" 
-                      initial={{ opacity: 0 }} 
-                      animate={{ opacity: 1 }} 
-                      exit={{ opacity: 0 }} 
-                    />
-                  ) : (
-                    <motion.img 
-                      key="expanded-logo" 
-                      src="/Scopostay long full logo blue.png" 
-                      alt="scopoStay Logo" 
-                      className="h-8 w-auto flex-shrink-0" 
-                      initial={{ opacity: 0 }} 
-                      animate={{ opacity: 1 }} 
-                      exit={{ opacity: 0 }} 
-                    />
-                  )}
-                </AnimatePresence>
+          <div className="flex flex-col h-full">
+            {/* Logo and collapse button */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <Link to="/dashboard" className="flex items-center">
+                {isCollapsed ? (
+                  <img 
+                    src="/Scopostay icon blue.png" 
+                    alt="scopoStay Logo" 
+                    className="h-8 w-8 flex-shrink-0" 
+                  />
+                ) : (
+                  <img 
+                    src="/Scopostay long full logo blue.png" 
+                    alt="scopoStay Logo" 
+                    className="h-8 w-auto flex-shrink-0" 
+                  />
+                )}
               </Link>
               <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
@@ -108,19 +123,11 @@ const DashboardLayout = () => {
                   <span className="flex-shrink-0">
                     {IconMap[item.icon]}
                   </span>
-                  <AnimatePresence>
-                    {!isCollapsed && (
-                      <motion.span
-                        initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: 'auto' }}
-                        exit={{ opacity: 0, width: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="ml-3 overflow-hidden whitespace-nowrap"
-                      >
-                        {item.title}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
+                  {!isCollapsed && (
+                    <span className="ml-3 overflow-hidden whitespace-nowrap">
+                      {item.title}
+                    </span>
+                  )}
                 </NavLink>
               ))}
 
@@ -128,18 +135,11 @@ const DashboardLayout = () => {
               {isAdmin && (
                 <>
                   <div className="pt-4 pb-2">
-                    <AnimatePresence>
-                      {!isCollapsed && (
-                        <motion.h3
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider"
-                        >
-                          Admin
-                        </motion.h3>
-                      )}
-                    </AnimatePresence>
+                    {!isCollapsed && (
+                      <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Admin
+                      </h3>
+                    )}
                   </div>
                   {adminNavItems.map((item) => (
                     <NavLink
@@ -156,19 +156,11 @@ const DashboardLayout = () => {
                       <span className="flex-shrink-0">
                         {IconMap[item.icon]}
                       </span>
-                      <AnimatePresence>
-                        {!isCollapsed && (
-                          <motion.span
-                            initial={{ opacity: 0, width: 0 }}
-                            animate={{ opacity: 1, width: 'auto' }}
-                            exit={{ opacity: 0, width: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="ml-3 overflow-hidden whitespace-nowrap"
-                          >
-                            {item.title}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
+                      {!isCollapsed && (
+                        <span className="ml-3 overflow-hidden whitespace-nowrap">
+                          {item.title}
+                        </span>
+                      )}
                     </NavLink>
                   ))}
                 </>
@@ -178,32 +170,25 @@ const DashboardLayout = () => {
             {/* Trial Warning in Sidebar */}
             {showTrialWarning && (
               <div className="p-2">
-                <AnimatePresence>
-                  {!isCollapsed && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="bg-amber-50 border border-amber-200 rounded-lg p-3"
-                    >
-                      <div className="flex items-start">
-                        <Clock className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                        <div className="ml-2 min-w-0">
-                          <p className="text-xs font-medium text-amber-800">
-                            Trial ends in {trialDaysRemaining} days
-                          </p>
-                          <Button
-                            size="sm"
-                            onClick={handleUpgradeClick}
-                            className="mt-2 text-xs h-6 bg-amber-600 hover:bg-amber-700"
-                          >
-                            Upgrade
-                          </Button>
-                        </div>
+                {!isCollapsed && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div className="flex items-start">
+                      <Clock className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <div className="ml-2 min-w-0">
+                        <p className="text-xs font-medium text-amber-800">
+                          Trial ends in {trialDaysRemaining} days
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={handleUpgradeClick}
+                          className="mt-2 text-xs h-6 bg-amber-600 hover:bg-amber-700"
+                        >
+                          Upgrade
+                        </Button>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -217,42 +202,28 @@ const DashboardLayout = () => {
                     </span>
                   </div>
                 </div>
-                <AnimatePresence>
-                  {!isCollapsed && (
-                    <motion.div
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="ml-3 min-w-0 overflow-hidden"
-                    >
-                      <p className="text-sm font-medium text-gray-700 truncate">
-                        {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {company?.name || 'Company'}
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <AnimatePresence>
-                  {!isCollapsed && (
-                    <motion.button
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.2 }}
-                      onClick={handleLogout}
-                      className="ml-auto p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                    >
-                      <LogOut size={16} />
-                    </motion.button>
-                  )}
-                </AnimatePresence>
+                {!isCollapsed && (
+                  <div className="ml-3 min-w-0 overflow-hidden">
+                    <p className="text-sm font-medium text-gray-700 truncate">
+                      {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {company?.name || 'Company'}
+                    </p>
+                  </div>
+                )}
+                {!isCollapsed && (
+                  <button
+                    onClick={handleLogout}
+                    className="ml-auto p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  >
+                    <LogOut size={16} />
+                  </button>
+                )}
               </div>
             </div>
           </div>
-        </motion.aside>
+        </aside>
 
         {/* Main content */}
         <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
