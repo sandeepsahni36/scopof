@@ -425,7 +425,6 @@ const DashboardLayout = () => {
       {/* Bottom Navigation for Mobile */}
       <BottomNavigation />
     </div>
-    </div>
   );
 };
 
