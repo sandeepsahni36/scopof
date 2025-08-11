@@ -286,6 +286,77 @@ const AdminSettingsPage = () => {
                 </p>
               </div>
               
+              {/* Company Logo Section */}
+              <div>
+                <h3 className="text-base font-medium text-gray-900 mb-4">Company Logo</h3>
+                <div className="flex items-start space-x-6">
+                  {/* Logo Preview */}
+                  <div className="flex-shrink-0">
+                    <div className="w-24 h-24 border-2 border-gray-300 border-dashed rounded-lg flex items-center justify-center bg-gray-50">
+                      {logoPreview ? (
+                        <img
+                          src={logoPreview}
+                          alt="Company Logo"
+                          className="w-full h-full object-contain rounded-lg"
+                        />
+                      ) : (
+                        <ImageIcon className="w-8 h-8 text-gray-400" />
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Logo Upload Controls */}
+                  <div className="flex-1">
+                    <div className="space-y-3">
+                      <div>
+                        <input
+                          type="file"
+                          id="logo-upload"
+                          accept="image/png,image/jpeg"
+                          onChange={handleLogoUpload}
+                          className="hidden"
+                          disabled={logoUploading}
+                        />
+                        <label htmlFor="logo-upload">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<Upload size={16} />}
+                            disabled={logoUploading}
+                            isLoading={logoUploading}
+                            className="cursor-pointer"
+                            onClick={() => document.getElementById('logo-upload')?.click()}
+                          >
+                            {logoPreview ? 'Change Logo' : 'Upload Logo'}
+                          </Button>
+                        </label>
+                      </div>
+                      
+                      {logoPreview && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleRemoveLogo}
+                          disabled={logoUploading}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          Remove Logo
+                        </Button>
+                      )}
+                      
+                      <div className="text-xs text-gray-500 space-y-1">
+                        <p>• Maximum file size: 300KB</p>
+                        <p>• Recommended dimensions: 100x100px</p>
+                        <p>• Supported formats: PNG, JPG</p>
+                        <p>• Images will be automatically resized and optimized</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <Input
                   label="Company Name"

@@ -2,6 +2,15 @@
 
 ## [Latest] - 2025-01-31
 
+### Added
+- **Company Logo Upload**: Admins and owners can now upload company logos in Company Settings
+  - Maximum file size: 300KB
+  - Recommended dimensions: 100x100px
+  - Supported formats: PNG, JPG
+  - Auto-resize and optimize to WebP format
+  - Stored under company folder structure: `{company_name}/logo/current_logo.webp`
+  - Only accessible to owners and admins (team members cannot access Company Settings)
+
 ### Fixed
 - **Template Builder Layout**: Reorganized layout to show field types on left, template items in center, and field settings on right
 - **Template Builder UI**: Removed "Enable Reporting" checkbox from template builder (now only available during live inspection)
