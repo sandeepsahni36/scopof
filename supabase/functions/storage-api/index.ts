@@ -514,8 +514,19 @@ serve(async (req) => {
           });
         }
 
-        const fileKey = pathSegments.slice(2).join('/'); // Reconstruct fileKey from remaining path segments
+        // Extract fileKey from URL path - handle both direct calls and function calls
+        let fileKey;
+        if (pathSegments.includes('storage-api')) {
+          // Called via /functions/v1/storage-api/download/filekey
+          const downloadIndex = pathSegments.findIndex(segment => segment === 'download');
+          fileKey = pathSegments.slice(downloadIndex + 1).join('/');
+        } else {
+          // Direct call to download endpoint
+          fileKey = pathSegments.slice(2).join('/');
+        }
+        
         if (!fileKey) {
+          console.error("Download: No file key extracted from path:", pathSegments);
           return new Response(JSON.stringify({
             error: "File key not provided"
           }), {
@@ -530,12 +541,15 @@ serve(async (req) => {
         console.log("Processing download for file key:", fileKey);
         console.log("Download request details:", {
           fileKey,
-          isServiceRole: isServiceRoleRequest,
-          userContextAdminId: userContext?.adminId
+          pathSegments,
+          fullUrl: req.url
         });
 
         try {
-          // Skip authorization check for service role requests
+          // Check if this is a service role request by looking at the token
+          const isServiceRoleRequest = token === supabaseServiceKey;
+          console.log("Auth check:", { isServiceRoleRequest, tokenLength: token.length });
+          
           if (!isServiceRoleRequest) {
             // Verify user authorization to access this file
             const { data: fileMetadata, error: metaError } = await supabase
@@ -575,6 +589,7 @@ serve(async (req) => {
 
           // Generate a pre-signed URL for secure, temporary access
           // The URL will allow direct download from MinIO without proxying through the Edge Function
+          console.log("Generating presigned URL for:", { bucket: minioBucketName, fileKey });
           const presignedUrl = await minioClient.presignedGetObject(
             minioBucketName, 
             fileKey, 
@@ -605,10 +620,15 @@ serve(async (req) => {
             }
           });
 
-        } catch (error) {
-          console.error("MinIO: File download failed:", error?.message);
+        } catch (minioError) {
+          console.error("MinIO: File download failed:", {
+            message: minioError?.message,
+            stack: minioError?.stack,
+            fileKey,
+            bucket: minioBucketName
+          });
           return new Response(JSON.stringify({
-            error: "Failed to generate file URL"
+            error: `Failed to generate file URL: ${minioError?.message}`
           }), {
             status: 500,
             headers: {
