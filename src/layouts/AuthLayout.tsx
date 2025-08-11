@@ -1,6 +1,5 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { Building2 } from 'lucide-react';
 
 const AuthLayout = () => {
   return (
@@ -23,8 +22,7 @@ const AuthLayout = () => {
       </div>
       
       <div className="flex-shrink-0 pb-4 sm:pb-6 text-center">
-        <p className="text-xs sm:text-sm text-gray-600">
-          &copy; scopoStay. All rights reserved.
+          <img src="/Scopostay long full logo blue.png" alt="scopoStay Logo" className="h-8 sm:h-10 w-auto" />
         </p>
       </div>
     </div>
