@@ -13,8 +13,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { toast } from 'sonner';
 
 interface DisplayStep {
-  type: 'section' | 'items';
-  sectionName?: string;
+  type: 'items';
   items: any[];
 }
 

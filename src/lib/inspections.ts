@@ -131,9 +131,7 @@ export async function createInspection(
             report_enabled,
             maintenance_email,
             report_recipient_id,
-            order,
-            parent_id,
-            section_name
+            order
           )
         )
       `)
@@ -240,8 +238,6 @@ export async function getInspectionDetails(inspectionId: string): Promise<{
             id,
             type,
             label,
-            section_name,
-            parent_id,
             required,
             options,
             report_enabled
