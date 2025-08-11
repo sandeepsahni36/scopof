@@ -216,4 +216,6 @@ const AdminSettingsPage = () => {
       setLogoUploading(false);
     }
   };
-}
+};
+
+export default AdminSettingsPage;
