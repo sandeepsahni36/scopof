@@ -231,7 +231,7 @@ const TemplateDetailPage = () => {
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Panel - Field Types */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 order-1">
             <div className="bg-white shadow rounded-lg p-6 sticky top-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Field Types</h3>
               <div className="space-y-3">
@@ -300,7 +300,7 @@ const TemplateDetailPage = () => {
           </div>
 
           {/* Center Panel - Template Form and Items */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 order-2">
             <div className="space-y-6">
               {/* Template Basic Info */}
               <div className="bg-white shadow rounded-lg p-6">
@@ -425,7 +425,7 @@ const TemplateDetailPage = () => {
           </div>
 
           {/* Right Panel - Field Settings */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 order-3">
             <div className="bg-white shadow rounded-lg p-6 sticky top-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Field Settings</h3>
               
@@ -539,43 +539,6 @@ const TemplateDetailPage = () => {
                     </div>
                   )}
 
-                  {/* Report Settings */}
-                  {selectedItem.type !== 'divider' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          {...register(`items.${selectedItemIndex}.reportEnabled` as const)}
-                          className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                        />
-                        <span className="ml-2 text-sm text-gray-900">Enable Reporting</span>
-                      </div>
-
-                      {watch(`items.${selectedItemIndex}.reportEnabled`) && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Default Report Recipient
-                          </label>
-                          <select
-                            {...register(`items.${selectedItemIndex}.reportRecipientId` as const)}
-                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          >
-                            <option value="">Select a team...</option>
-                            {reportServiceTeams.map((team) => (
-                              <option key={team.id} value={team.id}>
-                                {team.designation} ({team.email})
-                              </option>
-                            ))}
-                          </select>
-                          {reportServiceTeams.length === 0 && (
-                            <p className="mt-1 text-sm text-amber-600">
-                              No teams available. Add teams in Company Settings first.
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">

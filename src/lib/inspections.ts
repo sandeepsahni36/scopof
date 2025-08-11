@@ -236,6 +236,7 @@ export async function getInspectionDetails(inspectionId: string): Promise<{
           report_recipient_id,
           template_items (
             id,
+           template_id,
             type,
             label,
             required,

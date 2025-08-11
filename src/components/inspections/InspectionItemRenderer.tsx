@@ -286,19 +286,20 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {(templateItem.options || []).map((option: RatingOption | string, index: number) => {
                 const optionData = typeof option === 'string' ? { label: option, color: RATING_COLORS.blue } : option;
+                const isSelected = value === optionData.label;
                 return (
                   <button
                     key={index}
                     type="button"
                     onClick={() => handleValueChange(optionData.label)}
-                    className={`p-4 rounded-lg border-2 transition-all text-sm font-medium ${
-                      value === optionData.label
+                    className={`p-3 rounded-lg border-2 transition-all text-sm font-medium ${
+                      isSelected
                         ? 'border-gray-800 shadow-md scale-105'
                         : 'border-gray-300 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     style={{ 
-                      backgroundColor: value === optionData.label ? optionData.color : 'white',
-                      color: value === optionData.label ? 'white' : '#374151'
+                      backgroundColor: isSelected ? optionData.color : `${optionData.color}20`,
+                      color: isSelected ? 'white' : optionData.color
                     }}
                   >
                     {optionData.label}
@@ -331,14 +332,14 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
                         : [...currentValues, optionData.label];
                       handleValueChange(newValues);
                     }}
-                    className={`p-4 rounded-lg border-2 transition-all text-sm font-medium ${
+                    className={`p-3 rounded-lg border-2 transition-all text-sm font-medium ${
                       isSelected
                         ? 'border-gray-800 shadow-md scale-105'
                         : 'border-gray-300 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     style={{ 
-                      backgroundColor: isSelected ? optionData.color : 'white',
-                      color: isSelected ? 'white' : '#374151'
+                      backgroundColor: isSelected ? optionData.color : `${optionData.color}20`,
+                      color: isSelected ? 'white' : optionData.color
                     }}
                   >
                     {optionData.label}

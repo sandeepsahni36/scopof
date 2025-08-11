@@ -29,6 +29,7 @@ const InspectionPage = () => {
   const [completing, setCompleting] = useState(false);
   const [showSignatures, setShowSignatures] = useState(false);
   const [clientPresent, setClientPresent] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState('0:00');
   
   // Signature refs
   const inspectorSignatureRef = useRef<SignatureCanvas>(null);
@@ -40,6 +41,34 @@ const InspectionPage = () => {
     }
   }, [id]);
 
+  // Timer effect
+  useEffect(() => {
+    if (!inspection?.start_time) return;
+
+    const updateTimer = () => {
+      const startTime = new Date(inspection.start_time);
+      const now = new Date();
+      const diffInSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+      
+      const hours = Math.floor(diffInSeconds / 3600);
+      const minutes = Math.floor((diffInSeconds % 3600) / 60);
+      const seconds = diffInSeconds % 60;
+      
+      if (hours > 0) {
+        setElapsedTime(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      } else {
+        setElapsedTime(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      }
+    };
+
+    // Update immediately
+    updateTimer();
+    
+    // Update every second
+    const interval = setInterval(updateTimer, 1000);
+    
+    return () => clearInterval(interval);
+  }, [inspection?.start_time]);
   const loadInspectionData = async (inspectionId: string) => {
     try {
       setLoading(true);
@@ -84,16 +113,33 @@ const InspectionPage = () => {
   };
 
   const buildDisplaySteps = (items: any[]): DisplayStep[] => {
-    // With sections removed, create a simple flat list of items
-    // Group items into reasonable chunks for better UX (e.g., 3-5 items per step)
+    // Group items by their template to keep related items together
     const steps: DisplayStep[] = [];
-    const itemsPerStep = 3;
     
-    for (let i = 0; i < items.length; i += itemsPerStep) {
-      const stepItems = items.slice(i, i + itemsPerStep);
+    // Group items by template_id
+    const itemsByTemplate = new Map<string, any[]>();
+    
+    items.forEach(item => {
+      const templateId = item.template_items?.template_id || 'unknown';
+      if (!itemsByTemplate.has(templateId)) {
+        itemsByTemplate.set(templateId, []);
+      }
+      itemsByTemplate.get(templateId)!.push(item);
+    });
+    
+    // Create one step per template
+    itemsByTemplate.forEach((templateItems) => {
       steps.push({
         type: 'items',
-        items: stepItems
+        items: templateItems
+      });
+    });
+    
+    // If no templates found, create a single step with all items
+    if (steps.length === 0 && items.length > 0) {
+      steps.push({
+        type: 'items',
+        items: items
       });
     }
     
@@ -279,17 +325,8 @@ const InspectionPage = () => {
             <div className="flex items-center space-x-4">
               <div className="flex items-center text-sm text-gray-500">
                 <Clock className="w-4 h-4 mr-1" />
-                <span id="inspection-timer">0:00</span>
+                <span>{elapsedTime}</span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                leftIcon={<Save size={16} />}
-                onClick={handleSaveProgress}
-                isLoading={saving}
-              >
-                Save Progress
-              </Button>
             </div>
           </div>
         </div>

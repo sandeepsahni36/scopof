@@ -241,7 +241,10 @@ function TemplatesPage() {
                   </p>
                 )}
                 <div className="mt-4 text-sm text-gray-500">
-                  Created {new Date(template.createdAt).toLocaleDateString()}
+                  Created {template.createdAt && !isNaN(new Date(template.createdAt).getTime()) 
+                    ? new Date(template.createdAt).toLocaleDateString()
+                    : 'N/A'
+                  }
                 </div>
               </div>
             </div>
