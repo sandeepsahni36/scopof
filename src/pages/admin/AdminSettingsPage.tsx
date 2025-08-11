@@ -62,7 +62,7 @@ type User = {
 };
 
 const AdminSettingsPage = () => {
-  const { company, hasActiveSubscription, isTrialExpired, initialize } = useAuthStore();
+  const { company, hasActiveSubscription, isTrialExpired, initialize, logout } = useAuthStore();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
