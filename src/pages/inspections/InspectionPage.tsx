@@ -69,6 +69,7 @@ const InspectionPage = () => {
     
     return () => clearInterval(interval);
   }, [inspection?.start_time]);
+
   const loadInspectionData = async (inspectionId: string) => {
     try {
       setLoading(true);
@@ -116,22 +117,22 @@ const InspectionPage = () => {
     // Group items by their template to keep related items together
     const steps: DisplayStep[] = [];
     
-    // Group items by template_id
+    // Group items by template_id from template_items
     const itemsByTemplate = new Map<string, any[]>();
     
     items.forEach(item => {
-      const templateId = item.template_items?.template_id || 'unknown';
+      const templateId = item.template_items?.template_id || item.templateItem?.template_id || 'unknown';
       if (!itemsByTemplate.has(templateId)) {
         itemsByTemplate.set(templateId, []);
       }
       itemsByTemplate.get(templateId)!.push(item);
     });
     
-    // Create one step per template
+    // Create one step per template to keep dividers with their template
     itemsByTemplate.forEach((templateItems) => {
       steps.push({
         type: 'items',
-        items: templateItems
+        items: templateItems.sort((a, b) => a.order_index - b.order_index)
       });
     });
     
@@ -139,7 +140,7 @@ const InspectionPage = () => {
     if (steps.length === 0 && items.length > 0) {
       steps.push({
         type: 'items',
-        items: items
+        items: items.sort((a, b) => a.order_index - b.order_index)
       });
     }
     
