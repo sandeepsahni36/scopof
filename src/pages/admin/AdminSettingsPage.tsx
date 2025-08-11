@@ -22,7 +22,8 @@ import {
   Clock,
   AlertTriangle,
   Download,
-  ArrowRight
+  ArrowRight,
+  LogOut
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -459,6 +460,12 @@ const AdminSettingsPage = () => {
     }
   };
 
+  const handleLogout = async () => {
+    if (window.confirm('Are you sure you want to sign out?')) {
+      await logout();
+      navigate('/');
+    }
+  };
   // Calculated values
   const filteredUsers = users.filter(user =>
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -484,6 +491,18 @@ const AdminSettingsPage = () => {
           <p className="mt-1 text-sm text-gray-500">
             Manage your company information, users, and subscription.
           </p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            leftIcon={<LogOut size={16} />}
+            className="text-gray-600 hover:text-gray-800"
+          >
+            <span className="hidden sm:inline">Sign Out</span>
+            <span className="sm:hidden">Logout</span>
+          </Button>
         </div>
       </div>
 
