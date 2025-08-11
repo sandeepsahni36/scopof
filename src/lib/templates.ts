@@ -279,7 +279,7 @@ export async function getTemplates(searchTerm?: string, categoryId?: string) {
     }
 
     // Apply category filter
-    if (categoryId) {
+    if (categoryId && categoryId !== 'all') {
       query = query.eq('category_id', categoryId);
     }
 
