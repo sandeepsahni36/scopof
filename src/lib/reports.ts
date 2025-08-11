@@ -83,7 +83,7 @@ const DashboardLayout = () => {
           className="bg-white border-r border-gray-200 hidden md:flex md:flex-col flex-shrink-0 z-40"
         >
           <div className="flex flex-col h-full">
-            {/* Header */}
+            {/* Logo and collapse button */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <Link to="/dashboard" className="flex items-center">
                 <AnimatePresence mode="wait">
