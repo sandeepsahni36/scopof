@@ -1,794 +1,443 @@
-import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
-import jsPDF from 'jspdf';
-import { uploadFile } from './storage';
-import { getSignedUrlForFile } from './storage';
+import React, { useState, useEffect } from 'react';
+import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
+import { 
+  ChevronLeft,
+  LogOut,
+  AlertTriangle,
+  Clock,
+  HelpCircle,
+} from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { Button } from '../components/ui/Button';
+import BottomNavigation from '../components/layout/BottomNavigation';
 
-export async function generateInspectionReport(reportData: {
-  inspection: any;
-  rooms: Array<{ name: string; items: any[] }>;
-  primaryContactName: string;
-  inspectorName: string;
-  startTime?: string;
-  endTime?: string;
-  duration?: number;
-  primaryContactSignature?: string;
-  inspectorSignature?: string;
-}): Promise<string | null> {
+// Import navigation items for desktop sidebar
+import {
+  Home,
+  Building2,
+  LayoutTemplate,
+  FileText,
+  Settings,
+} from 'lucide-react';
+import { NavItem } from '../types';
+
+const mainNavItems: NavItem[] = [
+  { title: 'Dashboard', href: '/dashboard', icon: 'Home' },
+  { title: 'Properties', href: '/dashboard/properties', icon: 'Building2' },
+  { title: 'Templates', href: '/dashboard/templates', icon: 'LayoutTemplate' },
+  { title: 'Reports', href: '/dashboard/reports', icon: 'FileText' },
+];
+
+const adminNavItems: NavItem[] = [
+  { title: 'Company Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
+];
+
+const IconMap: Record<string, React.ReactNode> = {
+  Home: <Home size={20} />,
+  Building2: <Building2 size={20} />,
+  LayoutTemplate: <LayoutTemplate size={20} />,
+  FileText: <FileText size={20} />,
+  Settings: <Settings size={20} />,
+};
+
+const DashboardLayout = () => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { user, company, logout, isAdmin, isTrialExpired, hasActiveSubscription, requiresPayment } = useAuthStore();
+  const navigate = useNavigate();
+  
+  // Calculate trial days remaining
+  const trialDaysRemaining = company?.trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(company.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
+    : 0;
+
+  const showTrialWarning = !hasActiveSubscription && trialDaysRemaining <= 3 && trialDaysRemaining > 0;
+  
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = '/';
+  };
+
+  const handleUpgradeClick = () => {
+    if (requiresPayment) {
+      navigate('/subscription-required');
+    } else {
+      navigate('/dashboard/admin/subscription');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <div className="flex min-h-screen">
+        {/* Sidebar - Push Layout for Desktop */}
+        <motion.aside
+          initial={false}
+          animate={{ 
+            width: isCollapsed ? '5rem' : '16rem',
+          }}
+          transition={{
+            duration: 0.3,
+            ease: 'easeInOut',
+          }}
+          className="bg-white border-r border-gray-200 hidden md:flex md:flex-col flex-shrink-0 z-40"
+        >
   try {
-    const user = await validateUserSession();
-    if (!user) {
-      throw new Error('User session is invalid. Please sign in again.');
-    }
-
-    // Handle dev mode
-    if (devModeEnabled()) {
-      console.log('Dev mode: Generating mock PDF report');
-      return generateMockPDFReport(reportData);
-    }
-
-    // Generate PDF report
-    const pdfBlob = await createPDFReport(reportData);
+    // Save current state
+    const currentFontSize = pdf.internal.getFontSize();
+    const currentTextColor = pdf.getTextColor();
     
-    // Create a File object from the blob for upload
-    const fileName = generateReportFileName(reportData);
-    const pdfFile = new File([pdfBlob], fileName, {
-      type: 'application/pdf',
-    });
-    
-    // Upload PDF via custom storage API with property name
-    const uploadResult = await uploadFileWithPropertyName(
-      pdfFile, 
-      'report', 
-      reportData.inspection.id,
-      reportData.inspection.propertyName || 'Unknown_Property',
-      reportData
-    );
-    
-    if (!uploadResult) {
-      throw new Error('Failed to upload PDF report');
-    }
-
-    // Save report record to database
-    await saveReportRecord(reportData, uploadResult.fileUrl, uploadResult.fileKey);
-
-    return uploadResult.fileUrl;
-  } catch (error: any) {
-    console.error('Error generating inspection report:', error);
-    
-    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-      await handleAuthError(error);
-      return null;
-    }
-    
-    throw error;
-  }
-}
-
-async function createPDFReport(reportData: {
-  inspection: any;
-  rooms: any[];
-  primaryContactName: string;
-  inspectorName: string;
-  startTime?: string;
-  endTime?: string;
-  duration?: number;
-  primaryContactSignature?: string;
-  inspectorSignature?: string;
-}): Promise<Blob> {
-  const pdf = new jsPDF();
-  let yPosition = 20;
-  
-  // Header
-  pdf.setFontSize(20);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Property Inspection Report', 20, yPosition);
-  yPosition += 15;
-  
-  // Property and inspection details
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  
-  const details = [
-    `Property: ${reportData.inspection.propertyName || 'Property Name'}`,
-    `Inspection Type: ${reportData.inspection.inspectionType}`,
-    `Inspector: ${reportData.inspectorName}`,
-    ...(reportData.primaryContactName ? [`Contact: ${reportData.primaryContactName}`] : []),
-    `Date: ${new Date().toLocaleDateString()}`,
-    `Start Time: ${reportData.startTime ? new Date(reportData.startTime).toLocaleTimeString() : 'N/A'}`,
-    `End Time: ${reportData.endTime ? new Date(reportData.endTime).toLocaleTimeString() : 'N/A'}`,
-    `Duration: ${reportData.duration ? formatDuration(reportData.duration) : 'N/A'}`,
-  ];
-  
-  details.forEach(detail => {
-    pdf.text(detail, 20, yPosition);
-    yPosition += 7;
-  });
-  
-  yPosition += 10;
-  
-  // Room sections
-  for (const room of reportData.rooms) {
-    // Check if we need a new page
-    if (yPosition > 250) {
-      pdf.addPage();
-      yPosition = 20;
-    }
-    
-    // Room header
-    pdf.setFontSize(16);
+    // Set watermark properties
+    pdf.setFontSize(50);
+    pdf.setTextColor(200, 200, 200); // Light gray
     pdf.setFont('helvetica', 'bold');
-    pdf.text(room.name, 20, yPosition);
-    yPosition += 10;
     
-    // Room items
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
+    // Calculate center position
+    const pageWidth = pdf.internal.pageSize.width;
+    const pageHeight = pdf.internal.pageSize.height;
+    const centerX = pageWidth / 2;
+    const centerY = pageHeight / 2;
     
-    for (const item of room.items) {
-      if (yPosition > 270) {
-        pdf.addPage();
-        yPosition = 20;
-      }
-      
-      pdf.text(`• ${item.label}:`, 25, yPosition);
-      yPosition += 5;
-      
-      let valueText = 'Not completed';
-      if (item.value !== null && item.value !== undefined) {
-        if (Array.isArray(item.value)) {
-          valueText = item.value.join(', ') || 'None selected';
-        } else {
-          valueText = String(item.value);
-        }
-      }
-      
-      pdf.text(`  Value: ${valueText}`, 30, yPosition);
-      yPosition += 5;
-      
-      if (item.notes) {
-        pdf.text(`  Notes: ${String(item.notes)}`, 30, yPosition);
-        yPosition += 5;
-      }
-      
-      // Handle photos - embed them in the PDF
-      if (item.photos && item.photos.length > 0) {
-        pdf.text(`  Photos (${item.photos.length}):`, 30, yPosition);
-        yPosition += 5;
-        
-        for (let i = 0; i < item.photos.length; i++) {
-          const photoUrl = item.photos[i];
-          
-          try {
-            // Extract file key from URL for signed URL generation
-            const fileKey = extractFileKeyFromUrl(photoUrl);
-            
-            if (fileKey) {
-              // Get signed URL for secure access
-              const signedUrl = await getSignedUrlForFile(fileKey);
-              
-              if (signedUrl) {
-                // Fetch and embed the image
-                const imageData = await fetchAndProcessImage(signedUrl);
-                
-                if (imageData) {
-                  // Check if we need a new page for the image
-                  if (yPosition > 200) {
-                    pdf.addPage();
-                    yPosition = 20;
-                  }
-                  
-                  // Add image to PDF (scaled to fit)
-                  const imageWidth = 80; // Max width in mm
-                  const imageHeight = 60; // Max height in mm
-                  
-                  pdf.addImage(
-                    imageData.dataUrl,
-                    imageData.format,
-                    30,
-                    yPosition,
-                    imageWidth,
-                    imageHeight
-                  );
-                  
-                  yPosition += imageHeight + 10; // Add spacing after image
-                  
-                  // Add photo caption
-                  pdf.setFontSize(8);
-                  pdf.text(`Photo ${i + 1} of ${item.photos.length}`, 30, yPosition);
-                  pdf.setFontSize(10);
-                  yPosition += 5;
-                } else {
-                  // Fallback if image couldn't be processed
-                  pdf.text(`    Photo ${i + 1}: [Image could not be embedded]`, 30, yPosition);
-                  yPosition += 5;
-                }
-              } else {
-                // Fallback if signed URL couldn't be generated
-                pdf.text(`    Photo ${i + 1}: [Access denied]`, 30, yPosition);
-                yPosition += 5;
-              }
-            } else {
-              // Fallback if file key couldn't be extracted
-              pdf.text(`    Photo ${i + 1}: [Invalid URL]`, 30, yPosition);
-              yPosition += 5;
-            }
-          } catch (error) {
-            console.error(`Error embedding photo ${i + 1} for item ${item.label}:`, error);
-            // Add fallback text for failed photo
-            pdf.text(`    Photo ${i + 1}: [Failed to load]`, 30, yPosition);
-            yPosition += 5;
-          }
-        }
-      }
-      
-      yPosition += 3;
-    }
-    
-    yPosition += 5;
-  }
-  
-  // Signature section
-  if (reportData.inspectorSignature || reportData.primaryContactSignature) {
-    if (yPosition > 150) {
-      pdf.addPage();
-      yPosition = 20;
-    }
-    
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Signatures', 20, yPosition);
-    yPosition += 15;
-    
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    
-    // Inspector signature
-    if (reportData.inspectorSignature) {
-      pdf.text('Inspector signature:', 20, yPosition);
-      yPosition += 10;
-      
-      try {
-        // Check if signature data is valid before embedding
-        if (reportData.inspectorSignature && 
-            typeof reportData.inspectorSignature === 'string' && 
-            reportData.inspectorSignature.startsWith('data:image/')) {
-          pdf.addImage(
-            reportData.inspectorSignature,
-            'PNG',
-            20,
-            yPosition,
-            60, // width in mm
-            30  // height in mm
-          );
-          yPosition += 35; // Add spacing after signature
-        } else {
-          pdf.text('[Inspector signature could not be embedded]', 20, yPosition);
-          yPosition += 7;
-        }
-      } catch (error) {
-        console.error('Error embedding inspector signature:', error);
-        pdf.text('[Inspector signature could not be embedded]', 20, yPosition);
-        yPosition += 7;
-      }
-      
-      pdf.text(`Signed by: ${reportData.inspectorName}`, 20, yPosition);
-      yPosition += 7;
-      pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPosition);
-      yPosition += 15;
-    }
-    
-    // Primary contact signature (if applicable)
-    if (reportData.primaryContactSignature && reportData.primaryContactName) {
-      const contactLabel = reportData.inspection.inspectionType?.includes('check') ? 'Guest' : 'Client';
-      pdf.text(`${contactLabel} signature:`, 20, yPosition);
-      yPosition += 10;
-      
-      try {
-        // Check if signature data is valid before embedding
-        if (reportData.primaryContactSignature && 
-            typeof reportData.primaryContactSignature === 'string' && 
-            reportData.primaryContactSignature.startsWith('data:image/')) {
-          pdf.addImage(
-            reportData.primaryContactSignature,
-            'PNG',
-            20,
-            yPosition,
-            60, // width in mm
-            30  // height in mm
-          );
-          yPosition += 35; // Add spacing after signature
-        } else {
-          pdf.text(`[${contactLabel} signature could not be embedded]`, 20, yPosition);
-          yPosition += 7;
-        }
-      } catch (error) {
-        console.error('Error embedding primary contact signature:', error);
-        pdf.text(`[${contactLabel} signature could not be embedded]`, 20, yPosition);
-        yPosition += 7;
-      }
-      
-      pdf.text(`Signed by: ${reportData.primaryContactName}`, 20, yPosition);
-      yPosition += 7;
-      pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPosition);
-    }
-  }
-  
-  return pdf.output('blob');
-}
-
-function generateReportFileName(reportData: any): string {
-  const propertyName = reportData.inspection.propertyName || reportData.propertyName || 'Unknown_Property';
-  const inspectionType = reportData.inspection.inspectionType || reportData.inspection.inspection_type || 'inspection';
-  const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  const time = new Date().toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
-  
-  // Clean property name for filename
-  const cleanPropertyName = propertyName.replace(/[^a-zA-Z0-9]/g, '_');
-  const cleanInspectionType = inspectionType.replace('_', '-');
-  
-  return `${cleanPropertyName}_${cleanInspectionType}_${date}_${time}.pdf`;
-}
-
-// Enhanced upload function that includes property name
-async function uploadFileWithPropertyName(
-  file: File,
-  fileType: 'photo' | 'report',
-  inspectionId: string,
-  propertyName: string,
-  reportData?: any
-): Promise<any> {
-  try {
-    const user = await validateUserSession();
-    if (!user) {
-      throw new Error('User session is invalid. Please sign in again.');
-    }
-
-    // Handle dev mode
-    if (devModeEnabled()) {
-      console.log('Dev mode: Mock file upload with property name');
-      return {
-        fileUrl: `https://example.com/mock-${fileType}-${Date.now()}.${file.type.split('/')[1]}`,
-        fileKey: `mock-${fileType}-${Date.now()}`,
-        metadataId: `mock-metadata-${Date.now()}`,
-      };
-    }
-
-    // Get user's session token
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      throw new Error('No valid session token found');
-    }
-
-    // Prepare form data with property name
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('inspectionId', inspectionId);
-    formData.append('propertyName', propertyName);
-    
-    // Add inspection type for better file naming
-    if (reportData?.inspection?.inspectionType) {
-      formData.append('inspectionType', reportData.inspection.inspectionType);
-    }
-
-    console.log('Uploading file via storage-api with property name:', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType,
-      inspectionId,
-      propertyName,
-      inspectionType: reportData?.inspection?.inspectionType
-    });
-
-    // Call the custom storage API Edge Function using fetch for proper FormData handling
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/storage-api/upload/${fileType}`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: formData,
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Storage API error:', errorData);
-      
-      // Check if it's an authentication error
-      if (response.status === 401 || response.status === 403) {
-        await handleAuthError(new Error(errorData.error || 'Authentication failed'));
-        return null;
-      }
-      
-      throw new Error(errorData.error || 'Failed to upload file');
-    }
-
-    const data = await response.json();
-
-    if (!data || !data.fileUrl) {
-      throw new Error('No file URL returned from storage API');
-    }
-
-    console.log('File uploaded successfully with property name:', {
-      fileUrl: data.fileUrl,
-      fileKey: data.fileKey,
-      metadataId: data.metadataId
-    });
-
-    return {
-      fileUrl: data.fileUrl,
-      fileKey: data.fileKey,
-      metadataId: data.metadataId,
-    };
-  } catch (error: any) {
-    console.error('Error uploading file with property name:', error);
-    
-    // Check if it's an authentication error
-    if (error.message?.includes('user_not_found') || error.message?.includes('JWT') || error.message?.includes('Unauthorized')) {
-      await handleAuthError(error);
-      return null;
-    }
-    
-    throw error;
-  }
-}
-
-// Helper function to extract file key from MinIO URL
-function extractFileKeyFromUrl(url: string): string | null {
-  try {
-    console.log('=== EXTRACT FILE KEY FROM URL ===');
-    console.log('Input URL:', url);
-    
-    // Expected URL format: https://storage.scopostay.com:9000/storage-files/{admin_id}/photo/{uuid}.webp
-    const urlObj = new URL(url);
-    console.log('Parsed URL object:', {
-      hostname: urlObj.hostname,
-      pathname: urlObj.pathname,
-      protocol: urlObj.protocol
+    // Add rotated watermark text
+    pdf.text('STARTER PLAN', centerX, centerY, {
+      angle: 45,
+      align: 'center'
     });
     
-    const pathParts = urlObj.pathname.split('/');
-    console.log('Path parts:', pathParts);
-    
-    // Find the bucket name and extract everything after it
-    const bucketIndex = pathParts.findIndex(part => part === 'storage-files');
-    console.log('Bucket index found:', bucketIndex);
-    
-    if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
-      // Join all parts after the bucket name
-      const fileKey = pathParts.slice(bucketIndex + 1).join('/');
-      console.log('Extracted file key:', fileKey);
-      console.log('=== END EXTRACT FILE KEY SUCCESS ===');
-      return fileKey;
-    }
-    
-    console.log('=== EXTRACT FILE KEY FAILED ===');
-    console.log('Bucket index not found or invalid path structure');
-    console.log('=== END EXTRACT FILE KEY FAILED ===');
-    return null;
+    // Restore previous state
+    pdf.setFontSize(currentFontSize);
+    pdf.setTextColor(currentTextColor);
   } catch (error) {
-    console.error('=== EXTRACT FILE KEY ERROR ===');
-    console.error('Error extracting file key from URL:', error);
-    console.error('URL that caused error:', url);
-    console.error('=== END EXTRACT FILE KEY ERROR ===');
-    return null;
+    console.error('Error adding watermark to PDF page:', error);
+    // Continue without watermark if there's an error
   }
 }
 
-// Helper function to fetch and process image for PDF embedding
-async function fetchAndProcessImage(imageUrl: string): Promise<{
-  dataUrl: string;
-  format: string;
-} | null> {
+// Helper function to add page numbers to all pages
+function addPageNumbers(pdf: any) {
   try {
-    console.log('=== PDF IMAGE FETCH START ===');
-    console.log('Fetching image for PDF embedding:', imageUrl);
-    console.log('Image URL analysis:', {
-      isValidUrl: imageUrl.startsWith('http'),
-      urlLength: imageUrl.length,
-      hostname: new URL(imageUrl).hostname,
-      pathname: new URL(imageUrl).pathname
-    });
+    const totalPages = pdf.internal.getNumberOfPages();
     
-    // Fetch the image
-    const response = await fetch(imageUrl);
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      
+      // Save current state
+      const currentFontSize = pdf.internal.getFontSize();
+      
+      // Set page number properties
+      pdf.setFontSize(10);
+      pdf.setTextColor('#666666');
+      
+      // Add page number at bottom left
+      pdf.text(
+        `Page ${i} of ${totalPages}`,
+        20, // 20mm from left edge
+        pdf.internal.pageSize.height - 10 // 10mm from bottom
+      );
+      
+      // Restore font size
+      pdf.setFontSize(currentFontSize);
+      pdf.setTextColor('#000000');
+    }
+  } catch (error) {
+    console.error('Error adding page numbers to PDF:', error);
+    // Continue without page numbers if there's an error
+  }
+}
+
+// Helper function to load image as data URL
+async function loadImageAsDataUrl(imageUrl: string): Promise<string | null> {
+  try {
+    // Handle relative URLs by converting to absolute
+    const absoluteUrl = imageUrl.startsWith('/') 
+      ? `${window.location.origin}${imageUrl}`
+      : imageUrl;
     
-    console.log('=== PDF IMAGE FETCH RESPONSE ===');
-    console.log('Fetch response:', {
-      status: response.status,
-      ok: response.ok,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
-    });
-    
+    const response = await fetch(absoluteUrl);
     if (!response.ok) {
-      console.error('=== PDF IMAGE FETCH FAILED ===');
-      console.error('Failed to fetch image for PDF:', {
-        url: imageUrl,
-        status: response.status,
-        statusText: response.statusText
-      });
-      console.error('=== END PDF IMAGE FETCH FAILED ===');
-      return null;
+      throw new Error(`Failed to fetch image: ${response.status}`);
     }
     
     const blob = await response.blob();
     
-    console.log('=== PDF IMAGE BLOB PROCESSING ===');
-    console.log('Blob details:', {
-      type: blob.type,
-      size: blob.size
-    });
-    
-    const objectUrl = URL.createObjectURL(blob);
-    console.log('Object URL created:', objectUrl);
-    
-    // Create an image element to load the blob
     return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous'; // Handle CORS if needed
-      
-      img.onload = () => {
-        console.log('=== PDF IMAGE LOAD SUCCESS ===');
-        console.log('Image loaded for PDF processing:', {
-          width: img.width,
-          height: img.height,
-          naturalWidth: img.naturalWidth,
-          naturalHeight: img.naturalHeight
-        });
-        
-        try {
-          // Create canvas to process the image
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          if (!ctx) {
-            console.error('PDF image processing failed: could not get canvas context');
-            URL.revokeObjectURL(objectUrl);
-            reject(new Error('Failed to get canvas context'));
-            return;
-          }
-          
-          // Calculate dimensions to fit within PDF constraints
-          const maxWidth = 300; // pixels
-          const maxHeight = 225; // pixels
-          
-          let { width, height } = img;
-          
-          console.log('=== PDF IMAGE SCALING ===');
-          console.log('Original dimensions:', { width, height });
-          
-          // Scale down if necessary
-          if (width > maxWidth || height > maxHeight) {
-            const ratio = Math.min(maxWidth / width, maxHeight / height);
-            width *= ratio;
-            height *= ratio;
-            console.log('Scaled dimensions:', { width, height, ratio });
-          } else {
-            console.log('No scaling needed');
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          // Draw the image onto the canvas
-          ctx.drawImage(img, 0, 0, width, height);
-          console.log('Image drawn to canvas successfully');
-          
-          // Convert to data URL (JPEG for smaller file size)
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          
-          console.log('=== PDF IMAGE CONVERSION SUCCESS ===');
-          console.log('Data URL generated:', {
-            length: dataUrl.length,
-            startsWithData: dataUrl.startsWith('data:image/jpeg'),
-            preview: dataUrl.substring(0, 50) + '...'
-          });
-          console.log('=== END PDF IMAGE CONVERSION SUCCESS ===');
-          
-          // Clean up object URL
-          URL.revokeObjectURL(objectUrl);
-          
-          resolve({
-            dataUrl,
-            format: 'JPEG'
-          });
-        } catch (error) {
-          console.error('=== PDF IMAGE PROCESSING ERROR ===');
-          console.error('Error during canvas processing:', {
-            message: error.message,
-            stack: error.stack
-          });
-          console.error('=== END PDF IMAGE PROCESSING ERROR ===');
-          // Clean up object URL on error
-          URL.revokeObjectURL(objectUrl);
-          reject(error);
-        }
-      };
-      
-      img.onerror = (error) => {
-        console.error('=== PDF IMAGE LOAD ERROR ===');
-        console.error('Failed to load image for PDF processing:', {
-          url: imageUrl,
-          objectUrl: objectUrl,
-          error: error
-        });
-        console.error('=== END PDF IMAGE LOAD ERROR ===');
-        // Clean up object URL on error
-        URL.revokeObjectURL(objectUrl);
-        reject(new Error('Failed to load image'));
-      };
-      
-      img.src = objectUrl;
-      console.log('Image src set to object URL, waiting for load...');
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read image blob'));
+      reader.readAsDataURL(blob);
     });
   } catch (error) {
-    console.error('=== PDF IMAGE PROCESSING OUTER ERROR ===');
-    console.error('Outer error in fetchAndProcessImage:', {
-      message: error.message,
-      stack: error.stack,
-      imageUrl: imageUrl
-    });
-    console.error('=== END PDF IMAGE PROCESSING OUTER ERROR ===');
+    console.error('Error loading image as data URL:', error);
     return null;
   }
 }
 
-function generateMockPDFReport(reportData: any): string {
-  // Return a mock URL for dev mode
-  return `https://example.com/reports/mock-report-${Date.now()}.pdf`;
-}
+                      alt="scopoStay Logo" 
+                      className="h-8 w-8 flex-shrink-0" 
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }} 
+                      exit={{ opacity: 0 }} 
+                    />
+                  ) : (
+                    <motion.img 
+                      key="expanded-logo" 
+                      src="/Scopostay long full logo blue.png" 
+                      alt="scopoStay Logo" 
+                      className="h-8 w-auto flex-shrink-0" 
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }} 
+                      exit={{ opacity: 0 }} 
+                    />
+                  )}
+                </AnimatePresence>
+              </Link>
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="ml-auto p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              >
+                <ChevronLeft
+                  size={20}
+                  className={`transform transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`}
+                />
+              </button>
+            </div>
 
-function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-  return `${minutes}m`;
-}
+            {/* Navigation */}
+            <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+              {mainNavItems.map((item) => (
+                <NavLink
+                  key={item.href}
+                  to={item.href}
+                  className={({ isActive }) =>
+                    `group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
+                      isActive
+                        ? 'bg-primary-100 text-primary-900'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`
+                  }
+                  end={item.href === '/dashboard'}
+                >
+                  <span className="flex-shrink-0">
+                    {IconMap[item.icon]}
+                  </span>
+                  <AnimatePresence>
+                    {!isCollapsed && (
+                      <motion.span
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: 'auto' }}
+                        exit={{ opacity: 0, width: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="ml-3 overflow-hidden whitespace-nowrap"
+                      >
+                        {item.title}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </NavLink>
+              ))}
 
-async function saveReportRecord(reportData: any, reportUrl: string, fileKey: string) {
-  try {
-    // In dev mode, just log the save operation
-    if (devModeEnabled()) {
-      console.log('Dev mode: Would save report record:', {
-        inspectionId: reportData.inspection.id,
-        reportUrl,
-        fileKey,
-        generatedAt: new Date().toISOString(),
-      });
-      return;
-    }
+              {/* Admin Section */}
+              {isAdmin && (
+                <>
+                  <div className="pt-4 pb-2">
+                    <AnimatePresence>
+                      {!isCollapsed && (
+                        <motion.h3
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                        >
+                          Admin
+                        </motion.h3>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  {adminNavItems.map((item) => (
+                    <NavLink
+                      key={item.href}
+                      to={item.href}
+                      className={({ isActive }) =>
+                        `group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
+                          isActive
+                            ? 'bg-primary-100 text-primary-900'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }`
+                      }
+                    >
+                      <span className="flex-shrink-0">
+                        {IconMap[item.icon]}
+                      </span>
+                      <AnimatePresence>
+                        {!isCollapsed && (
+                          <motion.span
+                            initial={{ opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: 'auto' }}
+                            exit={{ opacity: 0, width: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="ml-3 overflow-hidden whitespace-nowrap"
+                          >
+                            {item.title}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </NavLink>
+                  ))}
+                </>
+              )}
+            </nav>
 
-    // Save to reports table (this would be implemented when the reports table exists)
-    const { error } = await supabase
-      .from('reports')
-      .insert([{
-        inspection_id: reportData.inspection.id,
-        report_url: reportUrl,
-        file_key: fileKey,
-        report_type: 'inspection',
-        generated_at: new Date().toISOString(),
-      }]);
+            {/* Trial Warning in Sidebar */}
+            {showTrialWarning && (
+              <div className="p-2">
+                <AnimatePresence>
+                  {!isCollapsed && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="bg-amber-50 border border-amber-200 rounded-lg p-3"
+                    >
+                      <div className="flex items-start">
+                        <Clock className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                        <div className="ml-2 min-w-0">
+                          <p className="text-xs font-medium text-amber-800">
+                            Trial ends in {trialDaysRemaining} days
+                          </p>
+                          <Button
+                            size="sm"
+                            onClick={handleUpgradeClick}
+                            className="mt-2 text-xs h-6 bg-amber-600 hover:bg-amber-700"
+                          >
+                            Upgrade
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
-    if (error) {
-      console.error('Error saving report record:', error);
-      // Don't throw here as the PDF was generated successfully
-    }
-  } catch (error) {
-    console.error('Error saving report record:', error);
-    // Don't throw here as the PDF was generated successfully
-  }
-}
+            {/* User info */}
+            <div className="flex-shrink-0 border-t border-gray-200 p-4">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
+                    <span className="text-sm font-medium text-primary-700">
+                      {user?.firstName?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                </div>
+                <AnimatePresence>
+                  {!isCollapsed && (
+                    <motion.div
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 'auto' }}
+                      exit={{ opacity: 0, width: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="ml-3 min-w-0 overflow-hidden"
+                    >
+                      <p className="text-sm font-medium text-gray-700 truncate">
+                        {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {company?.name || 'Company'}
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <AnimatePresence>
+                  {!isCollapsed && (
+                    <motion.button
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 'auto' }}
+                      exit={{ opacity: 0, width: 0 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={handleLogout}
+                      className="ml-auto p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                    >
+                      <LogOut size={16} />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+        </motion.aside>
 
-export async function getReports(filters?: {
-  propertyId?: string;
-  inspectionType?: string;
-  dateFrom?: string;
-  dateTo?: string;
-}) {
-  try {
-    const user = await validateUserSession();
-    if (!user) {
-      throw new Error('User session is invalid. Please sign in again.');
-    }
+        {/* Main content */}
+        <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+          isCollapsed ? 'md:ml-20' : 'md:ml-64'
+        }`}>
+          {/* Top bar */}
+          <div className="bg-white shadow-sm border-b border-gray-200 md:hidden">
+            <div className="px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between h-16">
+                <div className="flex items-center">
+                  <img 
+                    src="/Scopostay long full logo blue.png" 
+                    alt="scopoStay Logo" 
+                    className="h-8 w-auto" 
+                  />
+                </div>
+                <div className="flex items-center space-x-4">
+                  <a
+                    href="https://scopostay.com/support"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-3 py-1.5 border border-primary-300 text-sm font-medium rounded-md text-primary-700 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                  >
+                    <HelpCircle size={16} className="mr-1" />
+                    <span className="hidden sm:inline">Support</span>
+                    <span className="sm:hidden">Help</span>
+                  </a>
+                  <button
+                    onClick={handleLogout}
+                    className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  >
+                    <LogOut size={20} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    // Handle dev mode
-    if (devModeEnabled()) {
-      console.log('Dev mode: Returning mock reports');
-      return [
-        {
-          id: 'mock-report-1',
-          inspectionId: 'mock-inspection-1',
-          propertyName: 'Oceanview Apartment 2B',
-          inspectionType: 'check_in',
-          primaryContactName: 'John Smith',
-          inspectorName: 'Jane Inspector',
-          reportUrl: 'https://example.com/reports/mock-report-1.pdf',
-          generatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 'mock-report-2',
-          inspectionId: 'mock-inspection-2',
-          propertyName: 'Downtown Loft 5A',
-          inspectionType: 'check_out',
-          primaryContactName: null,
-          inspectorName: 'Mike Inspector',
-          reportUrl: 'https://example.com/reports/mock-report-2.pdf',
-          generatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        },
-      ];
-    }
+          {/* Trial warning banner */}
+          {isTrialExpired && (
+            <div className="bg-red-50 border-b border-red-200">
+              <div className="px-4 sm:px-6 lg:px-8 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <AlertTriangle className="h-5 w-5 text-red-400 mr-2" />
+                    <p className="text-sm font-medium text-red-800">
+                      Your trial has expired. Upgrade to continue using all features.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleUpgradeClick}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Upgrade Now
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
-    let query = supabase
-      .from('reports')
-      .select(`
-        *,
-        inspections (
-          property_id,
-          inspection_type,
-          primary_contact_name,
-          inspector_name,
-          properties (
-            name
-          )
-        )
-      `)
-      .order('created_at', { ascending: false });
+          {/* Main content area */}
+          <main className="flex-1 overflow-y-auto">
+            <div className="py-6 px-4 sm:px-6 lg:px-8 pb-20 md:pb-6">
+              <Outlet />
+            </div>
+          </main>
+        </div>
+      </div>
 
-    // Apply filters
-    if (filters?.propertyId) {
-      query = query.eq('inspections.property_id', filters.propertyId);
-    }
-    
-    if (filters?.inspectionType) {
-      query = query.eq('inspections.inspection_type', filters.inspectionType);
-    }
-    
-    if (filters?.dateFrom) {
-      query = query.gte('created_at', filters.dateFrom);
-    }
-    
-    if (filters?.dateTo) {
-      query = query.lte('created_at', filters.dateTo);
-    }
+      {/* Bottom Navigation for Mobile */}
+      <BottomNavigation />
+    </div>
+  );
+};
 
-    const { data, error } = await query;
-
-    if (error) {
-      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-        await handleAuthError(error);
-        return null;
-      }
-      throw error;
-    }
-
-    // Transform the data to match the Report interface expected by the frontend
-    return data?.map(item => ({
-      id: item.id,
-      inspectionId: item.inspection_id,
-      propertyName: item.inspections?.properties?.name || 'Unknown Property',
-      inspectionType: item.inspections?.inspection_type || 'check_in',
-      primaryContactName: item.inspections?.primary_contact_name || 'N/A',
-      inspectorName: item.inspections?.inspector_name || 'Unknown Inspector',
-      reportUrl: item.report_url || '',
-      fileKey: item.file_key || '',
-      generatedAt: item.generated_at || item.created_at,
-      createdAt: item.created_at,
-    })) || [];
-  } catch (error: any) {
-    console.error('Error fetching reports:', error);
-    
-    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-      await handleAuthError(error);
-      return null;
-    }
-    
-    throw error;
-  }
-}
+export default DashboardLayout;
