@@ -216,6 +216,42 @@ const InspectionPage = () => {
     }
   };
 
+  const getUpdatedDisplaySteps = async () => {
+    try {
+      console.log('Fetching updated inspection data for PDF generation...');
+      const updatedData = await getInspectionDetails(inspection.id);
+      
+      if (updatedData) {
+        console.log('Updated inspection data fetched successfully');
+        const updatedSteps = buildDisplaySteps(updatedData.items);
+        
+        // Log photo data for debugging
+        updatedSteps.forEach(step => {
+          step.items.forEach(item => {
+            const templateItem = item.template_items || item.templateItem;
+            if (templateItem?.type === 'photo') {
+              console.log('Updated photo item for PDF:', {
+                itemId: item.id,
+                templateLabel: templateItem.label,
+                hasPhotos: !!(item.photo_urls && item.photo_urls.length > 0),
+                photoCount: item.photo_urls?.length || 0,
+                photoUrls: item.photo_urls
+              });
+            }
+          });
+        });
+        
+        return updatedSteps;
+      } else {
+        console.warn('Failed to fetch updated inspection data, using existing data');
+        return displaySteps;
+      }
+    } catch (error) {
+      console.error('Error fetching updated inspection data:', error);
+      return displaySteps;
+    }
+  };
+
   const handleCompleteInspection = async () => {
     try {
       setCompleting(true);
@@ -261,7 +297,7 @@ const InspectionPage = () => {
           ...inspection,
           propertyName: property?.name,
         },
-        rooms: displaySteps,
+        rooms: await getUpdatedDisplaySteps(), // Get fresh data with photos
         primaryContactName: inspection.primary_contact_name || '',
         inspectorName: inspection.inspector_name || '',
         startTime: inspection.start_time,
