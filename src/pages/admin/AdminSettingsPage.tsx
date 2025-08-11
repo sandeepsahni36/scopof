@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Building2, Mail, Phone, MapPin, Palette, Plus, Edit, Trash2, Users } from 'lucide-react';
+import { Building2, Mail, Phone, MapPin, Palette, Plus, Edit, Trash2, Users, ImageIcon, Upload } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuthStore } from '../../store/authStore';
 import { getReportServiceTeams, createReportServiceTeam, updateReportServiceTeam, deleteReportServiceTeam, ReportServiceTeam } from '../../lib/reportServiceTeams';
+import { uploadFile, isImageValid, resizeAndOptimizeImage } from '../../lib/storage';
+import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
 type CompanySettingsFormData = {
