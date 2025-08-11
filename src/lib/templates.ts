@@ -252,8 +252,58 @@ export async function getTemplates(searchTerm?: string, categoryId?: string) {
 
       // Apply search filter
       if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        filteredTemplates = filteredTemplates.filter(template =>
+          template.name.toLowerCase().includes(searchLower) ||
+          (template.description && template.description.toLowerCase().includes(searchLower))
+        );
+      }
+
+      // Apply category filter
+      if (categoryId) {
+        filteredTemplates = filteredTemplates.filter(template => template.categoryId === categoryId);
+      }
+
+      return filteredTemplates;
+    }
+
+    // Build query for production
+    let query = supabase
+      .from('templates')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // Apply search filter
+    if (searchTerm) {
+      query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+    }
+
+    // Apply category filter
+    if (categoryId) {
+      query = query.eq('category_id', categoryId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Error fetching templates:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
       }
     }
+    
+    throw error;
   }
 }
 
