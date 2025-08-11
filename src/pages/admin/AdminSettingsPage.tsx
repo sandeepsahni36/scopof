@@ -23,12 +23,14 @@ type TeamFormData = {
 
 const AdminSettingsPage = () => {
   const [loading, setLoading] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [teamsLoading, setTeamsLoading] = useState(true);
   const [teams, setTeams] = useState<ReportServiceTeam[]>([]);
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [editingTeam, setEditingTeam] = useState<ReportServiceTeam | null>(null);
   const [teamFormLoading, setTeamFormLoading] = useState(false);
-  const { company } = useAuthStore();
+  const { company, initialize } = useAuthStore();
   
   const {
     register,
@@ -157,6 +159,110 @@ const AdminSettingsPage = () => {
     setShowTeamForm(false);
     setEditingTeam(null);
     resetTeam();
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file
+    const validation = isImageValid(file);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
+
+    try {
+      setLogoUploading(true);
+
+      // Resize and optimize the image
+      const optimizedFile = await resizeAndOptimizeImage(file, 100, 100, 0.9);
+
+      // Upload the logo
+      const uploadResult = await uploadFile(optimizedFile, 'logo');
+      
+      if (!uploadResult) {
+        throw new Error('Failed to upload logo');
+      }
+
+      // Update admin record with new logo URL
+      const { data: adminData, error: adminError } = await supabase
+        .from('admin')
+        .select('id')
+        .eq('owner_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (adminError || !adminData) {
+        throw new Error('Admin record not found');
+      }
+
+      const { error: updateError } = await supabase
+        .from('admin')
+        .update({ logo_url: uploadResult.fileUrl })
+        .eq('id', adminData.id);
+
+      if (updateError) {
+        throw new Error('Failed to update logo in database');
+      }
+
+      // Update local preview
+      setLogoPreview(uploadResult.fileUrl);
+      
+      // Refresh auth store to update company data
+      await initialize();
+      
+      toast.success('Logo uploaded successfully');
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      toast.error(error.message || 'Failed to upload logo');
+    } finally {
+      setLogoUploading(false);
+      // Reset the input
+      event.target.value = '';
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!window.confirm('Are you sure you want to remove the company logo?')) {
+      return;
+    }
+
+    try {
+      setLogoUploading(true);
+
+      // Update admin record to remove logo URL
+      const { data: adminData, error: adminError } = await supabase
+        .from('admin')
+        .select('id')
+        .eq('owner_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (adminError || !adminData) {
+        throw new Error('Admin record not found');
+      }
+
+      const { error: updateError } = await supabase
+        .from('admin')
+        .update({ logo_url: null })
+        .eq('id', adminData.id);
+
+      if (updateError) {
+        throw new Error('Failed to remove logo from database');
+      }
+
+      // Clear local preview
+      setLogoPreview(null);
+      
+      // Refresh auth store to update company data
+      await initialize();
+      
+      toast.success('Logo removed successfully');
+    } catch (error: any) {
+      console.error('Error removing logo:', error);
+      toast.error(error.message || 'Failed to remove logo');
+    } finally {
+      setLogoUploading(false);
+    }
   };
   
   return (

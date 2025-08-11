@@ -17,7 +17,7 @@ export interface StorageUsage {
 
 export async function uploadFile(
   file: File,
-  fileType: 'photo' | 'report',
+  fileType: 'photo' | 'report' | 'logo',
   inspectionId?: string,
   inspectionItemId?: string
 ): Promise<UploadResult | null> {

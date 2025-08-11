@@ -259,7 +259,7 @@ serve(async (req) => {
         }
 
         const fileType = subEndpoint; // 'photo' or 'report'
-        if (!['photo', 'report'].includes(fileType)) {
+        if (!['photo', 'report', 'logo'].includes(fileType)) {
           return new Response(JSON.stringify({
             error: "Invalid file type specified"
           }), {
@@ -313,7 +313,7 @@ serve(async (req) => {
         const allowedImageMimes = ['image/jpeg', 'image/png', 'image/webp'];
         const allowedReportMimes = ['application/pdf'];
 
-        if (fileType === 'photo' && !allowedImageMimes.includes(file.type)) {
+        if ((fileType === 'photo' || fileType === 'logo') && !allowedImageMimes.includes(file.type)) {
           return new Response(JSON.stringify({
             error: "Invalid image file format"
           }), {
@@ -384,7 +384,10 @@ serve(async (req) => {
         
         // Create hierarchical structure: company/inspections/inspection_id/photos or reports
         let objectName;
-        if (fileType === 'photo' && inspectionId) {
+        if (fileType === 'logo') {
+          // Store logo as: company/logo/current_logo.webp
+          objectName = `${cleanCompanyName}/logo/current_logo${fileExtension}`;
+        } else if (fileType === 'photo' && inspectionId) {
           objectName = `${cleanCompanyName}/inspections/${inspectionId}/photos/${inspectionItemId || 'general'}/${uuidv4()}${fileExtension}`;
         } else if (fileType === 'report' && inspectionId) {
           // Include property name and date in report filename
