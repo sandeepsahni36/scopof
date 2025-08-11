@@ -78,14 +78,14 @@ export async function resizeAndOptimizeImage(
         
         canvas.toBlob((blob) => {
           if (blob) {
-            const optimizedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), {
-              type: 'image/webp',
+            const optimizedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpeg'), {
+              type: 'image/jpeg',
             });
             resolve(optimizedFile);
           } else {
             reject(new Error('Failed to optimize image'));
           }
-        }, 'image/webp', quality);
+        }, 'image/jpeg', quality);
       } else {
         reject(new Error('Failed to get canvas context'));
       }
