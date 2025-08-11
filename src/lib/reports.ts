@@ -639,24 +639,6 @@ function formatDuration(durationSeconds: number): string {
   }
 }
 
-// Helper function to add a photo to the PDF with proper error handling
-async function addPhotoToPdf(
-  pdf: any, 
-  photo: { url: string; label: string; fileKey?: string }, 
-  x: number, 
-  y: number, 
-  width: number, 
-  height: number
-) {
-  try {
-    console.log('Adding photo to PDF:', {
-      url: photo.url,
-      fileKey: photo.fileKey,
-      position: { x, y, width, height }
-    });
-  }
-}
-
 async function saveReportRecord(reportData: any, reportUrl: string, fileKey: string) {
   try {
     const { error } = await supabase
