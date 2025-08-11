@@ -31,6 +31,7 @@ const InspectionPage = () => {
   const [showSignatures, setShowSignatures] = useState(false);
   const [clientPresent, setClientPresent] = useState(false);
   const [elapsedTime, setElapsedTime] = useState('0:00');
+  const [cancelling, setCancelling] = useState(false);
   
   // Signature refs
   const inspectorSignatureRef = useRef<SignatureCanvas>(null);
@@ -70,6 +71,32 @@ const InspectionPage = () => {
     
     return () => clearInterval(interval);
   }, [inspection?.start_time]);
+
+  const handleCancelInspection = async () => {
+    if (!window.confirm('Are you sure you want to cancel this inspection? All progress will be lost and no data will be saved.')) {
+      return;
+    }
+
+    try {
+      setCancelling(true);
+      
+      // Delete the inspection and all associated data
+      const { deleteInspection } = await import('../../lib/inspections');
+      const success = await deleteInspection(inspection.id);
+      
+      if (success) {
+        toast.success('Inspection cancelled successfully');
+        navigate('/dashboard');
+      } else {
+        throw new Error('Failed to cancel inspection');
+      }
+    } catch (error: any) {
+      console.error('Error cancelling inspection:', error);
+      toast.error('Failed to cancel inspection');
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const loadInspectionData = async (inspectionId: string) => {
     try {
@@ -319,11 +346,12 @@ const InspectionPage = () => {
             <div className="flex items-center">
               <Button
                 variant="ghost"
+                size="sm"
                 leftIcon={<ArrowLeft size={16} />}
-                onClick={() => navigate('/dashboard')}
+                onClick={handleCancelInspection}
                 className="mr-4"
               >
-                Exit
+                Cancel
               </Button>
               <div className="flex items-center">
                 <Building2 className="h-6 w-6 text-primary-600 mr-2" />
@@ -335,6 +363,15 @@ const InspectionPage = () => {
                 <Clock className="w-4 h-4 mr-1" />
                 <span>{elapsedTime}</span>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveProgress}
+                isLoading={saving}
+                leftIcon={<Save size={16} />}
+              >
+                Save Progress
+              </Button>
             </div>
           </div>
         </div>
@@ -551,14 +588,6 @@ const InspectionPage = () => {
               </Button>
 
               <div className="flex space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={handleSaveProgress}
-                  isLoading={saving}
-                  leftIcon={<Save size={16} />}
-                >
-                  Save Progress
-                </Button>
                 <Button
                   onClick={handleNext}
                   rightIcon={<ArrowRight size={16} />}

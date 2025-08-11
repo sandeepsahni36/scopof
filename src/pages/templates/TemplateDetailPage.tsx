@@ -229,9 +229,9 @@ const TemplateDetailPage = () => {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Panel - Field Types */}
-          <div className="lg:col-span-1 order-1">
+          <div className="lg:col-span-1">
             <div className="bg-white shadow rounded-lg p-6 sticky top-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Field Types</h3>
               <div className="space-y-3">
@@ -300,7 +300,7 @@ const TemplateDetailPage = () => {
           </div>
 
           {/* Center Panel - Template Form and Items */}
-          <div className="lg:col-span-2 order-2">
+          <div className="lg:col-span-1">
             <div className="space-y-6">
               {/* Template Basic Info */}
               <div className="bg-white shadow rounded-lg p-6">
@@ -425,7 +425,7 @@ const TemplateDetailPage = () => {
           </div>
 
           {/* Right Panel - Field Settings */}
-          <div className="lg:col-span-1 order-3">
+          <div className="lg:col-span-1">
             <div className="bg-white shadow rounded-lg p-6 sticky top-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Field Settings</h3>
               
