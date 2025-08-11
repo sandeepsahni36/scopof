@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Building2, Bed, Bath, MapPin, ClipboardCheck, Camera, Edit, ArrowLeft, Calendar, User, Plus, X, Check, Trash2, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Property, Template } from '../../types';
