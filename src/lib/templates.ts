@@ -252,58 +252,6 @@ export async function getTemplates(searchTerm?: string, categoryId?: string) {
 
       // Apply search filter
       if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        filteredTemplates = filteredTemplates.filter(template =>
-          template.name.toLowerCase().includes(searchLower) ||
-          template.description?.toLowerCase().includes(searchLower)
-        );
-      }
-
-      // Apply category filter
-      if (categoryId && categoryId !== 'all') {
-        filteredTemplates = filteredTemplates.filter(template => template.categoryId === categoryId);
-      }
-
-      return filteredTemplates;
-    }
-
-    let query = supabase
-      .from('templates')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    // Apply search filter
-    if (searchTerm) {
-      query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
-    }
-
-    // Apply category filter
-    if (categoryId && categoryId !== 'all') {
-      query = query.eq('category_id', categoryId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-        await handleAuthError(error);
-        return null;
-      }
-      throw error;
-    }
-
-    return data;
-  } catch (error: any) {
-    console.error('Error fetching templates:', error);
-    
-    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-      await handleAuthError(error);
-      return null;
-    }
-    
-    throw error;
-  }
-}
 
 export async function getTemplate(id: string) {
   try {
@@ -356,8 +304,23 @@ export async function getTemplate(id: string) {
       throw itemsResponse.error;
     }
 
-    // Transform database items to include hierarchy
-    const items = buildItemHierarchy(itemsResponse.data);
+    // Transform database items to flat structure
+    const items: TemplateItem[] = itemsResponse.data
+      .sort((a, b) => a.order - b.order)
+      .map(item => ({
+        id: item.id,
+        templateId: item.template_id,
+        type: item.type,
+        label: item.label,
+        required: item.required,
+        options: item.options,
+        reportEnabled: item.report_enabled,
+        maintenanceEmail: item.maintenance_email,
+        reportRecipientId: item.report_recipient_id,
+        order: item.order,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      }));
 
     return {
       template: templateResponse.data,
@@ -432,12 +395,10 @@ export async function createTemplate(
   templateData: { name: string; description?: string },
   items: Array<{
     id: string;
-    parentId?: string;
     type: TemplateItemType;
     label: string;
-    sectionName?: string;
     required: boolean;
-    options?: string[];
+    options?: string[] | RatingOption[];
     reportEnabled: boolean;
     reportRecipientId?: string;
     order: number;
@@ -453,8 +414,6 @@ export async function createTemplate(
     console.log('Template data:', templateData);
     console.log('Items array received:', items);
     console.log('Items count:', items.length);
-    console.log('Items with parentId:', items.filter(item => item.parentId).length);
-    console.log('Items without parentId (root):', items.filter(item => !item.parentId).length);
     // Handle dev mode
     if (devModeEnabled()) {
       console.log('Dev mode: Creating mock template');
@@ -474,10 +433,8 @@ export async function createTemplate(
       const newItems: TemplateItem[] = items.map((item, index) => ({
         id: `mock-item-${Date.now()}-${index}`,
         templateId: newTemplate.id,
-        parentId: item.parentId,
         type: item.type,
         label: item.label,
-        sectionName: item.sectionName,
         required: item.required,
         options: item.options || null,
         reportEnabled: item.reportEnabled,
@@ -527,38 +484,16 @@ export async function createTemplate(
     console.log('Template created successfully:', template);
     // Create template items with hierarchy support
     if (items.length > 0) {
-      // Insert items sequentially to handle parent-child relationships
+      // Insert items in order
       const templateItems = [];
-      const clientIdToDbIdMap = new Map<string, string>();
-      console.log('Starting sequential item insertion...');
       
       for (const item of items) {
-        console.log(`\n--- Processing item ${item.id} ---`);
-        console.log('Item details:', {
-          id: item.id,
-          parentId: item.parentId,
-          type: item.type,
-          label: item.label,
-          order: item.order
-        });
-        console.log('Current clientIdToDbIdMap state:', Object.fromEntries(clientIdToDbIdMap));
-        
-        // Resolve parent_id from client-side ID to database ID
-        const resolvedParentId = item.parentId ? clientIdToDbIdMap.get(item.parentId) : null;
-        console.log('Resolved parent ID:', {
-          clientParentId: item.parentId,
-          resolvedParentId: resolvedParentId,
-          foundInMap: item.parentId ? clientIdToDbIdMap.has(item.parentId) : 'N/A'
-        });
-        
         const { data: insertedItem, error: itemError } = await supabase
           .from('template_items')
           .insert({
             template_id: template.id,
-            parent_id: resolvedParentId,
             type: item.type,
             label: item.label,
-            section_name: item.sectionName || null,
             required: item.required,
             options: item.options,
             report_enabled: item.reportEnabled,
@@ -570,13 +505,6 @@ export async function createTemplate(
         
         if (itemError) {
           console.error('Error inserting item:', itemError);
-          console.error('Failed item data:', {
-            template_id: template.id,
-            parent_id: resolvedParentId,
-            type: item.type,
-            label: item.label,
-            order: item.order
-          });
           if (itemError.message?.includes('user_not_found') || itemError.message?.includes('JWT')) {
             await handleAuthError(itemError);
             return null;
@@ -584,21 +512,9 @@ export async function createTemplate(
           throw itemError;
         }
         
-        console.log('Item inserted successfully:', {
-          clientId: item.id,
-          dbId: insertedItem.id,
-          dbParentId: insertedItem.parent_id,
-          label: insertedItem.label
-        });
-        
         templateItems.push(insertedItem);
-        // Map client-side ID to database ID for future parent references
-        clientIdToDbIdMap.set(item.id, insertedItem.id);
-        console.log('Updated clientIdToDbIdMap:', Object.fromEntries(clientIdToDbIdMap));
       }
 
-      console.log('All items inserted successfully. Final templateItems:', templateItems.length);
-      console.log('Final clientIdToDbIdMap:', Object.fromEntries(clientIdToDbIdMap));
       console.log('=== CREATE TEMPLATE DEBUG END ===');
 
       return { template, items: templateItems };
@@ -624,12 +540,10 @@ export async function updateTemplate(
   templateData: { name: string; description?: string },
   items: Array<{
     id: string;
-    parentId?: string;
     type: TemplateItemType;
     label: string;
-    sectionName?: string;
     required: boolean;
-    options?: string[];
+    options?: string[] | RatingOption[];
     reportEnabled: boolean;
     reportRecipientId?: string;
     order: number;
@@ -646,8 +560,6 @@ export async function updateTemplate(
     console.log('Template data:', templateData);
     console.log('Items array received:', items);
     console.log('Items count:', items.length);
-    console.log('Items with parentId:', items.filter(item => item.parentId).length);
-    console.log('Items without parentId (root):', items.filter(item => !item.parentId).length);
     // Handle dev mode
     if (devModeEnabled()) {
       console.log('Dev mode: Updating mock template:', id);
@@ -673,10 +585,8 @@ export async function updateTemplate(
       const newItems: TemplateItem[] = items.map((item, index) => ({
         id: `mock-item-${Date.now()}-${index}`,
         templateId: id,
-        parentId: item.parentId,
         type: item.type,
         label: item.label,
-        sectionName: item.sectionName,
         required: item.required,
         options: item.options || null,
         reportEnabled: item.reportEnabled,
@@ -732,38 +642,16 @@ export async function updateTemplate(
     console.log('Existing items deleted successfully');
     // Create new items with hierarchy support
     if (items.length > 0) {
-      // Insert items sequentially to handle parent-child relationships
+      // Insert items in order
       const templateItems = [];
-      const clientIdToDbIdMap = new Map<string, string>();
-      console.log('Starting sequential item insertion...');
       
       for (const item of items) {
-        console.log(`\n--- Processing item ${item.id} ---`);
-        console.log('Item details:', {
-          id: item.id,
-          parentId: item.parentId,
-          type: item.type,
-          label: item.label,
-          order: item.order
-        });
-        console.log('Current clientIdToDbIdMap state:', Object.fromEntries(clientIdToDbIdMap));
-        
-        // Resolve parent_id from client-side ID to database ID
-        const resolvedParentId = item.parentId ? clientIdToDbIdMap.get(item.parentId) : null;
-        console.log('Resolved parent ID:', {
-          clientParentId: item.parentId,
-          resolvedParentId: resolvedParentId,
-          foundInMap: item.parentId ? clientIdToDbIdMap.has(item.parentId) : 'N/A'
-        });
-        
         const { data: insertedItem, error: itemError } = await supabase
           .from('template_items')
           .insert({
             template_id: id,
-            parent_id: resolvedParentId,
             type: item.type,
             label: item.label,
-            section_name: item.sectionName || null,
             required: item.required,
             options: item.options,
             report_enabled: item.reportEnabled,
@@ -775,13 +663,6 @@ export async function updateTemplate(
         
         if (itemError) {
           console.error('Error inserting item:', itemError);
-          console.error('Failed item data:', {
-            template_id: id,
-            parent_id: resolvedParentId,
-            type: item.type,
-            label: item.label,
-            order: item.order
-          });
           if (itemError.message?.includes('user_not_found') || itemError.message?.includes('JWT')) {
             await handleAuthError(itemError);
             return null;
@@ -789,21 +670,9 @@ export async function updateTemplate(
           throw itemError;
         }
         
-        console.log('Item inserted successfully:', {
-          clientId: item.id,
-          dbId: insertedItem.id,
-          dbParentId: insertedItem.parent_id,
-          label: insertedItem.label
-        });
-        
         templateItems.push(insertedItem);
-        // Map client-side ID to database ID for future parent references
-        clientIdToDbIdMap.set(item.id, insertedItem.id);
-        console.log('Updated clientIdToDbIdMap:', Object.fromEntries(clientIdToDbIdMap));
       }
 
-      console.log('All items inserted successfully. Final templateItems:', templateItems.length);
-      console.log('Final clientIdToDbIdMap:', Object.fromEntries(clientIdToDbIdMap));
       console.log('=== UPDATE TEMPLATE DEBUG END ===');
 
       return { template, items: templateItems };

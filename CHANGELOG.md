@@ -1,5 +1,43 @@
 ## [Unreleased]
 
+### Added
+- Added new simplified template builder with drag-and-drop interface
+- Added number field type for templates (accepts whole numbers 0-999)
+- Added colored rating buttons for single/multiple choice fields with 4 color options (Green, Red, Orange, Blue)
+- Added new checklist builder with template block drag-and-drop functionality
+- Added photo upload options modal (Take Photo with Camera vs Upload from File) during inspections
+- Added flat template structure without hierarchical sections for improved stability
+
+### Changed
+- Completely redesigned template builder UI with three-panel layout (field types, canvas, settings)
+- Replaced section-based template hierarchy with flat linear structure
+- Updated single/multiple choice fields to display as colored square rating buttons during inspections
+- Simplified checklist builder to work with template blocks instead of individual fields
+- Enhanced photo upload UX with choice between camera capture and file upload
+- Modernized template item ordering system for better inspection flow
+
+### Removed
+- Removed section field type and all hierarchical template structures
+- Removed parent_id and section_name columns from template_items table
+- Removed complex nested drag-and-drop logic that was causing errors
+- Removed SectionComponent and ItemComponent in favor of simplified structure
+- Removed automatic camera opening for photo uploads in favor of user choice
+
+### Fixed
+- Fixed template creation and editing stability issues caused by section hierarchy
+- Fixed inspection flow to work with simplified flat template structure
+- Fixed drag-and-drop functionality in template builder
+- Fixed photo upload workflow to provide user choice between camera and file upload
+- Fixed template item ordering and display during inspections
+
+### Technical Details
+- Updated template_items table schema to remove parent_id and section_name columns
+- Modified options column to support JSONB for storing rating button colors
+- Added number template item type to enum
+- Simplified template data handling logic throughout the application
+- Enhanced inspection item renderer to support new field types and rating buttons
+- Updated checklist builder to work with template blocks using drag-and-drop
+
 ### Fixed
 - Fixed template editor drag-and-drop functionality to support moving items into and out of sections
 - Fixed separated items in template editor that were causing individual inspection steps instead of section-based flow

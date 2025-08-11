@@ -85,64 +85,19 @@ const InspectionPage = () => {
   };
 
   const buildDisplaySteps = (items: any[]): DisplayStep[] => {
+    // With sections removed, create a simple flat list of items
+    // Group items into reasonable chunks for better UX (e.g., 3-5 items per step)
     const steps: DisplayStep[] = [];
-    const processedSections = new Set<string>();
+    const itemsPerStep = 3;
     
-    // Group items by their parent (section) or as individual items
-    const itemsByParent = new Map<string | null, any[]>();
+    for (let i = 0; i < items.length; i += itemsPerStep) {
+      const stepItems = items.slice(i, i + itemsPerStep);
+      steps.push({
+        type: 'items',
+        items: stepItems
+      });
+    }
     
-    items.forEach(item => {
-      const templateItem = item.template_items || item.templateItem;
-      if (!templateItem) return;
-      
-      const parentId = templateItem.parent_id;
-      if (!itemsByParent.has(parentId)) {
-        itemsByParent.set(parentId, []);
-      }
-      itemsByParent.get(parentId)!.push(item);
-    });
-
-    // Process root-level items first
-    const rootItems = itemsByParent.get(null) || [];
-    
-    rootItems.forEach(item => {
-      const templateItem = item.template_items || item.templateItem;
-      
-      if (templateItem.type === 'section') {
-        // This is a section - collect all its children
-        const sectionChildren = itemsByParent.get(templateItem.id) || [];
-        
-        if (sectionChildren.length > 0) {
-          steps.push({
-            type: 'section',
-            sectionName: templateItem.section_name || templateItem.label,
-            items: sectionChildren
-          });
-        }
-        
-        processedSections.add(templateItem.id);
-      } else {
-        // This is a standalone item (not in a section)
-        steps.push({
-          type: 'items',
-          items: [item]
-        });
-      }
-    });
-
-    // Process any orphaned items (items that reference a parent that doesn't exist)
-    itemsByParent.forEach((children, parentId) => {
-      if (parentId && !processedSections.has(parentId)) {
-        // These are orphaned items - add them as individual steps
-        children.forEach(item => {
-          steps.push({
-            type: 'items',
-            items: [item]
-          });
-        });
-      }
-    });
-
     return steps;
   };
 

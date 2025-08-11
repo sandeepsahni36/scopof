@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Upload, Flag, Users } from 'lucide-react';
+import { Camera, Upload, Flag, Users, FileImage } from 'lucide-react';
 import { validate as isValidUUID } from 'uuid';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -7,6 +7,7 @@ import { uploadInspectionPhoto } from '../../lib/inspections';
 import { updateInspectionItem } from '../../lib/inspections';
 import { getReportServiceTeams, ReportServiceTeam } from '../../lib/reportServiceTeams';
 import { getSignedUrlForFile } from '../../lib/storage';
+import { RatingOption, RATING_COLORS } from '../../types';
 import { toast } from 'sonner';
 
 interface InspectionItemRendererProps {
@@ -29,6 +30,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
   const [reportServiceTeams, setReportServiceTeams] = useState<ReportServiceTeam[]>([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
   const [loadingPreviews, setLoadingPreviews] = useState<Set<number>>(new Set());
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
 
   const templateItem = item.template_items || item.templateItem;
 
@@ -133,6 +135,8 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setShowPhotoOptions(false);
+
     try {
       setUploading(true);
       const photoUrl = await uploadInspectionPhoto(file, inspectionId, item.id);
@@ -188,6 +192,25 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     }
   };
 
+  const handleCameraCapture = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = (e) => handlePhotoUpload(e as any);
+    input.click();
+    setShowPhotoOptions(false);
+  };
+
+  const handleFileUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => handlePhotoUpload(e as any);
+    input.click();
+    setShowPhotoOptions(false);
+  };
+
   const renderInput = () => {
     switch (templateItem?.type) {
       case 'text':
@@ -207,6 +230,32 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
           </div>
         );
 
+      case 'number':
+        return (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {templateItem.label}
+              {templateItem.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="999"
+              step="1"
+              value={value || ''}
+              onChange={(e) => {
+                const numValue = parseInt(e.target.value);
+                if (isNaN(numValue) || numValue < 0 || numValue > 999) {
+                  return;
+                }
+                handleValueChange(numValue);
+              }}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              placeholder="Enter a number (0-999)"
+            />
+          </div>
+        );
+
       case 'single_choice':
         return (
           <div>
@@ -214,19 +263,27 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
               {templateItem.label}
               {templateItem.required && <span className="text-red-500 ml-1">*</span>}
             </label>
-            <div className="space-y-2">
-              {(templateItem.options || []).map((option: string, index: number) => (
-                <label key={index} className="flex items-center">
-                  <input
-                    type="radio"
-                    name={`item-${item.id}`}
-                    value={option}
-                    checked={value === option}
-                    onChange={(e) => handleValueChange(e.target.value)}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                  />
-                  <span className="ml-2 text-sm text-gray-900">{option}</span>
-                </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(templateItem.options || []).map((option: RatingOption | string, index: number) => {
+                const optionData = typeof option === 'string' ? { label: option, color: RATING_COLORS.blue } : option;
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => handleValueChange(optionData.label)}
+                    className={`p-4 rounded-lg border-2 transition-all text-sm font-medium ${
+                      value === optionData.label
+                        ? 'border-gray-800 shadow-md scale-105'
+                        : 'border-gray-300 hover:border-gray-400 hover:shadow-sm'
+                    }`}
+                    style={{ 
+                      backgroundColor: value === optionData.label ? optionData.color : 'white',
+                      color: value === optionData.label ? 'white' : '#374151'
+                    }}
+                  >
+                    {optionData.label}
+                  </button>
+                );
               ))}
             </div>
           </div>
@@ -239,24 +296,34 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
               {templateItem.label}
               {templateItem.required && <span className="text-red-500 ml-1">*</span>}
             </label>
-            <div className="space-y-2">
-              {(templateItem.options || []).map((option: string, index: number) => (
-                <label key={index} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    value={option}
-                    checked={(value || []).includes(option)}
-                    onChange={(e) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(templateItem.options || []).map((option: RatingOption | string, index: number) => {
+                const optionData = typeof option === 'string' ? { label: option, color: RATING_COLORS.blue } : option;
+                const isSelected = (value || []).includes(optionData.label);
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => {
                       const currentValues = value || [];
-                      const newValues = e.target.checked
-                        ? [...currentValues, option]
-                        : currentValues.filter((v: string) => v !== option);
+                      const newValues = isSelected
+                        ? currentValues.filter((v: string) => v !== optionData.label)
+                        : [...currentValues, optionData.label];
                       handleValueChange(newValues);
                     }}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-900">{option}</span>
-                </label>
+                    className={`p-4 rounded-lg border-2 transition-all text-sm font-medium ${
+                      isSelected
+                        ? 'border-gray-800 shadow-md scale-105'
+                        : 'border-gray-300 hover:border-gray-400 hover:shadow-sm'
+                    }`}
+                    style={{ 
+                      backgroundColor: isSelected ? optionData.color : 'white',
+                      color: isSelected ? 'white' : '#374151'
+                    }}
+                  >
+                    {optionData.label}
+                  </button>
+                );
               ))}
             </div>
           </div>
@@ -272,33 +339,52 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
             
             {/* Photo Upload */}
             <div className="mb-4">
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handlePhotoUpload}
-                className="hidden"
-                id={`photo-upload-${item.id}`}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowPhotoOptions(true)}
                 disabled={uploading}
-              />
-              <label
-                htmlFor={`photo-upload-${item.id}`}
-                className={`inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 cursor-pointer ${
-                  uploading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                leftIcon={<Camera size={16} />}
               >
-                {uploading ? (
-                  <>
-                    <Upload className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Camera className="w-4 h-4 mr-2" />
-                    Take Photo
-                  </>
-                )}
-              </label>
+                {uploading ? 'Uploading...' : 'Add Photo'}
+              </Button>
+
+              {/* Photo Options Modal */}
+              {showPhotoOptions && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Add Photo</h3>
+                    <div className="space-y-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        fullWidth
+                        onClick={handleCameraCapture}
+                        leftIcon={<Camera size={16} />}
+                      >
+                        Take Photo with Camera
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        fullWidth
+                        onClick={handleFileUpload}
+                        leftIcon={<FileImage size={16} />}
+                      >
+                        Upload Photo from File
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        fullWidth
+                        onClick={() => setShowPhotoOptions(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Photo Previews */}

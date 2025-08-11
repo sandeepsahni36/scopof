@@ -640,157 +640,17 @@ const PropertyDetailPage = () => {
                 </div>
               ) : showCreateChecklistForm ? (
                 /* Create/Edit Checklist Form */
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {propertyChecklist ? 'Edit Checklist' : 'Create Inspection Checklist'}
-                    </h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      leftIcon={<X size={16} />}
-                      onClick={handleCancelCreateChecklist}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-
-                  <div className="space-y-4">
-                    <Input
-                      label="Checklist Name"
-                      value={checklistName}
-                      onChange={(e) => setChecklistName(e.target.value)}
-                      placeholder="Enter checklist name"
-                    />
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Select Templates and Set Order
-                      </label>
-                      
-                      {availableTemplates.length === 0 ? (
-                        <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-                          <ClipboardCheck className="mx-auto h-12 w-12 text-gray-400" />
-                          <h4 className="mt-2 text-sm font-medium text-gray-900">No Templates Available</h4>
-                          <p className="mt-1 text-sm text-gray-500">
-                            You need to create templates first before building a checklist.
-                          </p>
-                          <div className="mt-4">
-                            <Link to="/dashboard/templates/new">
-                              <Button size="sm">Create Template</Button>
-                            </Link>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {/* Available Templates */}
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">Available Templates</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {availableTemplates
-                                .filter(template => !selectedTemplates.includes(template.id))
-                                .map((template) => (
-                                <div
-                                  key={template.id}
-                                  className="border border-gray-200 rounded-lg p-4 cursor-pointer transition-all hover:border-gray-300"
-                                  onClick={() => handleTemplateToggle(template.id)}
-                                >
-                                  <div className="flex items-start">
-                                    <div className="h-5 w-5 rounded border-2 border-gray-300 flex items-center justify-center mt-0.5">
-                                      <Plus className="h-3 w-3 text-gray-400" />
-                                    </div>
-                                    <div className="ml-3 flex-1">
-                                      <h4 className="text-sm font-medium text-gray-900">{template.name}</h4>
-                                      {template.description && (
-                                        <p className="text-sm text-gray-500 mt-1">{template.description}</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Selected Templates with Ordering */}
-                          {selectedTemplates.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-900 mb-2">
-                                Selected Templates (Inspection Order)
-                              </h4>
-                              <div className="space-y-2">
-                                {selectedTemplates.map((templateId, index) => {
-                                  const template = availableTemplates.find(t => t.id === templateId);
-                                  if (!template) return null;
-                                  
-                                  return (
-                                    <div
-                                      key={templateId}
-                                      className="border border-primary-200 bg-primary-50 rounded-lg p-4"
-                                    >
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center">
-                                          <div className="flex items-center justify-center w-8 h-8 bg-primary-100 text-primary-700 rounded-full text-sm font-medium mr-3">
-                                            {index + 1}
-                                          </div>
-                                          <div className="flex-1">
-                                            <h4 className="text-sm font-medium text-gray-900">{template.name}</h4>
-                                            {template.description && (
-                                              <p className="text-sm text-gray-500 mt-1">{template.description}</p>
-                                            )}
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => moveTemplateUp(index)}
-                                            disabled={index === 0}
-                                            leftIcon={<ArrowUp size={16} />}
-                                          />
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => moveTemplateDown(index)}
-                                            disabled={index === selectedTemplates.length - 1}
-                                            leftIcon={<ArrowDown size={16} />}
-                                          />
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleTemplateToggle(templateId)}
-                                            leftIcon={<X size={16} />}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {availableTemplates.length > 0 && (
-                    <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                      <Button
-                        variant="secondary"
-                        onClick={handleCancelCreateChecklist}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleSaveChecklist}
-                        disabled={selectedTemplates.length === 0 || !checklistName.trim()}
-                        isLoading={checklistLoading}
-                      >
-                        {propertyChecklist ? 'Update Checklist' : 'Create Checklist'}
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                <ChecklistBuilder
+                  checklistName={checklistName}
+                  setChecklistName={setChecklistName}
+                  availableTemplates={availableTemplates}
+                  selectedTemplates={selectedTemplates}
+                  setSelectedTemplates={setSelectedTemplates}
+                  onSave={handleSaveChecklist}
+                  onCancel={handleCancelCreateChecklist}
+                  loading={checklistLoading}
+                  isEditing={!!propertyChecklist}
+                />
               ) : (
                 /* No Checklist - Create New */
                 <div className="text-center py-12">
@@ -965,6 +825,202 @@ const PropertyDetailPage = () => {
           loading={formLoading}
         />
       )}
+    </div>
+  );
+};
+
+// New Checklist Builder Component
+interface ChecklistBuilderProps {
+  checklistName: string;
+  setChecklistName: (name: string) => void;
+  availableTemplates: any[];
+  selectedTemplates: string[];
+  setSelectedTemplates: (templates: string[]) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  loading: boolean;
+  isEditing: boolean;
+}
+
+const ChecklistBuilder: React.FC<ChecklistBuilderProps> = ({
+  checklistName,
+  setChecklistName,
+  availableTemplates,
+  selectedTemplates,
+  setSelectedTemplates,
+  onSave,
+  onCancel,
+  loading,
+  isEditing,
+}) => {
+  const handleTemplateAdd = (templateId: string) => {
+    if (!selectedTemplates.includes(templateId)) {
+      setSelectedTemplates([...selectedTemplates, templateId]);
+    }
+  };
+
+  const handleTemplateRemove = (templateId: string) => {
+    setSelectedTemplates(selectedTemplates.filter(id => id !== templateId));
+  };
+
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const newOrder = Array.from(selectedTemplates);
+    const [reorderedItem] = newOrder.splice(result.source.index, 1);
+    newOrder.splice(result.destination.index, 0, reorderedItem);
+
+    setSelectedTemplates(newOrder);
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Left Panel - Available Templates */}
+      <div className="lg:col-span-1">
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-gray-900 mb-3">Available Templates</h4>
+          {availableTemplates.length === 0 ? (
+            <div className="text-center py-8">
+              <ClipboardCheck className="mx-auto h-8 w-8 text-gray-400" />
+              <p className="text-sm text-gray-500 mt-2">No templates available</p>
+              <Link to="/dashboard/templates/new">
+                <Button size="sm" className="mt-2">Create Template</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {availableTemplates
+                .filter(template => !selectedTemplates.includes(template.id))
+                .map((template) => (
+                <div
+                  key={template.id}
+                  className="border border-gray-200 rounded-lg p-3 cursor-pointer transition-all hover:border-primary-300 hover:bg-primary-50"
+                  onClick={() => handleTemplateAdd(template.id)}
+                >
+                  <div className="flex items-center">
+                    <Plus className="h-4 w-4 text-gray-400 mr-2" />
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-900">{template.name}</h5>
+                      {template.description && (
+                        <p className="text-xs text-gray-500 mt-1">{template.description}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Center Panel - Checklist Builder */}
+      <div className="lg:col-span-2">
+        <div className="space-y-4">
+          <Input
+            label="Checklist Name"
+            value={checklistName}
+            onChange={(e) => setChecklistName(e.target.value)}
+            placeholder="Enter checklist name"
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Inspection Flow (Drag to Reorder)
+            </label>
+            
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="checklist-templates">
+                {(provided, snapshot) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className={`min-h-[200px] rounded-lg border-2 border-dashed transition-colors p-4 ${
+                      snapshot.isDraggingOver 
+                        ? 'border-primary-300 bg-primary-50' 
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    {selectedTemplates.length === 0 ? (
+                      <div className="flex items-center justify-center h-48 text-gray-400">
+                        <div className="text-center">
+                          <ClipboardCheck className="h-12 w-12 mx-auto mb-4" />
+                          <p className="text-lg font-medium">No templates selected</p>
+                          <p className="text-sm">Add templates from the left panel</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedTemplates.map((templateId, index) => {
+                          const template = availableTemplates.find(t => t.id === templateId);
+                          if (!template) return null;
+                          
+                          return (
+                            <Draggable key={templateId} draggableId={templateId} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className={`border border-primary-200 bg-primary-50 rounded-lg p-4 transition-all ${
+                                    snapshot.isDragging ? 'shadow-lg rotate-1 scale-105' : 'shadow-sm'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center">
+                                      <div
+                                        {...provided.dragHandleProps}
+                                        className="cursor-move p-1 text-gray-400 hover:text-gray-600 mr-3 rounded hover:bg-white/50 transition-colors"
+                                      >
+                                        <GripVertical size={16} />
+                                      </div>
+                                      <div className="flex items-center justify-center w-6 h-6 bg-primary-100 text-primary-700 rounded-full text-xs font-medium mr-3">
+                                        {index + 1}
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-medium text-gray-900">{template.name}</h4>
+                                        {template.description && (
+                                          <p className="text-xs text-gray-500 mt-1">{template.description}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleTemplateRemove(templateId)}
+                                      leftIcon={<X size={16} />}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+            <Button
+              variant="secondary"
+              onClick={onCancel}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={onSave}
+              disabled={selectedTemplates.length === 0 || !checklistName.trim()}
+              isLoading={loading}
+            >
+              {isEditing ? 'Update Checklist' : 'Create Checklist'}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -100,24 +100,36 @@ export type Template = {
 };
 
 export type TemplateItemType = 'text' | 'single_choice' | 'multiple_choice' | 'photo' | 'section';
-export type TemplateItemType = 'text' | 'single_choice' | 'multiple_choice' | 'photo' | 'section' | 'divider';
+export type TemplateItemType = 'text' | 'single_choice' | 'multiple_choice' | 'photo' | 'divider' | 'number';
 
+// Rating button option structure for single/multiple choice fields
+export type RatingOption = {
+  label: string;
+  color: string;
+};
+
+// Available colors for rating buttons
+export const RATING_COLORS = {
+  green: '#22C55E',
+  red: '#EF4444',
+  orange: '#F97316',
+  blue: '#3B82F6',
+} as const;
+
+export type RatingColorKey = keyof typeof RATING_COLORS;
 export type TemplateItem = {
   id: string;
   templateId: string;
-  parentId?: string | null; // For hierarchical structure
   type: TemplateItemType;
   label: string;
-  sectionName?: string | null; // Only for section type
   required: boolean;
-  options: string[] | null;
+  options: string[] | RatingOption[] | null;
   reportEnabled: boolean;
   maintenanceEmail: string | null;
   reportRecipientId?: string | null; // New field for report recipient
   order: number;
   createdAt: string;
   updatedAt: string;
-  children?: TemplateItem[]; // For nested items under sections
 };
 
 // Report Service Teams type
