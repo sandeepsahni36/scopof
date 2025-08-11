@@ -146,7 +146,7 @@ async function createPDFReport(reportData: {
       yPosition += 5;
       
       if (item.notes) {
-        pdf.text(`  Notes: ${item.notes}`, 30, yPosition);
+        pdf.text(`  Notes: ${String(item.notes)}`, 30, yPosition);
         yPosition += 5;
       }
       

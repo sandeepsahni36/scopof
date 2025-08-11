@@ -31,6 +31,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
   const [loadingPreviews, setLoadingPreviews] = useState<Set<number>>(new Set());
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const templateItem = item.template_items || item.templateItem;
 
@@ -43,6 +44,16 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     loadPhotoPreviewUrls();
   }, [photos]);
 
+  // Debounced save effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (!saving) {
+        debouncedSave();
+      }
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [value, notes, markedForReport, reportRecipientId]);
   const loadReportServiceTeams = async () => {
     try {
       const teams = await getReportServiceTeams();
@@ -106,32 +117,39 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     }
   };
 
+  const debouncedSave = async () => {
+    if (saving) return;
+    
+    try {
+      setSaving(true);
+      await saveChanges({});
+    } catch (error) {
+      console.error('Error in debounced save:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
   const handleValueChange = async (newValue: any) => {
     setValue(newValue);
-    await saveChanges({ value: newValue });
   };
 
   const handleNotesChange = async (newNotes: string) => {
     setNotes(newNotes);
-    await saveChanges({ notes: newNotes });
   };
 
   const handleMarkedForReportChange = async (checked: boolean) => {
     setMarkedForReport(checked);
     if (!checked) {
       setReportRecipientId('');
-      await saveChanges({ marked_for_report: checked, report_recipient_id: null });
-    } else {
-      await saveChanges({ marked_for_report: checked });
     }
   };
 
   const handleReportRecipientChange = async (recipientId: string) => {
     setReportRecipientId(recipientId);
-    await saveChanges({ report_recipient_id: recipientId });
   };
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const target = event.target; // Capture target before async operations
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -153,7 +171,9 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     } finally {
       setUploading(false);
       // Reset the input
-      event.target.value = '';
+      if (target) {
+        target.value = '';
+      }
     }
   };
 
