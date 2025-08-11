@@ -5,7 +5,7 @@ import { getSignedUrlForFile } from './storage';
 
 export async function generateInspectionReport(reportData: {
   inspection: any;
-  rooms: any[];
+  rooms: Array<{ name: string; items: any[] }>;
   primaryContactName: string;
   inspectorName: string;
   startTime?: string;

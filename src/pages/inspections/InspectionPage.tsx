@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 
 interface DisplayStep {
   type: 'items';
+  name: string;
   items: any[];
 }
 
@@ -119,19 +120,24 @@ const InspectionPage = () => {
     
     // Group items by template_id from template_items
     const itemsByTemplate = new Map<string, any[]>();
+    const templateNames = new Map<string, string>();
     
     items.forEach(item => {
       const templateId = item.template_items?.template_id || item.templateItem?.template_id || 'unknown';
+      const templateName = item.template_items?.templates?.name || item.templateItem?.templates?.name || 'General Section';
+      
       if (!itemsByTemplate.has(templateId)) {
         itemsByTemplate.set(templateId, []);
+        templateNames.set(templateId, templateName);
       }
       itemsByTemplate.get(templateId)!.push(item);
     });
     
     // Create one step per template to keep dividers with their template
-    itemsByTemplate.forEach((templateItems) => {
+    itemsByTemplate.forEach((templateItems, templateId) => {
       steps.push({
         type: 'items',
+        name: templateNames.get(templateId) || 'General Section',
         items: templateItems.sort((a, b) => a.order_index - b.order_index)
       });
     });
@@ -140,6 +146,7 @@ const InspectionPage = () => {
     if (steps.length === 0 && items.length > 0) {
       steps.push({
         type: 'items',
+        name: 'General Section',
         items: items.sort((a, b) => a.order_index - b.order_index)
       });
     }
