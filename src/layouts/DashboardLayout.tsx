@@ -73,7 +73,7 @@ const DashboardLayout = () => {
         animate={{ 
           width: isCollapsed ? '5rem' : '16rem',
         }}
-        className="fixed top-0 left-0 z-50 h-full bg-white border-r border-gray-200 transition-all duration-300 ease-in-out hidden md:flex md:flex-col"
+        className="fixed top-0 left-0 z-50 h-full bg-white border-r border-gray-200 hidden md:flex md:flex-col"
       >
         <div className="flex flex-col h-full">
           {/* Sidebar header */}
@@ -288,7 +288,7 @@ const DashboardLayout = () => {
 
       {/* Main content */}
       <main 
-        className={`flex-1 min-h-screen transition-all duration-300 ease-in-out pb-20 md:pb-0 overflow-x-hidden ${
+        className={`flex-1 min-h-screen pb-20 md:pb-0 overflow-x-hidden transition-all duration-300 ease-in-out ${
           isCollapsed ? 'md:ml-20' : 'md:ml-64'
         }`}
       >
