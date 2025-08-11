@@ -300,7 +300,6 @@ export async function getTemplates(searchTerm?: string, categoryId?: string) {
     if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
       await handleAuthError(error);
       return null;
-      }
     }
     
     throw error;
