@@ -237,6 +237,13 @@ const InspectionPage = () => {
       const endTime = new Date().toISOString();
       const startTime = new Date(inspection.start_time);
       const durationSeconds = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+      
+      console.log('Inspection completion data:', {
+        startTime: inspection.start_time,
+        endTime,
+        durationSeconds,
+        durationMinutes: Math.floor(durationSeconds / 60)
+      });
 
       // Update inspection status
       await updateInspectionStatus(

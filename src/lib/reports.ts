@@ -291,6 +291,8 @@ async function createPDFReport(reportData: any): Promise<Blob> {
 
   // Process each room/step
   for (const step of reportData.rooms || []) {
+    console.log('Processing step for PDF:', step.name, 'Items:', step.items?.length || 0);
+    
     // Check if we need a new page
     if (yPosition > 250) {
       pdf.addPage();
@@ -304,18 +306,27 @@ async function createPDFReport(reportData: any): Promise<Blob> {
     pdf.text(step.name, 20, yPosition);
     yPosition += 12;
 
-    // Collect all photos for this section
+    // Collect all photos for this section with their labels
     const sectionPhotos: Array<{
       url: string;
       label: string;
       fileKey?: string;
     }> = [];
 
-    // Process items in this section to collect photos and other data
+    // Process items in this section
     for (const item of step.items || []) {
       const templateItem = item.template_items || item.templateItem;
       
+      console.log('Processing item:', {
+        itemId: item.id,
+        templateLabel: templateItem?.label,
+        templateType: templateItem?.type,
+        hasPhotos: !!(item.photo_urls && item.photo_urls.length > 0),
+        photoCount: item.photo_urls?.length || 0
+      });
+      
       if (!templateItem || templateItem.type === 'divider') {
+        console.log('Skipping divider or invalid template item');
         continue;
       }
 
@@ -357,8 +368,10 @@ async function createPDFReport(reportData: any): Promise<Blob> {
 
       // Collect photos for this item
       if (item.photo_urls && item.photo_urls.length > 0) {
+        console.log('Found photos for item:', templateItem.label, 'Count:', item.photo_urls.length);
         for (const photoUrl of item.photo_urls) {
           const fileKey = extractFileKeyFromUrl(photoUrl);
+          console.log('Photo URL:', photoUrl, 'Extracted file key:', fileKey);
           sectionPhotos.push({
             url: photoUrl,
             label: templateItem.label,
@@ -376,6 +389,7 @@ async function createPDFReport(reportData: any): Promise<Blob> {
 
     // Add photos section for this step if there are any photos
     if (sectionPhotos.length > 0) {
+      console.log('Adding photos section for step:', step.name, 'Photo count:', sectionPhotos.length);
       yPosition += 10;
       
       // Check if we need a new page for photos
@@ -398,6 +412,13 @@ async function createPDFReport(reportData: any): Promise<Blob> {
       const photoSpacing = 10;
       const startX = 25;
       const labelHeight = 8;
+      
+      console.log('Photo layout settings:', {
+        photosPerRow,
+        photoWidth,
+        photoHeight,
+        totalPhotos: sectionPhotos.length
+      });
 
       for (let i = 0; i < sectionPhotos.length; i++) {
         const photo = sectionPhotos[i];
@@ -407,8 +428,15 @@ async function createPDFReport(reportData: any): Promise<Blob> {
         const photoX = startX + col * (photoWidth + photoSpacing);
         const photoY = yPosition + row * (photoHeight + labelHeight + 15);
 
+        console.log(`Processing photo ${i + 1}/${sectionPhotos.length}:`, {
+          label: photo.label,
+          position: { x: photoX, y: photoY },
+          fileKey: photo.fileKey
+        });
+
         // Check if we need a new page
         if (photoY + photoHeight + labelHeight > 270) {
+          console.log('Adding new page for photo');
           pdf.addPage();
           addHeader();
           yPosition = 60;
@@ -438,6 +466,9 @@ async function createPDFReport(reportData: any): Promise<Blob> {
       // Update yPosition to account for all photo rows
       const totalRows = Math.ceil(sectionPhotos.length / photosPerRow);
       yPosition += totalRows * (photoHeight + labelHeight + 15) + 10;
+      console.log('Photos section completed, new yPosition:', yPosition);
+    } else {
+      console.log('No photos found for step:', step.name);
     }
 
     yPosition += 10; // Space between sections

@@ -528,39 +528,49 @@ serve(async (req) => {
         }
 
         console.log("Processing download for file key:", fileKey);
+        console.log("Download request details:", {
+          fileKey,
+          isServiceRole: isServiceRoleRequest,
+          userContextAdminId: userContext?.adminId
+        });
 
         try {
-          // Verify user authorization to access this file
-          const { data: fileMetadata, error: metaError } = await supabase
-            .from('file_metadata')
-            .select('admin_id')
-            .eq('file_key', fileKey)
-            .single();
+          // Skip authorization check for service role requests
+          if (!isServiceRoleRequest) {
+            // Verify user authorization to access this file
+            const { data: fileMetadata, error: metaError } = await supabase
+              .from('file_metadata')
+              .select('admin_id')
+              .eq('file_key', fileKey)
+              .single();
 
-          if (metaError || !fileMetadata) {
-            console.warn(`DB: File metadata not found for ${fileKey}:`, metaError?.message);
-            return new Response(JSON.stringify({
-              error: "File not found or unauthorized"
-            }), {
-              status: 404,
-              headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json"
-              }
-            });
-          }
+            if (metaError || !fileMetadata) {
+              console.warn(`DB: File metadata not found for ${fileKey}:`, metaError?.message);
+              return new Response(JSON.stringify({
+                error: "File not found or unauthorized"
+              }), {
+                status: 404,
+                headers: {
+                  ...corsHeaders,
+                  "Content-Type": "application/json"
+                }
+              });
+            }
 
-          if (fileMetadata.admin_id !== userContext.adminId) {
-            console.warn(`Auth: Unauthorized access attempt for file ${fileKey} by admin ${userContext.adminId}`);
-            return new Response(JSON.stringify({
-              error: "Forbidden: You do not have access to this file"
-            }), {
-              status: 403,
-              headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json"
-              }
-            });
+            if (fileMetadata.admin_id !== userContext.adminId) {
+              console.warn(`Auth: Unauthorized access attempt for file ${fileKey} by admin ${userContext.adminId}`);
+              return new Response(JSON.stringify({
+                error: "Forbidden: You do not have access to this file"
+              }), {
+                status: 403,
+                headers: {
+                  ...corsHeaders,
+                  "Content-Type": "application/json"
+                }
+              });
+            }
+          } else {
+            console.log("Service role request: Skipping file authorization check");
           }
 
           // Generate a pre-signed URL for secure, temporary access

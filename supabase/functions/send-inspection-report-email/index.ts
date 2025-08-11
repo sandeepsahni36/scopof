@@ -358,7 +358,7 @@ ITEM DETAILS:
 Item: ${templateItem.label}
 Value: ${valueDisplay}
 ${item.notes ? `Notes: ${item.notes}` : ''}
-${item.photo_urls && item.photo_urls.length > 0 ? `Photos: ${item.photo_urls.length} photo(s) attached` : ''}
+${photosText}
 
 This item was flagged by the inspector during the inspection and requires your attention. Please review the details above and take appropriate action.
 
