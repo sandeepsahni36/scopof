@@ -284,7 +284,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
                     {optionData.label}
                   </button>
                 );
-              ))}
+              })}
             </div>
           </div>
         );
@@ -324,7 +324,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
                     {optionData.label}
                   </button>
                 );
-              ))}
+              })}
             </div>
           </div>
         );
