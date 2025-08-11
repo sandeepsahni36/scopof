@@ -216,3 +216,4 @@ const AdminSettingsPage = () => {
       setLogoUploading(false);
     }
   };
+}
