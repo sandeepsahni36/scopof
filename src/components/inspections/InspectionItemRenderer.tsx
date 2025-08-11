@@ -164,10 +164,40 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     if (!checked) {
       setReportRecipientId('');
     }
+    // Force immediate save when marked for report changes
+    try {
+      await updateInspectionItem(
+        item.id,
+        value,
+        notes,
+        photos,
+        checked,
+        checked && reportRecipientId && isValidUUID(reportRecipientId) ? reportRecipientId : null
+      );
+      console.log('Marked for report saved successfully:', checked);
+    } catch (saveError) {
+      console.error('Error saving marked for report:', saveError);
+      toast.error('Failed to save report flag');
+    }
   };
 
   const handleReportRecipientChange = async (recipientId: string) => {
     setReportRecipientId(recipientId);
+    // Force immediate save when report recipient changes
+    try {
+      await updateInspectionItem(
+        item.id,
+        value,
+        notes,
+        photos,
+        markedForReport,
+        recipientId && isValidUUID(recipientId) ? recipientId : null
+      );
+      console.log('Report recipient saved successfully:', recipientId);
+    } catch (saveError) {
+      console.error('Error saving report recipient:', saveError);
+      toast.error('Failed to save report recipient');
+    }
   };
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,7 +214,21 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       if (photoUrl) {
         const newPhotos = [...photos, photoUrl];
         setPhotos(newPhotos);
-        await saveChanges({ photo_urls: newPhotos });
+        // Force immediate save of photo URLs
+        try {
+          await updateInspectionItem(
+            item.id,
+            value,
+            notes,
+            newPhotos,
+            markedForReport,
+            reportRecipientId && isValidUUID(reportRecipientId) ? reportRecipientId : null
+          );
+          console.log('Photo URLs saved successfully:', newPhotos);
+        } catch (saveError) {
+          console.error('Error saving photo URLs:', saveError);
+          toast.error('Photo uploaded but failed to save to inspection');
+        }
         toast.success('Photo uploaded successfully');
       }
     } catch (error: any) {
