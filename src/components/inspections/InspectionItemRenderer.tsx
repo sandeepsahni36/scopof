@@ -50,7 +50,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       if (!saving) {
         debouncedSave();
       }
-    }, 1000); // 1 second debounce
+    }, 3000); // 3 second debounce to prevent timeouts
 
     return () => clearTimeout(timeoutId);
   }, [value, notes, markedForReport, reportRecipientId]);
@@ -122,9 +122,22 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     
     try {
       setSaving(true);
-      await saveChanges({});
+      
+      // Only save if there are actual changes to prevent unnecessary database calls
+      const hasChanges = value !== item.value || 
+                        notes !== (item.notes || '') || 
+                        markedForReport !== (item.marked_for_report || false) || 
+                        reportRecipientId !== (item.report_recipient_id || '');
+      
+      if (hasChanges) {
+        await saveChanges({});
+      }
     } catch (error) {
       console.error('Error in debounced save:', error);
+      // Don't show toast for timeout errors to avoid spam
+      if (!error.message?.includes('timeout')) {
+        toast.error('Failed to save changes automatically');
+      }
     } finally {
       setSaving(false);
     }
@@ -150,6 +163,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const target = event.target; // Capture target before async operations
+    const target = event.target; // Capture target before async operations
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -174,6 +188,8 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       if (target) {
         target.value = '';
       }
+        target.value = '';
+      }
     }
   };
 
@@ -196,7 +212,8 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     }
 
     try {
-      await updateInspectionItem(
+      // Add timeout protection
+      const savePromise = updateInspectionItem(
         item.id,
         sanitizedUpdates.value !== undefined ? sanitizedUpdates.value : value,
         sanitizedUpdates.notes !== undefined ? sanitizedUpdates.notes : notes,
@@ -205,10 +222,25 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
         sanitizedUpdates.report_recipient_id !== undefined ? sanitizedUpdates.report_recipient_id : (reportRecipientId && isValidUUID(reportRecipientId) ? reportRecipientId : null)
       );
       
+      // Add 10 second timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Save operation timed out')), 10000)
+      );
+      
+      await Promise.race([savePromise, timeoutPromise]);
+      
       onUpdate(item.id, sanitizedUpdates);
     } catch (error: any) {
       console.error('Error saving inspection item:', error);
-      toast.error('Failed to save changes');
+      
+      // Only show error toast for non-timeout errors to avoid spam
+      if (error.message?.includes('timeout') || error.message?.includes('canceling statement')) {
+        console.warn('Database timeout occurred, changes may not be saved');
+      } else {
+        toast.error('Failed to save changes');
+      }
+      
+      throw error; // Re-throw to be handled by caller
     }
   };
 
@@ -292,13 +324,13 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
                     key={index}
                     type="button"
                     onClick={() => handleValueChange(optionData.label)}
-                    className={`p-3 rounded-lg border-2 transition-all text-sm font-medium ${
+                    className={`p-2 rounded-lg border-2 transition-all text-sm font-medium ${
                       isSelected
                         ? 'border-gray-800 shadow-md scale-105'
                         : 'border-gray-300 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     style={{ 
-                      backgroundColor: isSelected ? optionData.color : `${optionData.color}20`,
+                      backgroundColor: isSelected ? optionData.color : `${optionData.color}40`,
                       color: isSelected ? 'white' : optionData.color
                     }}
                   >
@@ -332,13 +364,13 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
                         : [...currentValues, optionData.label];
                       handleValueChange(newValues);
                     }}
-                    className={`p-3 rounded-lg border-2 transition-all text-sm font-medium ${
+                    className={`p-2 rounded-lg border-2 transition-all text-sm font-medium ${
                       isSelected
                         ? 'border-gray-800 shadow-md scale-105'
                         : 'border-gray-300 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     style={{ 
-                      backgroundColor: isSelected ? optionData.color : `${optionData.color}20`,
+                      backgroundColor: isSelected ? optionData.color : `${optionData.color}40`,
                       color: isSelected ? 'white' : optionData.color
                     }}
                   >
