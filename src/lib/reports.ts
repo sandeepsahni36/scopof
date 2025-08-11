@@ -269,8 +269,14 @@ async function createPDFReport(reportData: any): Promise<Blob> {
     ['Inspection Type:', reportData.inspection.inspection_type?.replace('_', ' ').toUpperCase() || 'N/A'],
     ['Inspector:', reportData.inspectorName || 'N/A'],
     ['Primary Contact:', reportData.primaryContactName || 'N/A'],
-    ['Date:', new Date(reportData.startTime).toLocaleDateString()],
-    ['Duration:', reportData.duration ? `${Math.floor(reportData.duration / 60)} minutes` : 'N/A'],
+    ['Date:', new Date(reportData.startTime).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })],
+    ['Duration:', reportData.durationSeconds ? formatDuration(reportData.durationSeconds) : 'N/A'],
   ];
 
   propertyInfo.forEach(([label, value]) => {
