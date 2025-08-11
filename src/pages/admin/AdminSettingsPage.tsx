@@ -25,15 +25,16 @@ type TeamFormData = {
 };
 
 const AdminSettingsPage = () => {
+  const { company, initialize } = useAuthStore();
+  
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
-  const [logoPreview, setLogoPreview] = useState<string | null>(company?.logo || null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(company?.logo_url || null);
   const [teamsLoading, setTeamsLoading] = useState(true);
   const [teams, setTeams] = useState<ReportServiceTeam[]>([]);
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [editingTeam, setEditingTeam] = useState<ReportServiceTeam | null>(null);
   const [teamFormLoading, setTeamFormLoading] = useState(false);
-  const { company, initialize } = useAuthStore();
   
   const {
     register,
