@@ -166,18 +166,18 @@ const StartTrialPage = () => {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
             {skipTrial ? 'Choose Your Plan' : 'Start Your Free Trial'}
-          </h1>
+      <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 mb-12">
           <p className="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
             {skipTrial 
               ? 'Select your plan and start managing your properties today'
-              : 'Choose your plan and start your 14-day free trial today'
+          className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:gap-12 2xl:gap-16"
             }
           </p>
         </div>
 
         {/* Pricing Cards */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-          <motion.div
+                ? 'border-2 border-primary-500 bg-primary-50 shadow-xl ring-4 ring-primary-100 scale-105'
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:gap-8"
@@ -216,7 +216,7 @@ const StartTrialPage = () => {
                     </div>
                   </div>
                 </div>
-                
+                    <h3 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900">{tier.name}</h3>
                 <p className="text-sm lg:text-base text-gray-600 mb-6 leading-relaxed">{tier.description}</p>
                 
                 <div className="mb-6">
@@ -233,11 +233,11 @@ const StartTrialPage = () => {
                 <ul className="space-y-3 lg:space-y-4">
                   {tier.features.map((feature, index) => (
                     <li key={index} className="flex items-start">
-                      <Check className="flex-shrink-0 h-4 w-4 lg:h-5 lg:w-5 text-primary-500 mt-1" />
+              <p className="text-base lg:text-lg xl:text-xl text-gray-600 mb-8 leading-relaxed">{tier.description}</p>
                       <span className="ml-3 text-sm lg:text-base text-gray-700 leading-relaxed">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+              <div className="mb-8">
+                <span className="text-5xl lg:text-6xl xl:text-7xl font-extrabold text-gray-900">${tier.price}</span>
+                <span className="text-xl lg:text-2xl xl:text-3xl text-gray-500">/month</span>
               </div>
             </div>
           ))}
@@ -245,21 +245,21 @@ const StartTrialPage = () => {
         </div>
 
         {/* Action Section */}
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+        <div className="max-w-[1200px] mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="bg-white rounded-2xl shadow-lg p-10 lg:p-12 xl:p-16">
             <Button
               fullWidth
               size="lg"
               onClick={handleStartTrial}
               isLoading={loading}
               rightIcon={!loading ? <ArrowRight size={20} /> : undefined}
-              className="bg-primary-600 hover:bg-primary-700 text-lg py-4 mb-6"
+              className="bg-primary-600 hover:bg-primary-700 text-xl lg:text-2xl py-6 lg:py-8 mb-8 font-semibold"
             >
               {skipTrial ? 'Choose Plan & Get Started' : 'Start 14-Day Free Trial'}
             </Button>
             
             <div className="text-center mb-6">
-              <button
+            <div className="px-8 py-10 lg:px-10 xl:px-12">
                 onClick={() => navigate('/login')}
                 className="text-sm text-gray-500 hover:text-gray-700 underline"
               >
@@ -268,7 +268,7 @@ const StartTrialPage = () => {
             </div>
 
             {/* What happens next */}
-            <div className="bg-gray-50 rounded-xl p-6 lg:p-8">
+            <div className="bg-gray-50 rounded-xl p-8 lg:p-10 xl:p-12">
               <h4 className="text-lg font-semibold text-gray-900 mb-4">
                 What happens next?
               </h4>
@@ -295,35 +295,35 @@ const StartTrialPage = () => {
                   </ul>
                 </div>
               )}
-              <ul className="space-y-3 text-gray-600">
+              <ul className="space-y-4 lg:space-y-5 text-gray-600">
                 <li className="flex items-start">
-                  <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
-                  <span className="ml-3">
+                  <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
+                  <span className="ml-4 text-base lg:text-lg">
                     {skipTrial ? 'Start using your selected plan immediately' : 'Start your 14-day free trial immediately'}
                   </span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
-                  <span className="ml-3">
+                  <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
+                  <span className="ml-4 text-base lg:text-lg">
                     Full access to all {STRIPE_PRODUCTS[selectedTier as keyof typeof STRIPE_PRODUCTS]?.name} features
                   </span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
-                  <span className="ml-3">
+                  <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
+                  <span className="ml-4 text-base lg:text-lg">
                     {skipTrial ? 'Billing starts immediately' : 'No charges during trial period'}
                   </span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
-                  <span className="ml-3">
+                  <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
+                  <span className="ml-4 text-base lg:text-lg">
                     {skipTrial ? 'Cancel anytime from account settings' : 'Cancel anytime before trial ends'}
                   </span>
-                </li>
+              <ul className="space-y-4 lg:space-y-5 xl:space-y-6">
                 <li className="flex items-start">
-                  <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
-                  <span className="ml-3">
-                    {skipTrial ? 'Immediate access to premium support' : 'Automatic billing starts after trial expires'}
+                  <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
+                  <span className="ml-4 text-base lg:text-lg">
+                    <span className="ml-4 lg:ml-5 xl:ml-6 text-base lg:text-lg xl:text-xl text-gray-700 leading-relaxed">{feature}</span>
                   </span>
                 </li>
               </ul>
