@@ -43,6 +43,22 @@ const DashboardPage = () => {
     issuesDetected: 0,
   });
   
+  // Chart data state
+  const [chartData, setChartData] = useState({
+    inspectionsByType: {
+      check_in: 0,
+      check_out: 0,
+      move_in: 0,
+      move_out: 0,
+    },
+    issuesByValue: {
+      'Needs Repair': 0,
+      'Poor': 0,
+      'Damaged': 0,
+      'Missing': 0,
+    },
+  });
+  
   // Activities data (placeholder for future implementation)
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,10 +75,23 @@ const DashboardPage = () => {
         
         let completedInspections = 0;
         let pendingInspections = 0;
+        let issuesDetected = 0;
+        let inspectionsByType = {
+          check_in: 0,
+          check_out: 0,
+          move_in: 0,
+          move_out: 0,
+        };
+        let issuesByValue = {
+          'Needs Repair': 0,
+          'Poor': 0,
+          'Damaged': 0,
+          'Missing': 0,
+        };
         
         // Get inspection counts (skip in dev mode to avoid errors)
         if (!devModeEnabled()) {
-          const [completedResponse, pendingResponse] = await Promise.all([
+          const [completedResponse, pendingResponse, issuesResponse, inspectionTypesResponse] = await Promise.all([
             supabase
               .from('inspections')
               .select('id', { count: 'exact' })
@@ -70,21 +99,108 @@ const DashboardPage = () => {
             supabase
               .from('inspections')
               .select('id', { count: 'exact' })
-              .eq('status', 'in_progress')
+              .eq('status', 'in_progress'),
+            supabase
+              .from('inspection_items')
+              .select('id', { count: 'exact' })
+              .eq('marked_for_report', true),
+            supabase
+              .from('inspections')
+              .select('inspection_type')
+              .eq('status', 'completed')
           ]);
           
           completedInspections = completedResponse.count || 0;
           pendingInspections = pendingResponse.count || 0;
+          issuesDetected = issuesResponse.count || 0;
+          
+          // Process inspection types for chart
+          if (inspectionTypesResponse.data) {
+            inspectionTypesResponse.data.forEach((inspection: any) => {
+              const type = inspection.inspection_type;
+              if (type && inspectionsByType.hasOwnProperty(type)) {
+                inspectionsByType[type]++;
+              }
+            });
+          }
+          
+          // Get issue breakdown by value (items marked for report with specific values)
+          const { data: issueItems, error: issueItemsError } = await supabase
+            .from('inspection_items')
+            .select('value')
+            .eq('marked_for_report', true)
+            .not('value', 'is', null);
+          
+          if (!issueItemsError && issueItems) {
+            issueItems.forEach((item: any) => {
+              const value = item.value;
+              if (typeof value === 'string') {
+                // Check if the value indicates an issue
+                if (value.toLowerCase().includes('repair') || value.toLowerCase().includes('needs repair')) {
+                  issuesByValue['Needs Repair']++;
+                } else if (value.toLowerCase().includes('poor') || value.toLowerCase().includes('bad')) {
+                  issuesByValue['Poor']++;
+                } else if (value.toLowerCase().includes('damaged') || value.toLowerCase().includes('damage')) {
+                  issuesByValue['Damaged']++;
+                } else if (value.toLowerCase().includes('missing') || value.toLowerCase().includes('absent')) {
+                  issuesByValue['Missing']++;
+                }
+              } else if (Array.isArray(value)) {
+                // Handle multiple choice values
+                value.forEach((v: string) => {
+                  if (typeof v === 'string') {
+                    if (v.toLowerCase().includes('repair') || v.toLowerCase().includes('needs repair')) {
+                      issuesByValue['Needs Repair']++;
+                    } else if (v.toLowerCase().includes('poor') || v.toLowerCase().includes('bad')) {
+                      issuesByValue['Poor']++;
+                    } else if (v.toLowerCase().includes('damaged') || v.toLowerCase().includes('damage')) {
+                      issuesByValue['Damaged']++;
+                    } else if (v.toLowerCase().includes('missing') || v.toLowerCase().includes('absent')) {
+                      issuesByValue['Missing']++;
+                    }
+                  }
+                });
+              }
+            });
+          }
+        } else {
+          // Dev mode - use mock data for charts
+          completedInspections = 8;
+          pendingInspections = 3;
+          issuesDetected = 5;
+          inspectionsByType = {
+            check_in: 4,
+            check_out: 4,
+            move_in: 0,
+            move_out: 0,
+          };
+          issuesByValue = {
+            'Needs Repair': 2,
+            'Poor': 1,
+            'Damaged': 1,
+            'Missing': 1,
+          };
         }
         
         setStats({
           properties: propertyCount,
           completedInspections,
           pendingInspections,
-          issuesDetected: 0, // TODO: Implement when issue tracking is added
+          issuesDetected,
+        });
+        
+        setChartData({
+          inspectionsByType,
+          issuesByValue,
         });
         
         // TODO: Load activities when activity tracking is implemented
+        // Activities would require a separate table to track user actions like:
+        // - Property created/updated
+        // - Inspection started/completed
+        // - Template created/updated
+        // - Report generated
+        // For now, keeping as empty array
         setActivities([]);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -95,6 +211,20 @@ const DashboardPage = () => {
           pendingInspections: 0,
           issuesDetected: 0,
         });
+        setChartData({
+          inspectionsByType: {
+            check_in: 0,
+            check_out: 0,
+            move_in: 0,
+            move_out: 0,
+          },
+          issuesByValue: {
+            'Needs Repair': 0,
+            'Poor': 0,
+            'Damaged': 0,
+            'Missing': 0,
+          },
+        });
       } finally {
         setLoading(false);
       }
@@ -104,35 +234,42 @@ const DashboardPage = () => {
   }, []);
   
   // Chart data
-  const hasInspectionData = stats.completedInspections > 0;
+  const hasInspectionData = stats.completedInspections > 0 || stats.pendingInspections > 0;
   const hasIssueData = stats.issuesDetected > 0;
   
+  // Calculate total inspections by type for chart
+  const totalInspectionsByType = Object.values(chartData.inspectionsByType).reduce((sum, count) => sum + count, 0);
+  const totalIssuesByValue = Object.values(chartData.issuesByValue).reduce((sum, count) => sum + count, 0);
+  
   const inspectionChartData = {
-    labels: ['January', 'February', 'March', 'April'],
+    labels: ['Check-In', 'Check-Out', 'Move-In', 'Move-Out'],
     datasets: [
       {
-        label: 'Check-in Inspections',
-        data: [0, 0, 0, 0], // TODO: Implement monthly breakdown
+        label: 'Completed Inspections',
+        data: [
+          chartData.inspectionsByType.check_in,
+          chartData.inspectionsByType.check_out,
+          chartData.inspectionsByType.move_in,
+          chartData.inspectionsByType.move_out,
+        ],
         backgroundColor: 'rgba(59, 130, 246, 0.5)',
         borderColor: 'rgba(59, 130, 246, 1)',
-        borderWidth: 1,
-      },
-      {
-        label: 'Check-out Inspections',
-        data: [0, 0, 0, 0], // TODO: Implement monthly breakdown
-        backgroundColor: 'rgba(249, 115, 22, 0.5)',
-        borderColor: 'rgba(249, 115, 22, 1)',
         borderWidth: 1,
       },
     ],
   };
   
   const issueChartData = {
-    labels: ['Damage', 'Missing Items', 'Cleanliness', 'Maintenance'],
+    labels: ['Needs Repair', 'Poor Condition', 'Damaged', 'Missing Items'],
     datasets: [
       {
         label: 'Issues by Type',
-        data: [0, 0, 0, 0], // TODO: Implement when issue tracking is added
+        data: [
+          chartData.issuesByValue['Needs Repair'],
+          chartData.issuesByValue['Poor'],
+          chartData.issuesByValue['Damaged'],
+          chartData.issuesByValue['Missing'],
+        ],
         backgroundColor: [
           'rgba(239, 68, 68, 0.7)',
           'rgba(249, 115, 22, 0.7)',
@@ -421,13 +558,15 @@ const DashboardPage = () => {
       </div>
       
       {/* Chart section - only show if there's data */}
-      {hasAnyData ? (
+      {hasAnyData && (hasInspectionData || hasIssueData) ? (
         <div className="mb-8">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Analytics</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
-              <h3 className="text-base font-medium text-gray-900 mb-4">Inspection Activity</h3>
-              {hasInspectionData ? (
+              <h3 className="text-base font-medium text-gray-900 mb-4">
+                Inspections by Type ({stats.completedInspections} completed)
+              </h3>
+              {hasInspectionData && totalInspectionsByType > 0 ? (
                 <Bar
                   data={inspectionChartData}
                   options={{
@@ -441,6 +580,9 @@ const DashboardPage = () => {
                     scales: {
                       y: {
                         beginAtZero: true,
+                        ticks: {
+                          stepSize: 1,
+                        },
                       },
                     },
                   }}
@@ -455,8 +597,10 @@ const DashboardPage = () => {
             </div>
             
             <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-base font-medium text-gray-900 mb-4">Issue Types</h3>
-              {hasIssueData ? (
+              <h3 className="text-base font-medium text-gray-900 mb-4">
+                Flagged Items ({stats.issuesDetected} total)
+              </h3>
+              {hasIssueData && totalIssuesByValue > 0 ? (
                 <Pie
                   data={issueChartData}
                   options={{
@@ -472,8 +616,8 @@ const DashboardPage = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-500">
                   <AlertTriangle className="h-12 w-12 mb-4" />
-                  <p className="text-sm">No issues detected</p>
-                  <p className="text-xs">Issues will appear here when found</p>
+                  <p className="text-sm">No flagged items</p>
+                  <p className="text-xs">Items marked for report will appear here</p>
                 </div>
               )}
             </div>
@@ -506,63 +650,23 @@ const DashboardPage = () => {
       <div className="mb-8">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h2>
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          {activities.length > 0 ? (
-            <ul className="divide-y divide-gray-200">
-              {activities.map((activity) => (
-                <li key={activity.id}>
-                  <div className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-primary-600 truncate">
-                        {activity.type === 'inspection_completed' && 'Inspection completed'}
-                        {activity.type === 'damage_detected' && 'Damage detected'}
-                        {activity.type === 'inspection_started' && 'Inspection started'}
-                        {activity.type === 'template_created' && 'Template created'}
-                      </p>
-                      <div className="ml-2 flex-shrink-0 flex">
-                        <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          {new Date(activity.date).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <p className="flex items-center text-sm text-gray-500">
-                          {activity.property && (
-                            <>
-                              <Building2 className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
-                              {activity.property}
-                            </>
-                          )}
-                          {activity.template && (
-                            <>
-                              <Building2 className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
-                              {activity.template}
-                            </>
-                          )}
-                        </p>
-                      </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                        <p>by {activity.user}</p>
-                      </div>
-                    </div>
-                    {activity.details && (
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-500">{activity.details}</p>
-                      </div>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="text-center py-12">
-              <Clock className="mx-auto h-16 w-16 text-gray-400" />
-              <h3 className="mt-4 text-lg font-semibold text-gray-900">No activity yet</h3>
-              <p className="mt-2 text-base text-gray-500">
-                Your recent activities will appear here as you use the platform.
-              </p>
+          <div className="text-center py-12">
+            <Clock className="mx-auto h-16 w-16 text-gray-400" />
+            <h3 className="mt-4 text-lg font-semibold text-gray-900">Recent Activity</h3>
+            <p className="mt-2 text-base text-gray-500">
+              Activity tracking is coming soon. This will show recent inspections, property updates, and team actions.
+            </p>
+            <div className="mt-4 text-sm text-gray-400">
+              <p>Future activities will include:</p>
+              <ul className="mt-2 space-y-1">
+                <li>• Inspections started and completed</li>
+                <li>• Properties added or updated</li>
+                <li>• Templates created or modified</li>
+                <li>• Reports generated</li>
+                <li>• Team member actions</li>
+              </ul>
             </div>
-          )}
+          </div>
         </div>
       </div>
       
