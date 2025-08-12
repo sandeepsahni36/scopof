@@ -72,7 +72,7 @@ export type Property = {
   companyId: string; // This maps to admin_id in the database
   name: string;
   address: string;
-  type: 'apartment' | 'house' | 'villa' | 'condo';
+  type: 'apartment' | 'hotel_apartment' | 'penthouse' | 'villa';
   bedrooms: string;
   bathrooms: string;
   notes?: string;

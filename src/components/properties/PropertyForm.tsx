@@ -44,9 +44,9 @@ const PropertyForm: React.FC<PropertyFormProps> = ({
 
   const propertyTypes = [
     { value: 'apartment', label: 'Apartment' },
-    { value: 'house', label: 'House' },
+    { value: 'hotel_apartment', label: 'Hotel Apartment' },
+    { value: 'penthouse', label: 'Penthouse' },
     { value: 'villa', label: 'Villa' },
-    { value: 'condo', label: 'Condo' },
   ];
 
   const bedroomOptions = [

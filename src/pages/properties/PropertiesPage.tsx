@@ -227,9 +227,9 @@ function PropertiesPage() {
                 >
                   <option value="all">All Types</option>
                   <option value="apartment">Apartment</option>
-                  <option value="house">House</option>
+                  <option value="hotel_apartment">Hotel Apartment</option>
+                  <option value="penthouse">Penthouse</option>
                   <option value="villa">Villa</option>
-                  <option value="condo">Condo</option>
                 </select>
               </div>
 

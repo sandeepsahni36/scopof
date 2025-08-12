@@ -100,13 +100,15 @@ export async function resizeAndOptimizeImage(
 }
 export function getPropertyTypeIcon(type: string) {
   switch (type) {
-    case 'villa':
-      return '🏖️';
-    case 'house':
-      return '🏠';
-    case 'condo':
+    case 'apartment':
       return '🏢';
+    case 'hotel_apartment':
+      return '🏨';
+    case 'penthouse':
+      return '🏙️';
+    case 'villa':
+      return '🏡';
     default:
-      return '🏠';
+      return '🏢';
   }
 }
