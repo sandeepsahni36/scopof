@@ -28,6 +28,81 @@ const AuthCallbackPage = () => {
       return;
     }
 
+    // Strategy 0: Check for tokens in URL hash first (Implicit Flow fallback)
+    const handleHashTokens = async () => {
+      const hash = window.location.hash.substring(1);
+      if (!hash) {
+        addDebugInfo('No hash parameters found in URL');
+        return false;
+      }
+
+      addDebugInfo(`Hash found: ${hash.substring(0, 50)}...`);
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const expiresAt = params.get('expires_at');
+      const tokenType = params.get('token_type');
+
+      addDebugInfo(`Hash tokens: access_token=${!!accessToken}, refresh_token=${!!refreshToken}, expires_at=${expiresAt}, token_type=${tokenType}`);
+
+      if (accessToken && refreshToken) {
+        addDebugInfo('Found tokens in hash, attempting to set session manually');
+        
+        try {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+
+          if (error) {
+            addDebugInfo(`setSession error: ${error.message}`);
+            throw error;
+          }
+
+          if (data.session && data.user) {
+            addDebugInfo('Session set successfully from hash tokens');
+            hasProcessedRef.current = true;
+            
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
+              timeoutRef.current = null;
+            }
+
+            // Clean up the URL hash
+            addDebugInfo('Cleaning up URL hash');
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+            // Add delay before initializing
+            addDebugInfo('Adding 1000ms delay before auth initialization (hash tokens path)');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            try {
+              await initialize();
+              addDebugInfo('Adding 500ms delay after auth initialization (hash tokens path)');
+              await new Promise(resolve => setTimeout(resolve, 500));
+              toast.success('Email confirmed successfully');
+              console.log('Email confirmed via hash tokens, redirecting to dashboard');
+              navigate('/dashboard', { replace: true });
+              return true;
+            } catch (error: any) {
+              addDebugInfo(`Auth initialization failed after hash tokens: ${error.message}`);
+              setError(error.message || 'Failed to initialize user session');
+              return true; // Still processed, even if failed
+            }
+          } else {
+            addDebugInfo('setSession succeeded but no session/user returned');
+            throw new Error('Session was not properly established');
+          }
+        } catch (error: any) {
+          addDebugInfo(`Hash token processing failed: ${error.message}`);
+          setError(`Failed to process authentication tokens: ${error.message}`);
+          return true; // Processed but failed
+        }
+      }
+
+      return false; // No hash tokens found
+    };
+
     // Check for error in URL first
     const errorMessage = searchParams.get('error_description');
     if (errorMessage) {
@@ -35,6 +110,26 @@ const AuthCallbackPage = () => {
       addDebugInfo(`URL error detected: ${errorMessage}`);
       return;
     }
+
+    const handleAuthCallback = async () => {
+      try {
+        addDebugInfo('Starting auth callback process');
+        
+        // Set up timeout (20 seconds)
+        timeoutRef.current = setTimeout(() => {
+          if (!hasProcessedRef.current) {
+            addDebugInfo('Authentication callback timed out after 20 seconds');
+            setIsTimeout(true);
+            setError('Authentication is taking longer than expected. This might be due to a slow connection or server issue.');
+          }
+        }, 20000);
+
+        // Strategy 0: Try hash tokens first (for Implicit Flow)
+        const hashProcessed = await handleHashTokens();
+        if (hashProcessed) {
+          addDebugInfo('Hash tokens processed, exiting callback handler');
+          return;
+        }
 
     // Check for code parameter
     const code = searchParams.get('code');
@@ -48,19 +143,6 @@ const AuthCallbackPage = () => {
     // Check for PKCE code verifier specifically
     const pkceCodeVerifier = localStorage.getItem('supabase.auth.code_verifier');
     addDebugInfo(`PKCE code verifier present: ${!!pkceCodeVerifier}`);
-
-    const handleAuthCallback = async () => {
-      try {
-        addDebugInfo('Starting auth callback process');
-        
-        // Set up timeout (15 seconds)
-        timeoutRef.current = setTimeout(() => {
-          if (!hasProcessedRef.current) {
-            addDebugInfo('Authentication callback timed out after 20 seconds');
-            setIsTimeout(true);
-            setError('Authentication is taking longer than expected. This might be due to a slow connection or server issue.');
-          }
-        }, 20000);
 
         // Add initial delay to allow Supabase client to fully process the session
         addDebugInfo('Adding 500ms delay for session processing');
