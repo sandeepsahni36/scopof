@@ -62,10 +62,10 @@ const BottomNavigation = () => {
             <div className="mb-1 flex-shrink-0">
               {IconMap[item.icon]}
             </div>
-            <span className="text-center leading-tight text-xs font-medium overflow-hidden text-ellipsis w-full px-0.5">
+            <span className="text-center leading-tight text-[10px] font-medium w-full">
               {item.title}
               {(requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings') && (
-                <span className="block text-[9px] text-amber-600 mt-0.5 leading-none">Upgrade</span>
+                <span className="block text-[8px] text-amber-600 mt-0.5 leading-none">Upgrade</span>
               )}
             </span>
           </NavLink>
