@@ -134,6 +134,16 @@ function App() {
           {/* Subscription required page */}
           <Route path="/subscription-required" element={<SubscriptionRequiredPage />} />
           
+          {/* Start trial page (outside auth layout for full width) */}
+          <Route 
+            path="/start-trial" 
+            element={
+              <ProtectedRoute>
+                <StartTrialPage />
+              </ProtectedRoute>
+            } 
+          />
+          
           {/* Access restricted page for non-admin members */}
           <Route path="/access-restricted" element={<AccessRestrictedPage />} />
           
@@ -144,14 +154,6 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route 
-              path="/start-trial" 
-              element={
-                <ProtectedRoute>
-                  <StartTrialPage />
-                </ProtectedRoute>
-              } 
-            />
             <Route path="/auth/confirm-email" element={<EmailConfirmationPage />} />
           </Route>
 
