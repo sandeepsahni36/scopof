@@ -260,11 +260,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               });
               
               if (trialEnd && now < trialEnd) { // Trial is active
-                if (!admin.customer_id || admin.customer_id === '') { // No customer_id means payment setup needed
+                // Check if payment setup is truly complete by verifying Stripe subscription status
+                if (!admin.customer_id || admin.customer_id === '' || !stripe_subscription_status || stripe_subscription_status === 'incomplete') {
                   hasActiveSubscription = false; // Not truly active until payment setup
                   needsPaymentSetup = true;
                   requiresPayment = false; // Not requiring payment yet, but needs setup
-                  console.log('DEBUG: Trial user without customer_id, needs payment setup.');
+                  console.log('DEBUG: Trial user needs payment setup - missing customer_id or incomplete Stripe subscription.');
                 } else { // Trial is active AND customer_id exists
                   hasActiveSubscription = true;
                   needsPaymentSetup = false;
@@ -359,10 +360,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           
           if (admin_subscription_status === 'trialing') {
             if (trialEnd && now < trialEnd) {
-              if (!admin.customer_id || admin.customer_id === '') { // No customer_id means payment setup needed
+              // Check if payment setup is truly complete by verifying Stripe subscription status
+              if (!admin.customer_id || admin.customer_id === '' || !stripe_subscription_status || stripe_subscription_status === 'incomplete') {
                 hasActiveSubscription = false;
                 needsPaymentSetup = true;
-                console.log('DEBUG: Trial user without customer_id, needs payment setup.');
+                console.log('DEBUG: Trial user needs payment setup - missing customer_id or incomplete Stripe subscription.');
               } else {
                 hasActiveSubscription = true;
                 needsPaymentSetup = false;
