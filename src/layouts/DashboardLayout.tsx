@@ -92,7 +92,7 @@ const DashboardLayout = () => {
                       key="collapsed-logo" 
                       src="/Scopostay Fevicon.png" 
                       alt="scopoStay Logo" 
-                      className="h-8 w-8 flex-shrink-0" 
+                      className="h-10 w-10 flex-shrink-0" 
                       initial={{ opacity: 0 }} 
                       animate={{ opacity: 1 }} 
                       exit={{ opacity: 0 }} 
@@ -102,7 +102,7 @@ const DashboardLayout = () => {
                       key="expanded-logo" 
                       src="/Scopostay long full logo blue.png" 
                       alt="scopoStay Logo" 
-                      className="h-8 w-auto flex-shrink-0" 
+                      className="h-12 w-auto flex-shrink-0 max-w-[180px]" 
                       initial={{ opacity: 0 }} 
                       animate={{ opacity: 1 }} 
                       exit={{ opacity: 0 }} 
