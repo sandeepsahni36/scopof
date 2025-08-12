@@ -176,7 +176,7 @@ const StartTrialPage = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 mb-12">
+        <div className=""w-full max-w-screen-2xl mx-auto px-6 sm:px-8 lg:px-12 mb-1>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
