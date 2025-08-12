@@ -84,7 +84,7 @@ const DashboardLayout = () => {
         >
           <div className="flex flex-col h-full">
             {/* Sidebar header */}
-            <div className="h-16 flex items-center px-4 border-b border-gray-200">
+            <div className="h-20 flex items-center px-4 border-b border-gray-200">
               <Link to="/dashboard" className="flex items-center">
                 <AnimatePresence mode="wait">
                   {isCollapsed ? (
