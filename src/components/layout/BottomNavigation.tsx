@@ -18,7 +18,7 @@ const mainNavItems: NavItem[] = [
 ];
 
 const adminNavItems: NavItem[] = [
-  { title: 'Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
+  { title: 'Company Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
 ];
 
 const IconMap: Record<string, React.ReactNode> = {

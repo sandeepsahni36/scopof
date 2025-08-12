@@ -326,9 +326,17 @@ const DashboardLayout = () => {
         </motion.aside>
 
         {/* Main content */}
-        <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
-          isCollapsed ? 'md:ml-20' : 'md:ml-64'
-        }`}>
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Mobile header */}
+          <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex justify-end">
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
+            >
+              <LogOut size={20} />
+            </button>
+          </div>
+
           {/* Top bar */}
           {/* Trial warning banner */}
           {isTrialExpired && (
