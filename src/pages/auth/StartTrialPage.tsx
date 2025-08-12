@@ -236,89 +236,96 @@ const StartTrialPage = () => {
                     ))}
                   </ul>
                 </div>
+
+                {selectedTier === tier.id && (
+                  <div className="mt-8 p-4 bg-primary-100 rounded-lg border border-primary-200">
+                    <p className="text-base font-medium text-primary-800 text-center">
+                      ✨ Selected Plan
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </motion.div>
         </div>
 
         {/* Action Section */}
-        <div className="max-w-5xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-xl p-10">
-            <Button
-              fullWidth
-              size="lg"
-              onClick={handleStartTrial}
-              isLoading={loading}
-              rightIcon={!loading ? <ArrowRight size={20} /> : undefined}
-              className="bg-primary-600 hover:bg-primary-700 text-xl py-5 mb-8 font-semibold rounded-xl"
+        <div className="mt-12 space-y-8 max-w-4xl mx-auto">
+          <Button
+            fullWidth
+            size="lg"
+            onClick={handleStartTrial}
+            isLoading={loading}
+            leftIcon={<CreditCard size={20} />}
+            rightIcon={<ArrowRight size={20} />}
+            className="bg-primary-600 hover:bg-primary-700 text-xl py-6 font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            {skipTrial ? 'Choose Plan & Get Started' : 'Start 14-Day Free Trial'}
+          </Button>
+          
+          <div className="text-center">
+            <button
+              onClick={() => navigate('/login')}
+              className="text-sm text-gray-500 hover:text-gray-700 underline transition-colors"
             >
-              {skipTrial ? 'Choose Plan & Get Started' : 'Start 14-Day Free Trial'}
-            </Button>
-            
-            <div className="text-center mb-8">
-              <button
-                onClick={() => navigate('/login')}
-                className="text-sm text-gray-500 hover:text-gray-700 underline transition-colors"
-              >
-                Sign out instead
-              </button>
-            </div>
+              Sign out instead
+            </button>
+          </div>
 
-            {/* What happens next */}
-            <div className="bg-gray-50 rounded-xl p-8">
-              <h4 className="text-xl font-semibold text-gray-900 mb-6">
-                What happens next?
-              </h4>
-              {skipTrial ? (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <h5 className="text-base font-semibold text-green-800 mb-3">💳 Direct Subscription</h5>
-                  <ul className="text-sm text-green-700 space-y-2">
-                    <li>• Start using all features immediately</li>
-                    <li>• Billing begins immediately after setup</li>
-                    <li>• Full access to your selected plan</li>
-                    <li>• Cancel anytime from your account settings</li>
-                    <li>• No trial period - direct access to premium features</li>
-                  </ul>
-                </div>
-              ) : (
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h5 className="text-base font-semibold text-blue-800 mb-3">🎉 14-Day Free Trial</h5>
-                  <ul className="text-sm text-blue-700 space-y-2">
-                    <li>• Start using all features immediately</li>
-                    <li>• No charges during the 14-day trial period</li>
-                    <li>• Payment method secured for seamless transition</li>
-                    <li>• Cancel anytime before trial ends</li>
-                    <li>• Automatic billing starts after trial expires</li>
-                  </ul>
-                </div>
-              )}
-              <ul className="space-y-4">
-                <li className="flex items-start">
-                  <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
-                  <span className="ml-4 text-base leading-relaxed">
-                    {skipTrial ? 'Start using your selected plan immediately' : 'Start your 14-day free trial immediately'}
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
-                  <span className="ml-4 text-base leading-relaxed">
-                    Full access to all {STRIPE_PRODUCTS[selectedTier as keyof typeof STRIPE_PRODUCTS]?.name} features
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
-                  <span className="ml-4 text-base leading-relaxed">
-                    {skipTrial ? 'Billing starts immediately' : 'No charges during trial period'}
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
-                  <span className="ml-4 text-base leading-relaxed">
-                    {skipTrial ? 'Cancel anytime from account settings' : 'Cancel anytime before trial ends'}
-                  </span>
-                </li>
-              </ul>
-            </div>
+          {/* What happens next */}
+          <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-200">
+            <h4 className="text-xl font-semibold text-gray-900 mb-6 text-center">
+              What happens next?
+            </h4>
+            {skipTrial ? (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <h5 className="text-base font-semibold text-green-800 mb-3">💳 Direct Subscription</h5>
+                <ul className="text-sm text-green-700 space-y-2">
+                  <li>• Start using all features immediately</li>
+                  <li>• Billing begins immediately after setup</li>
+                  <li>• Full access to your selected plan</li>
+                  <li>• Cancel anytime from your account settings</li>
+                  <li>• No trial period - direct access to premium features</li>
+                </ul>
+              </div>
+            ) : (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h5 className="text-base font-semibold text-blue-800 mb-3">🎉 14-Day Free Trial</h5>
+                <ul className="text-sm text-blue-700 space-y-2">
+                  <li>• Start using all features immediately</li>
+                  <li>• No charges during the 14-day trial period</li>
+                  <li>• Payment method secured for seamless transition</li>
+                  <li>• Cancel anytime before trial ends</li>
+                  <li>• Automatic billing starts after trial expires</li>
+                </ul>
+              </div>
+            )}
+            <ul className="space-y-4">
+              <li className="flex items-start">
+                <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
+                <span className="ml-4 text-base leading-relaxed">
+                  {skipTrial ? 'Start using your selected plan immediately' : 'Start your 14-day free trial immediately'}
+                </span>
+              </li>
+              <li className="flex items-start">
+                <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
+                <span className="ml-4 text-base leading-relaxed">
+                  Full access to all {STRIPE_PRODUCTS[selectedTier as keyof typeof STRIPE_PRODUCTS]?.name} features
+                </span>
+              </li>
+              <li className="flex items-start">
+                <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
+                <span className="ml-4 text-base leading-relaxed">
+                  {skipTrial ? 'Billing starts immediately' : 'No charges during trial period'}
+                </span>
+              </li>
+              <li className="flex items-start">
+                <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
+                <span className="ml-4 text-base leading-relaxed">
+                  {skipTrial ? 'Cancel anytime from account settings' : 'Cancel anytime before trial ends'}
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
