@@ -113,11 +113,13 @@ const DashboardLayout = () => {
               <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className="ml-auto p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-              >
-                <ChevronLeft
-                  size={20}
-                  className={`transform transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`}
-                />
+                <a href="https://scopostay.com" target="_blank" rel="noopener noreferrer">
+                  <img 
+                    src="/Scopostay long full logo blue.png" 
+                    alt="scopoStay Logo" 
+                    className="h-8 w-auto" 
+                  />
+                </a>
               </button>
             </div>
 
