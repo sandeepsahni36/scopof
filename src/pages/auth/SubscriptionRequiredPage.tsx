@@ -123,6 +123,8 @@ const SubscriptionRequiredPage = () => {
                   <div className="mt-2 text-sm text-red-700">
                     <p>
                       Your 14-day free trial has ended. All your data is safely stored and will be restored immediately upon upgrading.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
