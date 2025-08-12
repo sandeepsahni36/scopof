@@ -67,13 +67,11 @@ const SubscriptionRequiredPage = () => {
       {/* Header with Logo and Sign Out */}
       <div className="sm:mx-auto sm:w-full sm:max-w-4xl">
         <div className="flex justify-between items-center mb-8">
-          <a href="https://scopostay.com" target="_blank" rel="noopener noreferrer">
-            <img 
-              src="/Scopostay long full logo blue.png" 
-              alt="scopoStay Logo" 
-              className="h-8 w-auto" 
-            />
-          </a>
+          <img 
+            src="/Scopostay long full logo blue.png" 
+            alt="scopoStay Logo" 
+            className="h-8 w-auto" 
+          />
           <Button
             variant="ghost"
             size="sm"
