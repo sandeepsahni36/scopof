@@ -34,8 +34,8 @@ const BottomNavigation = () => {
   const navItems = isAdmin ? [...mainNavItems, ...adminNavItems] : mainNavItems;
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-      <nav className="flex">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 overflow-hidden">
+      <nav className="flex w-full">
         {navItems.map((item) => (
           <NavLink
             key={item.href}
@@ -43,7 +43,7 @@ const BottomNavigation = () => {
             className={({ isActive }) => {
               // Allow access to Company Settings for billing management
               const isDisabled = (requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings');
-              return `flex flex-col items-center justify-center text-xs font-medium transition-colors flex-1 py-3 px-2 ${
+              return `flex flex-col items-center justify-center text-xs font-medium transition-colors flex-1 py-3 px-1 min-w-0 ${
                 isActive
                   ? 'text-primary-600 bg-primary-50'
                   : isDisabled
@@ -59,13 +59,13 @@ const BottomNavigation = () => {
             }}
             end={item.href === '/dashboard'}
           >
-            <div className="mb-1.5 flex-shrink-0">
+            <div className="mb-1 flex-shrink-0">
               {IconMap[item.icon]}
             </div>
-            <span className="text-center leading-tight text-xs font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-full px-2">
+            <span className="text-center leading-tight text-xs font-medium overflow-hidden text-ellipsis w-full px-0.5">
               {item.title}
               {(requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings') && (
-                <span className="block text-[10px] text-amber-600 mt-0.5">Upgrade</span>
+                <span className="block text-[9px] text-amber-600 mt-0.5 leading-none">Upgrade</span>
               )}
             </span>
           </NavLink>
