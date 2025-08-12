@@ -31,7 +31,7 @@ const IconMap: Record<string, React.ReactNode> = {
 
 const BottomNavigation = () => {
   const { isAdmin, requiresPayment, needsPaymentSetup } = useAuthStore();
-  const navItems = isAdmin ? [...mainNavItems, ...adminNavItems] : mainNavItems;
+  const navItems = [...mainNavItems, ...(isAdmin ? adminNavItems : [])];
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
