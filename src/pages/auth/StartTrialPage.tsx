@@ -192,7 +192,6 @@ const StartTrialPage = () => {
   }`}
                 onClick={() => setSelectedTier(tier.id)}
               >
-              >
                 {tier.popular && (
                   <div className="absolute top-0 right-0 bg-primary-500 text-white px-4 py-2 text-sm font-medium rounded-bl-lg">
                     Popular
