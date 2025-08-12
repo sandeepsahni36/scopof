@@ -41,7 +41,7 @@ const BottomNavigation = () => {
             key={item.href}
             to={item.href}
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center text-xs font-medium transition-colors min-w-0 flex-1 py-2 px-1 rounded-lg mx-0.5 ${
+              `flex flex-col items-center justify-center text-xs font-medium transition-colors flex-1 py-3 px-2 ${
                 isActive
                   ? 'text-primary-600 bg-primary-50'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
@@ -49,10 +49,12 @@ const BottomNavigation = () => {
             }
             end={item.href === '/dashboard'}
           >
-            <div className="mb-1 flex-shrink-0">
+            <div className="mb-1.5 flex-shrink-0">
               {IconMap[item.icon]}
             </div>
-            <span className="truncate text-center leading-none text-xs font-medium max-w-full">{item.title}</span>
+            <span className="text-center leading-tight text-xs font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-full px-0.5">
+              {item.title}
+            </span>
           </NavLink>
         ))}
       </nav>
