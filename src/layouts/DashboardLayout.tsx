@@ -330,45 +330,6 @@ const DashboardLayout = () => {
           isCollapsed ? 'md:ml-20' : 'md:ml-64'
         }`}>
           {/* Top bar */}
-          <div className="bg-white shadow-sm border-b border-gray-200 md:hidden">
-            <div className="px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between h-16">
-                <div className="flex items-center">
-                  <img 
-                    src="/Scopostay long full logo blue.png" 
-                    alt="scopoStay Logo" 
-                    className="h-8 w-auto" 
-                  />
-                </div>
-                <div className="flex items-center space-x-4">
-                  {(requiresPayment || needsPaymentSetup) && (
-                    <Button
-                      size="sm"
-                      onClick={() => navigate('/subscription-required')}
-                      className="bg-primary-600 hover:bg-primary-700 text-xs"
-                    >
-                      Upgrade
-                    </Button>
-                  )}
-                  <a
-                    href="https://scopostay.com/support"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                  >
-                    <HelpCircle size={20} />
-                  </a>
-                  <button
-                    onClick={handleLogout}
-                    className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                  >
-                    <LogOut size={20} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Trial warning banner */}
           {isTrialExpired && (
             <div className="bg-red-50 border-b border-red-200">
