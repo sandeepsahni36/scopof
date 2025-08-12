@@ -354,11 +354,9 @@ const DashboardLayout = () => {
                     href="https://scopostay.com/support"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center px-3 py-1.5 border border-primary-300 text-sm font-medium rounded-md text-primary-700 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                    className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                   >
-                    <HelpCircle size={16} className="mr-1" />
-                    <span className="hidden sm:inline">Support</span>
-                    <span className="sm:hidden">Help</span>
+                    <HelpCircle size={20} />
                   </a>
                   <button
                     onClick={handleLogout}
