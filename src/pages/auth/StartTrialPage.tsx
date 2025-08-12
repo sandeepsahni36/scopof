@@ -184,13 +184,17 @@ const StartTrialPage = () => {
           >
             {pricingTiers.map((tier) => (
               <div
-                key={tier.id}
-                className={`relative rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 transform hover:scale-105 min-h-[500px] ${
-                  selectedTier === tier.id
-                    ? 'border-2 border-primary-500 bg-primary-50 shadow-xl ring-4 ring-primary-100 scale-105'
-                    : 'border border-gray-200 bg-white hover:shadow-xl hover:border-primary-300'
-                }`}
-                onClick={() => setSelectedTier(tier.id)}
+                <div
+  key={tier.id}
+  className={`relative rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 transform hover:scale-105 min-h-[500px] flex flex-col justify-between ${ /* ADDED CLASSES HERE */
+    selectedTier === tier.id
+      ? 'border-2 border-primary-500 bg-primary-50 shadow-xl ring-4 ring-primary-100 scale-105'
+      : 'border border-gray-200 bg-white hover:shadow-xl hover:border-primary-300'
+  }`}
+  onClick={() => setSelectedTier(tier.id)}
+>
+  {/* ... content ... */}
+</div>
               >
                 {tier.popular && (
                   <div className="absolute top-0 right-0 bg-primary-500 text-white px-4 py-2 text-sm font-medium rounded-bl-lg">
