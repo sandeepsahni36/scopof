@@ -65,7 +65,7 @@ const StartTrialPage = () => {
     };
 
     checkAuth();
-  }, [hasActiveSubscription, isTrialExpired, requiresPayment, navigate]);
+  }, [hasActiveSubscription, isTrialExpired, requiresPayment, navigate, company?.subscription_status]);
 
   const handleStartTrial = async () => {
     try {
@@ -166,81 +166,80 @@ const StartTrialPage = () => {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
             {skipTrial ? 'Choose Your Plan' : 'Start Your Free Trial'}
-      <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 mb-12">
+          </h1>
           <p className="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
             {skipTrial 
               ? 'Select your plan and start managing your properties today'
-          className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:gap-12 2xl:gap-16"
+              : 'Get full access to all features with our 14-day free trial'
             }
           </p>
         </div>
 
         {/* Pricing Cards */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-                ? 'border-2 border-primary-500 bg-primary-50 shadow-xl ring-4 ring-primary-100 scale-105'
+        <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 mb-12">
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:gap-8"
+            className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:gap-12 2xl:gap-16"
           >
-          {pricingTiers.map((tier) => (
-            <div
-              key={tier.id}
-              className={`relative rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 transform hover:scale-105 min-h-[500px] ${
-                selectedTier === tier.id
-                  ? 'border-2 border-primary-500 bg-primary-50 shadow-xl ring-4 ring-primary-100'
-                  : 'border border-gray-200 bg-white hover:shadow-xl hover:border-primary-300'
-              }`}
-              onClick={() => setSelectedTier(tier.id)}
-            >
-              {tier.popular && (
-                <div className="absolute top-0 right-0 bg-primary-500 text-white px-4 py-2 text-sm font-medium rounded-bl-lg">
-                  Popular
-                </div>
-              )}
-              
-              {/* Plan Header */}
-              <div className="px-6 py-8 lg:px-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center">
-                    <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${
-                      selectedTier === tier.id
-                        ? 'border-primary-500 bg-primary-500'
-                        : 'border-gray-300'
-                    }`}>
-                      {selectedTier === tier.id && (
-                        <Check className="h-4 w-4 text-white" />
-                      )}
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-xl lg:text-2xl font-bold text-gray-900">{tier.name}</h3>
+            {pricingTiers.map((tier) => (
+              <div
+                key={tier.id}
+                className={`relative rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 transform hover:scale-105 min-h-[500px] ${
+                  selectedTier === tier.id
+                    ? 'border-2 border-primary-500 bg-primary-50 shadow-xl ring-4 ring-primary-100 scale-105'
+                    : 'border border-gray-200 bg-white hover:shadow-xl hover:border-primary-300'
+                }`}
+                onClick={() => setSelectedTier(tier.id)}
+              >
+                {tier.popular && (
+                  <div className="absolute top-0 right-0 bg-primary-500 text-white px-4 py-2 text-sm font-medium rounded-bl-lg">
+                    Popular
+                  </div>
+                )}
+                
+                {/* Plan Header */}
+                <div className="px-6 py-8 lg:px-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center">
+                      <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${
+                        selectedTier === tier.id
+                          ? 'border-primary-500 bg-primary-500'
+                          : 'border-gray-300'
+                      }`}>
+                        {selectedTier === tier.id && (
+                          <Check className="h-4 w-4 text-white" />
+                        )}
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900">{tier.name}</h3>
+                      </div>
                     </div>
                   </div>
+                  <p className="text-base lg:text-lg xl:text-xl text-gray-600 mb-8 leading-relaxed">{tier.description}</p>
+                  
+                  <div className="mb-8">
+                    <span className="text-5xl lg:text-6xl xl:text-7xl font-extrabold text-gray-900">${tier.price}</span>
+                    <span className="text-xl lg:text-2xl xl:text-3xl text-gray-500">/month</span>
+                  </div>
                 </div>
-                    <h3 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900">{tier.name}</h3>
-                <p className="text-sm lg:text-base text-gray-600 mb-6 leading-relaxed">{tier.description}</p>
-                
-                <div className="mb-6">
-                  <span className="text-4xl lg:text-5xl font-extrabold text-gray-900">${tier.price}</span>
-                  <span className="text-lg lg:text-xl text-gray-500">/month</span>
-                </div>
-              </div>
 
-              {/* Features */}
-              <div className="px-6 lg:px-8 pb-8 bg-gray-50 flex-1">
-                <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
-                  What's included
-                </h4>
-                <ul className="space-y-3 lg:space-y-4">
-                  {tier.features.map((feature, index) => (
-                    <li key={index} className="flex items-start">
-              <p className="text-base lg:text-lg xl:text-xl text-gray-600 mb-8 leading-relaxed">{tier.description}</p>
-                      <span className="ml-3 text-sm lg:text-base text-gray-700 leading-relaxed">{feature}</span>
-              <div className="mb-8">
-                <span className="text-5xl lg:text-6xl xl:text-7xl font-extrabold text-gray-900">${tier.price}</span>
-                <span className="text-xl lg:text-2xl xl:text-3xl text-gray-500">/month</span>
+                {/* Features */}
+                <div className="px-8 py-10 lg:px-10 xl:px-12">
+                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
+                    What's included
+                  </h4>
+                  <ul className="space-y-4 lg:space-y-5 xl:space-y-6">
+                    {tier.features.map((feature, index) => (
+                      <li key={index} className="flex items-start">
+                        <Check className="flex-shrink-0 h-5 w-5 text-primary-500 mt-0.5" />
+                        <span className="ml-4 lg:ml-5 xl:ml-6 text-base lg:text-lg xl:text-xl text-gray-700 leading-relaxed">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
           </motion.div>
         </div>
 
@@ -259,7 +258,7 @@ const StartTrialPage = () => {
             </Button>
             
             <div className="text-center mb-6">
-            <div className="px-8 py-10 lg:px-10 xl:px-12">
+              <button
                 onClick={() => navigate('/login')}
                 className="text-sm text-gray-500 hover:text-gray-700 underline"
               >
@@ -295,7 +294,7 @@ const StartTrialPage = () => {
                   </ul>
                 </div>
               )}
-              <ul className="space-y-4 lg:space-y-5 text-gray-600">
+              <ul className="space-y-4 lg:space-y-5">
                 <li className="flex items-start">
                   <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
                   <span className="ml-4 text-base lg:text-lg">
@@ -318,12 +317,6 @@ const StartTrialPage = () => {
                   <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
                   <span className="ml-4 text-base lg:text-lg">
                     {skipTrial ? 'Cancel anytime from account settings' : 'Cancel anytime before trial ends'}
-                  </span>
-              <ul className="space-y-4 lg:space-y-5 xl:space-y-6">
-                <li className="flex items-start">
-                  <Check className="flex-shrink-0 h-6 w-6 text-primary-500 mt-0.5" />
-                  <span className="ml-4 text-base lg:text-lg">
-                    <span className="ml-4 lg:ml-5 xl:ml-6 text-base lg:text-lg xl:text-xl text-gray-700 leading-relaxed">{feature}</span>
                   </span>
                 </li>
               </ul>
