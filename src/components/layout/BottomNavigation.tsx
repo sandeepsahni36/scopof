@@ -18,7 +18,7 @@ const mainNavItems: NavItem[] = [
 ];
 
 const adminNavItems: NavItem[] = [
-  { title: 'Company Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
+  { title: 'Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
 ];
 
 const IconMap: Record<string, React.ReactNode> = {
@@ -31,7 +31,7 @@ const IconMap: Record<string, React.ReactNode> = {
 
 const BottomNavigation = () => {
   const { isAdmin, requiresPayment, needsPaymentSetup } = useAuthStore();
-  const navItems = [...mainNavItems, ...(isAdmin ? adminNavItems : [])];
+  const navItems = isAdmin ? [...mainNavItems, ...adminNavItems] : mainNavItems;
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
