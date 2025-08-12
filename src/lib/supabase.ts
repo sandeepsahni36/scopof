@@ -155,6 +155,7 @@ export async function resendConfirmationEmail(email: string) {
   console.log('ResendConfirmation: Using redirect URL:', redirectUrl);
   
   return supabase.auth.resend({
+    type: 'signup',
     email,
     options: {
       emailRedirectTo: redirectUrl,
