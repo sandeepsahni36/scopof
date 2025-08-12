@@ -113,6 +113,7 @@ const DashboardLayout = () => {
               <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className="ml-auto p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              >
                 <a href="https://scopostay.com" target="_blank" rel="noopener noreferrer">
                   <img 
                     src="/Scopostay long full logo blue.png" 
