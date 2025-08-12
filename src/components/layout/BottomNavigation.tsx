@@ -30,7 +30,7 @@ const IconMap: Record<string, React.ReactNode> = {
 };
 
 const BottomNavigation = () => {
-  const { isAdmin } = useAuthStore();
+  const { isAdmin, requiresPayment, needsPaymentSetup } = useAuthStore();
   const navItems = isAdmin ? [...mainNavItems, ...adminNavItems] : mainNavItems;
 
   return (
@@ -40,20 +40,33 @@ const BottomNavigation = () => {
           <NavLink
             key={item.href}
             to={item.href}
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center text-xs font-medium transition-colors flex-1 py-3 px-2 ${
+            className={({ isActive }) => {
+              // Allow access to Company Settings for billing management
+              const isDisabled = (requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings');
+              return `flex flex-col items-center justify-center text-xs font-medium transition-colors flex-1 py-3 px-2 ${
                 isActive
                   ? 'text-primary-600 bg-primary-50'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-              }`
-            }
+                  : isDisabled
+                    ? 'text-gray-400 opacity-60'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+              }`;
+            }}
+            onClick={(e) => {
+              if ((requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings')) {
+                e.preventDefault();
+                window.location.href = '/subscription-required';
+              }
+            }}
             end={item.href === '/dashboard'}
           >
             <div className="mb-1.5 flex-shrink-0">
               {IconMap[item.icon]}
             </div>
-            <span className="text-center leading-tight text-xs font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-full px-0.5">
+            <span className="text-center leading-tight text-xs font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-full px-2">
               {item.title}
+              {(requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings') && (
+                <span className="block text-[10px] text-amber-600 mt-0.5">Upgrade</span>
+              )}
             </span>
           </NavLink>
         ))}

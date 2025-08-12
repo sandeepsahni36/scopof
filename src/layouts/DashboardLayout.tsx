@@ -43,7 +43,7 @@ const IconMap: Record<string, React.ReactNode> = {
 
 const DashboardLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { user, company, logout, isAdmin, isTrialExpired, hasActiveSubscription, requiresPayment } = useAuthStore();
+  const { user, company, logout, isAdmin, isTrialExpired, hasActiveSubscription, requiresPayment, needsPaymentSetup } = useAuthStore();
   const navigate = useNavigate();
   
   // Calculate trial days remaining
@@ -127,13 +127,22 @@ const DashboardLayout = () => {
                 <NavLink
                   key={item.href}
                   to={item.href}
-                  className={({ isActive }) =>
-                    `group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={({ isActive }) => {
+                    const isDisabled = requiresPayment || needsPaymentSetup;
+                    return `group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                       isActive
                         ? 'bg-primary-100 text-primary-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`
-                  }
+                        : isDisabled
+                          ? 'text-gray-400 cursor-not-allowed opacity-60'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`;
+                  }}
+                  onClick={(e) => {
+                    if (requiresPayment || needsPaymentSetup) {
+                      e.preventDefault();
+                      navigate('/subscription-required');
+                    }
+                  }}
                   end={item.href === '/dashboard'}
                 >
                   <span className="flex-shrink-0">
@@ -152,6 +161,15 @@ const DashboardLayout = () => {
                       </motion.span>
                     )}
                   </AnimatePresence>
+                  {(requiresPayment || needsPaymentSetup) && !isCollapsed && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="ml-auto text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full"
+                    >
+                      Upgrade
+                    </motion.div>
+                  )}
                 </NavLink>
               ))}
 
@@ -176,13 +194,23 @@ const DashboardLayout = () => {
                     <NavLink
                       key={item.href}
                       to={item.href}
-                      className={({ isActive }) =>
-                        `group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
+                      className={({ isActive }) => {
+                        // Allow access to Company Settings for billing management
+                        const isDisabled = (requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings');
+                        return `group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                           isActive
                             ? 'bg-primary-100 text-primary-900'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }`
-                      }
+                            : isDisabled
+                              ? 'text-gray-400 cursor-not-allowed opacity-60'
+                              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }`;
+                      }}
+                      onClick={(e) => {
+                        if ((requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings')) {
+                          e.preventDefault();
+                          navigate('/subscription-required');
+                        }
+                      }}
                     >
                       <span className="flex-shrink-0">
                         {IconMap[item.icon]}
@@ -200,6 +228,15 @@ const DashboardLayout = () => {
                           </motion.span>
                         )}
                       </AnimatePresence>
+                      {(requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings') && !isCollapsed && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="ml-auto text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full"
+                        >
+                          Upgrade
+                        </motion.div>
+                      )}
                     </NavLink>
                   ))}
                 </>
@@ -301,6 +338,15 @@ const DashboardLayout = () => {
                   />
                 </div>
                 <div className="flex items-center space-x-4">
+                  {(requiresPayment || needsPaymentSetup) && (
+                    <Button
+                      size="sm"
+                      onClick={() => navigate('/subscription-required')}
+                      className="bg-primary-600 hover:bg-primary-700 text-xs"
+                    >
+                      Upgrade
+                    </Button>
+                  )}
                   <a
                     href="https://scopostay.com/support"
                     target="_blank"
