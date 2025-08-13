@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { HardDrive, AlertTriangle, CheckCircle } from 'lucide-react';
+import { HardDrive, AlertTriangle, CheckCircle, Gauge } from 'lucide-react';
 import { getStorageUsage, formatBytes, getUsagePercentage, StorageUsage } from '../../lib/storage';
 import { Button } from '../ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const StorageUsageCard = () => {
   const [usage, setUsage] = useState<StorageUsage | null>(null);
@@ -76,6 +77,12 @@ const StorageUsageCard = () => {
   const usagePercentage = getUsagePercentage(usage.currentUsage, usage.quota);
   const isNearLimit = usagePercentage >= 80;
   const isOverLimit = usagePercentage >= 100;
+  
+  // Gauge chart data for visual representation
+  const gaugeData = [
+    { name: 'Used', value: usagePercentage, color: isOverLimit ? '#EF4444' : isNearLimit ? '#F59E0B' : '#22C55E' },
+    { name: 'Available', value: 100 - usagePercentage, color: '#E5E7EB' }
+  ];
 
   return (
     <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -93,7 +100,7 @@ const StorageUsageCard = () => {
             ) : isNearLimit ? (
               <AlertTriangle className="h-6 w-6 text-amber-600" />
             ) : (
-              <HardDrive className="h-6 w-6 text-green-600" />
+              <Gauge className="h-6 w-6 text-green-600" />
             )}
           </div>
           <div className="ml-5 w-0 flex-1">
@@ -111,35 +118,47 @@ const StorageUsageCard = () => {
           </div>
         </div>
         
-        {/* Usage Progress Bar */}
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
-            <span>Usage</span>
-            <span>{usagePercentage}%</span>
+        {/* Enhanced Gauge Chart */}
+        <div className="mt-4 flex items-center">
+          <div className="w-20 h-20 mr-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={gaugeData}
+                  cx="50%"
+                  cy="50%"
+                  startAngle={180}
+                  endAngle={0}
+                  innerRadius={25}
+                  outerRadius={35}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {gaugeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="text-center -mt-8">
+              <span className={`text-lg font-bold ${
+                isOverLimit ? 'text-red-600' : isNearLimit ? 'text-amber-600' : 'text-green-600'
+              }`}>
+                {usagePercentage}%
+              </span>
+            </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className={`h-2 rounded-full transition-all duration-300 ${
-                isOverLimit 
-                  ? 'bg-red-500' 
-                  : isNearLimit 
-                    ? 'bg-amber-500' 
-                    : 'bg-green-500'
-              }`}
-              style={{ width: `${Math.min(usagePercentage, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Breakdown */}
-        <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-gray-500">Photos:</span>
-            <span className="ml-1 font-medium">{formatBytes(usage.photosUsage)}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Reports:</span>
-            <span className="ml-1 font-medium">{formatBytes(usage.reportsUsage)}</span>
+          <div className="flex-1">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-gray-500">Photos:</span>
+                <span className="ml-1 font-medium">{formatBytes(usage.photosUsage)}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">Reports:</span>
+                <span className="ml-1 font-medium">{formatBytes(usage.reportsUsage)}</span>
+              </div>
+            </div>
           </div>
         </div>
 

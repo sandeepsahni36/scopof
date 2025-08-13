@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bar, Pie } from 'react-chartjs-2';
+import { Bar, Pie, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -8,10 +8,11 @@ import {
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  ChartOptions
 } from 'chart.js';
 import { motion } from 'framer-motion';
-import { Building2, CheckCircle2, AlertTriangle, Clock, CreditCard, Calendar, Plus, BarChart3 } from 'lucide-react';
+import { Building2, CheckCircle2, AlertTriangle, Clock, CreditCard, Calendar, Plus, BarChart3, Timer, TrendingUp, PieChart } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { TIER_LIMITS } from '../../types';
 import { Link, useNavigate } from 'react-router-dom';
@@ -41,6 +42,7 @@ const DashboardPage = () => {
     completedInspections: 0,
     pendingInspections: 0,
     issuesDetected: 0,
+    averageInspectionDuration: 0,
   });
   
   // Chart data state
@@ -57,10 +59,10 @@ const DashboardPage = () => {
       'Damaged': 0,
       'Missing': 0,
     },
+    propertiesByType: {} as Record<string, number>,
+    topPropertiesByInspections: [] as Array<{ name: string; count: number }>,
   });
   
-  // Activities data (placeholder for future implementation)
-  const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Load dashboard data from database
@@ -168,6 +170,7 @@ const DashboardPage = () => {
           completedInspections = 8;
           pendingInspections = 3;
           issuesDetected = 5;
+          averageInspectionDuration = 42; // 42 minutes
           inspectionsByType = {
             check_in: 4,
             check_out: 4,
@@ -180,6 +183,16 @@ const DashboardPage = () => {
             'Damaged': 1,
             'Missing': 1,
           };
+          propertiesByType = {
+            'apartment': 2,
+            'villa': 1,
+            'condo': 0,
+          };
+          topPropertiesByInspections = [
+            { name: 'Oceanview Apartment 2B', count: 3 },
+            { name: 'Downtown Loft 5A', count: 2 },
+            { name: 'Mountain View Villa', count: 1 },
+          ];
         }
         
         setStats({
@@ -187,21 +200,16 @@ const DashboardPage = () => {
           completedInspections,
           pendingInspections,
           issuesDetected,
+          averageInspectionDuration,
         });
         
         setChartData({
           inspectionsByType,
           issuesByValue,
+          propertiesByType,
+          topPropertiesByInspections,
         });
         
-        // TODO: Load activities when activity tracking is implemented
-        // Activities would require a separate table to track user actions like:
-        // - Property created/updated
-        // - Inspection started/completed
-        // - Template created/updated
-        // - Report generated
-        // For now, keeping as empty array
-        setActivities([]);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
         // Set fallback values on error
@@ -210,6 +218,7 @@ const DashboardPage = () => {
           completedInspections: 0,
           pendingInspections: 0,
           issuesDetected: 0,
+          averageInspectionDuration: 0,
         });
         setChartData({
           inspectionsByType: {
@@ -224,6 +233,8 @@ const DashboardPage = () => {
             'Damaged': 0,
             'Missing': 0,
           },
+          propertiesByType: {},
+          topPropertiesByInspections: [],
         });
       } finally {
         setLoading(false);
@@ -236,10 +247,13 @@ const DashboardPage = () => {
   // Chart data
   const hasInspectionData = stats.completedInspections > 0 || stats.pendingInspections > 0;
   const hasIssueData = stats.issuesDetected > 0;
+  const hasPropertiesData = Object.keys(chartData.propertiesByType).length > 0;
+  const hasTopPropertiesData = chartData.topPropertiesByInspections.length > 0;
   
   // Calculate total inspections by type for chart
   const totalInspectionsByType = Object.values(chartData.inspectionsByType).reduce((sum, count) => sum + count, 0);
   const totalIssuesByValue = Object.values(chartData.issuesByValue).reduce((sum, count) => sum + count, 0);
+  const totalPropertiesByType = Object.values(chartData.propertiesByType).reduce((sum, count) => sum + count, 0);
   
   const inspectionChartData = {
     labels: ['Check-In', 'Check-Out', 'Move-In', 'Move-Out'],
@@ -285,6 +299,37 @@ const DashboardPage = () => {
         borderWidth: 1,
       },
     ],
+  };
+  
+  // Properties by type pie chart data
+  const propertyTypeColors = ['#2563EB', '#059669', '#DC2626', '#D97706', '#7C3AED', '#DB2777'];
+  const propertiesPieData = Object.entries(chartData.propertiesByType).map(([type, count], index) => ({
+    name: type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' '),
+    value: count,
+    color: propertyTypeColors[index % propertyTypeColors.length],
+  }));
+  
+  // Top properties bar chart data
+  const topPropertiesChartData = {
+    labels: chartData.topPropertiesByInspections.map(p => p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name),
+    datasets: [
+      {
+        label: 'Completed Inspections',
+        data: chartData.topPropertiesByInspections.map(p => p.count),
+        backgroundColor: 'rgba(37, 99, 235, 0.6)',
+        borderColor: 'rgba(37, 99, 235, 1)',
+        borderWidth: 1,
+      },
+    ],
+  };
+  
+  // Format average inspection duration
+  const formatDuration = (minutes: number) => {
+    if (minutes === 0) return 'N/A';
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
   };
   
   const tierLimits = TIER_LIMITS[company?.tier || 'starter'];
@@ -421,9 +466,9 @@ const DashboardPage = () => {
       )}
       
       {/* Usage statistics */}
-      <div className="border-b border-gray-200 pb-8 mb-8">
+      <div className="border-b border-gray-200 pb-8 mb-12">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Usage Statistics</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -507,6 +552,54 @@ const DashboardPage = () => {
                 </div>
               </div>
             </div>
+          
+          // Process properties by type for pie chart
+          if (propertiesResponse.data) {
+            propertiesResponse.data.forEach((property: any) => {
+              const type = property.type;
+              if (type) {
+                propertiesByType[type] = (propertiesByType[type] || 0) + 1;
+              }
+            });
+          }
+          
+          // Get average inspection duration
+          const { data: durationData, error: durationError } = await supabase
+            .from('inspections')
+            .select('duration_seconds')
+            .eq('status', 'completed')
+            .not('duration_seconds', 'is', null);
+          
+          if (!durationError && durationData && durationData.length > 0) {
+            const totalDuration = durationData.reduce((sum, inspection) => sum + (inspection.duration_seconds || 0), 0);
+            averageInspectionDuration = Math.round(totalDuration / durationData.length / 60); // Convert to minutes
+          }
+          
+          // Get top 5 properties by inspection count (last 30 days)
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const { data: topPropertiesData, error: topPropertiesError } = await supabase
+            .from('inspections')
+            .select(`
+              property_id,
+              properties (
+                name
+              )
+            `)
+            .eq('status', 'completed')
+            .gte('created_at', thirtyDaysAgo);
+          
+          if (!topPropertiesError && topPropertiesData) {
+            const propertyInspectionCounts = {};
+            topPropertiesData.forEach((inspection: any) => {
+              const propertyName = inspection.properties?.name || 'Unknown Property';
+              propertyInspectionCounts[propertyName] = (propertyInspectionCounts[propertyName] || 0) + 1;
+            });
+            
+            topPropertiesByInspections = Object.entries(propertyInspectionCounts)
+              .map(([name, count]) => ({ name, count: count as number }))
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 5);
+          }
             <div className="bg-gray-50 px-5 py-3">
               <div className="text-sm">
                 <Link to="/dashboard/properties" className="font-medium text-primary-600 hover:text-primary-500">
@@ -546,11 +639,42 @@ const DashboardPage = () => {
             </div>
           </motion.div>
           
-          {/* Storage Usage Card */}
+          {/* Average Inspection Duration KPI */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
+            className="bg-white overflow-hidden shadow rounded-lg"
+          >
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-blue-100 rounded-md p-3">
+                  <Timer className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Avg Duration</dt>
+                    <dd>
+                      <div className="text-lg font-medium text-gray-900">{formatDuration(stats.averageInspectionDuration)}</div>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 px-5 py-3">
+              <div className="text-sm">
+                <span className="text-gray-500">
+                  {stats.averageInspectionDuration === 0 ? 'Complete inspections to see average' : 'Per inspection'}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+          
+          {/* Storage Usage Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
           >
             <StorageUsageCard />
           </motion.div>
@@ -558,11 +682,12 @@ const DashboardPage = () => {
       </div>
       
       {/* Chart section - only show if there's data */}
-      {hasAnyData && (hasInspectionData || hasIssueData) ? (
+      {hasAnyData && (hasInspectionData || hasIssueData || hasPropertiesData || hasTopPropertiesData) ? (
         <div className="mb-8">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Analytics</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {/* Inspections by Type Chart */}
+            <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-base font-medium text-gray-900 mb-4">
                 Inspections by Type ({stats.completedInspections} completed)
               </h3>
@@ -596,6 +721,41 @@ const DashboardPage = () => {
               )}
             </div>
             
+            {/* Properties by Type Pie Chart */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-base font-medium text-gray-900 mb-4">
+                Property Portfolio ({stats.properties} total)
+              </h3>
+              {hasPropertiesData && totalPropertiesByType > 0 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <RechartsPie
+                      data={propertiesPieData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {propertiesPieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </RechartsPie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                  <PieChart className="h-12 w-12 mb-4" />
+                  <p className="text-sm">No properties yet</p>
+                  <p className="text-xs">Add properties to see portfolio breakdown</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Flagged Items Chart */}
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-base font-medium text-gray-900 mb-4">
                 Flagged Items ({stats.issuesDetected} total)
@@ -622,6 +782,36 @@ const DashboardPage = () => {
               )}
             </div>
           </div>
+          
+          {/* Top Properties by Inspections Chart */}
+          {hasTopPropertiesData && (
+            <div className="mt-6 bg-white rounded-lg shadow p-6">
+              <h3 className="text-base font-medium text-gray-900 mb-4">
+                Most Active Properties (Last 30 Days)
+              </h3>
+              <Bar
+                data={topPropertiesChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: true,
+                  indexAxis: 'y' as const,
+                  plugins: {
+                    legend: {
+                      display: false,
+                    },
+                  },
+                  scales: {
+                    x: {
+                      beginAtZero: true,
+                      ticks: {
+                        stepSize: 1,
+                      },
+                    },
+                  },
+                }}
+              />
+            </div>
+          )}
         </div>
       ) : (
         /* Empty state for new users */
@@ -645,30 +835,6 @@ const DashboardPage = () => {
           </div>
         </div>
       )}
-      
-      {/* Recent activity */}
-      <div className="mb-8">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h2>
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <div className="text-center py-12">
-            <Clock className="mx-auto h-16 w-16 text-gray-400" />
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">Recent Activity</h3>
-            <p className="mt-2 text-base text-gray-500">
-              Activity tracking is coming soon. This will show recent inspections, property updates, and team actions.
-            </p>
-            <div className="mt-4 text-sm text-gray-400">
-              <p>Future activities will include:</p>
-              <ul className="mt-2 space-y-1">
-                <li>• Inspections started and completed</li>
-                <li>• Properties added or updated</li>
-                <li>• Templates created or modified</li>
-                <li>• Reports generated</li>
-                <li>• Team member actions</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
       
       {/* Quick links */}
       <div className="mb-8">
