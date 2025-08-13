@@ -32,6 +32,7 @@ const InspectionPage = () => {
   const [clientPresent, setClientPresent] = useState(false);
   const [elapsedTime, setElapsedTime] = useState('0:00');
   const [cancelling, setCancelling] = useState(false);
+  const itemRefs = useRef<{ [key: string]: any }>({});
   
   // Signature refs
   const inspectorSignatureRef = useRef<SignatureCanvas>(null);
@@ -206,7 +207,20 @@ const InspectionPage = () => {
   const handleSaveProgress = async () => {
     try {
       setSaving(true);
-      // Auto-save is handled by individual item renderers
+      
+      // Save all inspection items
+      const savePromises = Object.values(itemRefs.current).map(async (itemRef) => {
+        if (itemRef && itemRef.saveChanges) {
+          try {
+            await itemRef.saveChanges();
+          } catch (error) {
+            console.error('Error saving item:', error);
+            throw error;
+          }
+        }
+      });
+      
+      await Promise.all(savePromises);
       toast.success('Progress saved');
     } catch (error: any) {
       console.error('Error saving progress:', error);
@@ -619,6 +633,11 @@ const InspectionPage = () => {
                   {currentDisplayStep.items.map((item, index) => (
                     <div key={item.id} className="border-b border-gray-100 pb-8 last:border-b-0 last:pb-0">
                       <InspectionItemRenderer
+                        ref={(ref) => {
+                          if (ref) {
+                            itemRefs.current[item.id] = ref;
+                          }
+                        }}
                         item={item}
                         inspectionId={inspection.id}
                         onUpdate={handleItemUpdate}

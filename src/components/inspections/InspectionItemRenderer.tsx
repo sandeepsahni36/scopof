@@ -44,25 +44,6 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     loadPhotoPreviewUrls();
   }, [photos]);
 
-  // Debounced save effect
-  useEffect(() => {
-    // Don't auto-save if there are no changes
-    const hasChanges = value !== item.value || 
-                      notes !== (item.notes || '') || 
-                      markedForReport !== (item.marked_for_report || false) || 
-                      reportRecipientId !== (item.report_recipient_id || '');
-    
-    if (!hasChanges) return;
-    
-    const timeoutId = setTimeout(() => {
-      if (!saving) {
-        debouncedSave();
-      }
-    }, 3000); // 3 second debounce to prevent timeouts
-
-    return () => clearTimeout(timeoutId);
-  }, [value, notes, markedForReport, reportRecipientId]);
-  
   const loadReportServiceTeams = async () => {
     try {
       const teams = await getReportServiceTeams();
@@ -126,31 +107,6 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     }
   };
 
-  const debouncedSave = async () => {
-    if (saving) return;
-    
-    // Only save if there are actual changes to prevent unnecessary database calls
-    const hasChanges = value !== item.value || 
-                      notes !== (item.notes || '') || 
-                      markedForReport !== (item.marked_for_report || false) || 
-                      reportRecipientId !== (item.report_recipient_id || '');
-    
-    if (!hasChanges) return;
-    
-    try {
-      setSaving(true);
-      await saveChanges({});
-    } catch (error) {
-      console.error('Error in debounced save:', error);
-      // Don't show toast for timeout errors to avoid spam
-      if (!error.message?.includes('timeout')) {
-        toast.error('Failed to save changes automatically');
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
-  
   const handleValueChange = async (newValue: any) => {
     setValue(newValue);
   };
@@ -164,40 +120,10 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     if (!checked) {
       setReportRecipientId('');
     }
-    // Force immediate save when marked for report changes
-    try {
-      await updateInspectionItem(
-        item.id,
-        value,
-        notes,
-        photos,
-        checked,
-        checked && reportRecipientId && isValidUUID(reportRecipientId) ? reportRecipientId : null
-      );
-      console.log('Marked for report saved successfully:', checked);
-    } catch (saveError) {
-      console.error('Error saving marked for report:', saveError);
-      toast.error('Failed to save report flag');
-    }
   };
 
   const handleReportRecipientChange = async (recipientId: string) => {
     setReportRecipientId(recipientId);
-    // Force immediate save when report recipient changes
-    try {
-      await updateInspectionItem(
-        item.id,
-        value,
-        notes,
-        photos,
-        markedForReport,
-        recipientId && isValidUUID(recipientId) ? recipientId : null
-      );
-      console.log('Report recipient saved successfully:', recipientId);
-    } catch (saveError) {
-      console.error('Error saving report recipient:', saveError);
-      toast.error('Failed to save report recipient');
-    }
   };
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,21 +140,6 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       if (photoUrl) {
         const newPhotos = [...photos, photoUrl];
         setPhotos(newPhotos);
-        // Force immediate save of photo URLs
-        try {
-          await updateInspectionItem(
-            item.id,
-            value,
-            notes,
-            newPhotos,
-            markedForReport,
-            reportRecipientId && isValidUUID(reportRecipientId) ? reportRecipientId : null
-          );
-          console.log('Photo URLs saved successfully:', newPhotos);
-        } catch (saveError) {
-          console.error('Error saving photo URLs:', saveError);
-          toast.error('Photo uploaded but failed to save to inspection');
-        }
         toast.success('Photo uploaded successfully');
       }
     } catch (error: any) {
@@ -243,7 +154,8 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     }
   };
 
-  const saveChanges = async (updates: any) => {
+  // Public method to save changes when called from parent component
+  const saveChanges = async () => {
     // Defensive check to ensure item.id is valid
     if (!item.id || typeof item.id !== 'string' || item.id.trim() === '') {
       console.error('Invalid item ID:', item.id);
@@ -251,25 +163,15 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       return;
     }
 
-    // Convert empty string UUIDs to null for database compatibility
-    const sanitizedUpdates = { ...updates };
-    if (sanitizedUpdates.report_recipient_id !== undefined) {
-      if (!sanitizedUpdates.report_recipient_id || 
-          sanitizedUpdates.report_recipient_id === '' || 
-          !isValidUUID(sanitizedUpdates.report_recipient_id)) {
-        sanitizedUpdates.report_recipient_id = null;
-      }
-    }
-
     try {
       // Add timeout protection
       const savePromise = updateInspectionItem(
         item.id,
-        sanitizedUpdates.value !== undefined ? sanitizedUpdates.value : value,
-        sanitizedUpdates.notes !== undefined ? sanitizedUpdates.notes : notes,
-        sanitizedUpdates.photo_urls !== undefined ? sanitizedUpdates.photo_urls : photos,
-        sanitizedUpdates.marked_for_report !== undefined ? sanitizedUpdates.marked_for_report : markedForReport,
-        sanitizedUpdates.report_recipient_id !== undefined ? sanitizedUpdates.report_recipient_id : (reportRecipientId && isValidUUID(reportRecipientId) ? reportRecipientId : null)
+        value,
+        notes,
+        photos,
+        markedForReport,
+        reportRecipientId && isValidUUID(reportRecipientId) ? reportRecipientId : null
       );
       
       // Add 10 second timeout
@@ -279,7 +181,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       
       await Promise.race([savePromise, timeoutPromise]);
       
-      onUpdate(item.id, sanitizedUpdates);
+      onUpdate(item.id, { value, notes, photos, markedForReport, reportRecipientId });
     } catch (error: any) {
       console.error('Error saving inspection item:', error);
       
@@ -293,6 +195,11 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       throw error; // Re-throw to be handled by caller
     }
   };
+
+  // Expose saveChanges method to parent component
+  React.useImperativeHandle(React.forwardRef(() => null), () => ({
+    saveChanges
+  }));
 
   const handleCameraCapture = () => {
     const input = document.createElement('input');
