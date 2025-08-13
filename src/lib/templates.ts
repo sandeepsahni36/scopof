@@ -211,9 +211,20 @@ export async function createTemplateCategory(name: string) {
       return newCategory;
     }
 
+    // Get the admin_id for the current user
+    const { data: adminData, error: adminError } = await supabase
+      .from('admin')
+      .select('id')
+      .eq('owner_id', user.id)
+      .single();
+
+    if (adminError || !adminData) {
+      throw new Error('Admin account not found for current user');
+    }
+
     const { data, error } = await supabase
       .from('template_categories')
-      .insert([{ name }])
+      .insert([{ name, admin_id: adminData.id }])
       .select()
       .single();
 
