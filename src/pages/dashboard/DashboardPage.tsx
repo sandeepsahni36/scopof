@@ -90,6 +90,9 @@ const DashboardPage = () => {
           'Damaged': 0,
           'Missing': 0,
         };
+        let propertiesByType = {} as Record<string, number>;
+        let topPropertiesByInspections = [] as Array<{ name: string; count: number }>;
+        let averageInspectionDuration = 0;
         
         // Get inspection counts (skip in dev mode to avoid errors)
         if (!devModeEnabled()) {
@@ -165,6 +168,59 @@ const DashboardPage = () => {
               }
             });
           }
+          
+          // Get properties by type for pie chart
+          const { data: propertiesResponse, error: propertiesError } = await supabase
+            .from('properties')
+            .select('type');
+          
+          // Process properties by type for pie chart
+          if (!propertiesError && propertiesResponse) {
+            propertiesResponse.forEach((property: any) => {
+              const type = property.type;
+              if (type) {
+                propertiesByType[type] = (propertiesByType[type] || 0) + 1;
+              }
+            });
+          }
+          
+          // Get average inspection duration
+          const { data: durationData, error: durationError } = await supabase
+            .from('inspections')
+            .select('duration_seconds')
+            .eq('status', 'completed')
+            .not('duration_seconds', 'is', null);
+          
+          if (!durationError && durationData && durationData.length > 0) {
+            const totalDuration = durationData.reduce((sum, inspection) => sum + (inspection.duration_seconds || 0), 0);
+            averageInspectionDuration = Math.round(totalDuration / durationData.length / 60); // Convert to minutes
+          }
+          
+          // Get top 5 properties by inspection count (last 30 days)
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const { data: topPropertiesData, error: topPropertiesError } = await supabase
+            .from('inspections')
+            .select(`
+              property_id,
+              properties (
+                name
+              )
+            `)
+            .eq('status', 'completed')
+            .gte('created_at', thirtyDaysAgo);
+          
+          if (!topPropertiesError && topPropertiesData) {
+            const propertyInspectionCounts = {} as Record<string, number>;
+            topPropertiesData.forEach((inspection: any) => {
+              const propertyName = inspection.properties?.name || 'Unknown Property';
+              propertyInspectionCounts[propertyName] = (propertyInspectionCounts[propertyName] || 0) + 1;
+            });
+            
+            topPropertiesByInspections = Object.entries(propertyInspectionCounts)
+              .map(([name, count]) => ({ name, count: count as number }))
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 5);
+          }
         } else {
           // Dev mode - use mock data for charts
           completedInspections = 8;
@@ -193,6 +249,16 @@ const DashboardPage = () => {
             { name: 'Downtown Loft 5A', count: 2 },
             { name: 'Mountain View Villa', count: 1 },
           ];
+          propertiesByType = {
+            'apartment': 2,
+            'villa': 1,
+            'condo': 0,
+          };
+          topPropertiesByInspections = [
+            { name: 'Oceanview Apartment 2B', count: 3 },
+            { name: 'Downtown Loft 5A', count: 2 },
+            { name: 'Mountain View Villa', count: 1 },
+          ];
         }
         
         setStats({
@@ -206,6 +272,8 @@ const DashboardPage = () => {
         setChartData({
           inspectionsByType,
           issuesByValue,
+          propertiesByType,
+          topPropertiesByInspections,
           propertiesByType,
           topPropertiesByInspections,
         });
@@ -233,6 +301,8 @@ const DashboardPage = () => {
             'Damaged': 0,
             'Missing': 0,
           },
+          propertiesByType: {},
+          topPropertiesByInspections: [],
           propertiesByType: {},
           topPropertiesByInspections: [],
         });
@@ -348,7 +418,7 @@ const DashboardPage = () => {
   };
 
   // Check if user has any data
-  const hasAnyData = stats.properties > 0 || stats.completedInspections > 0 || activities.length > 0;
+  const hasAnyData = stats.properties > 0 || stats.completedInspections > 0;
   
   if (loading) {
     return (
@@ -553,92 +623,6 @@ const DashboardPage = () => {
               </div>
             </div>
           
-          // Process properties by type for pie chart
-          if (propertiesResponse.data) {
-            propertiesResponse.data.forEach((property: any) => {
-              const type = property.type;
-              if (type) {
-                propertiesByType[type] = (propertiesByType[type] || 0) + 1;
-              }
-            });
-          }
-          
-          // Get average inspection duration
-          const { data: durationData, error: durationError } = await supabase
-            .from('inspections')
-            .select('duration_seconds')
-            .eq('status', 'completed')
-            .not('duration_seconds', 'is', null);
-          
-          if (!durationError && durationData && durationData.length > 0) {
-            const totalDuration = durationData.reduce((sum, inspection) => sum + (inspection.duration_seconds || 0), 0);
-            averageInspectionDuration = Math.round(totalDuration / durationData.length / 60); // Convert to minutes
-          }
-          
-          // Get top 5 properties by inspection count (last 30 days)
-          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-          const { data: topPropertiesData, error: topPropertiesError } = await supabase
-            .from('inspections')
-            .select(`
-              property_id,
-              properties (
-                name
-              )
-            `)
-            .eq('status', 'completed')
-            .gte('created_at', thirtyDaysAgo);
-          
-          if (!topPropertiesError && topPropertiesData) {
-            const propertyInspectionCounts = {};
-            topPropertiesData.forEach((inspection: any) => {
-              const propertyName = inspection.properties?.name || 'Unknown Property';
-              propertyInspectionCounts[propertyName] = (propertyInspectionCounts[propertyName] || 0) + 1;
-            });
-            
-            topPropertiesByInspections = Object.entries(propertyInspectionCounts)
-              .map(([name, count]) => ({ name, count: count as number }))
-              .sort((a, b) => b.count - a.count)
-              .slice(0, 5);
-          }
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <Link to="/dashboard/properties" className="font-medium text-primary-600 hover:text-primary-500">
-                  {stats.pendingInspections === 0 ? 'Schedule inspection' : 'View pending'}
-                </Link>
-              </div>
-            </div>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-white overflow-hidden shadow rounded-lg"
-          >
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0 bg-red-100 rounded-md p-3">
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Issues Detected</dt>
-                    <dd>
-                      <div className="text-lg font-medium text-gray-900">{stats.issuesDetected}</div>
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <Link to="/dashboard/reports" className="font-medium text-primary-600 hover:text-primary-500">
-                  {stats.issuesDetected === 0 ? 'No issues found' : 'View issues'}
-                </Link>
-              </div>
-            </div>
-          </motion.div>
-          
           {/* Average Inspection Duration KPI */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -682,7 +666,7 @@ const DashboardPage = () => {
       </div>
       
       {/* Chart section - only show if there's data */}
-      {hasAnyData && (hasInspectionData || hasIssueData || hasPropertiesData || hasTopPropertiesData) ? (
+      {(hasInspectionData || hasIssueData || hasPropertiesData || hasTopPropertiesData) ? (
         <div className="mb-8">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Analytics</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -727,25 +711,55 @@ const DashboardPage = () => {
                 Property Portfolio ({stats.properties} total)
               </h3>
               {hasPropertiesData && totalPropertiesByType > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <RechartsPie
-                      data={propertiesPieData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {propertiesPieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </RechartsPie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Pie
+                  data={{
+                    labels: Object.keys(chartData.propertiesByType).map(type => 
+                      type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')
+                    ),
+                    datasets: [
+                      {
+                        data: Object.values(chartData.propertiesByType),
+                        backgroundColor: [
+                          'rgba(37, 99, 235, 0.7)',   // primary-600
+                          'rgba(5, 150, 105, 0.7)',   // emerald-600
+                          'rgba(220, 38, 38, 0.7)',   // red-600
+                          'rgba(217, 119, 6, 0.7)',   // amber-600
+                          'rgba(124, 58, 237, 0.7)',  // violet-600
+                          'rgba(219, 39, 119, 0.7)',  // pink-600
+                        ],
+                        borderColor: [
+                          'rgba(37, 99, 235, 1)',
+                          'rgba(5, 150, 105, 1)',
+                          'rgba(220, 38, 38, 1)',
+                          'rgba(217, 119, 6, 1)',
+                          'rgba(124, 58, 237, 1)',
+                          'rgba(219, 39, 119, 1)',
+                        ],
+                        borderWidth: 1,
+                      },
+                    ],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                      legend: {
+                        position: 'bottom',
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${value} (${percentage}%)`;
+                          }
+                        }
+                      }
+                    },
+                  }}
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-500">
                   <PieChart className="h-12 w-12 mb-4" />
@@ -814,7 +828,7 @@ const DashboardPage = () => {
           )}
         </div>
       ) : (
-        /* Empty state for new users */
+        // Empty state for new users
         <div className="mb-8">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Analytics</h2>
           <div className="bg-white rounded-lg shadow p-12">
