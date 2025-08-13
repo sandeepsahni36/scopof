@@ -31,6 +31,7 @@ const PropertyDetailPage = () => {
   const [deletingInspections, setDeletingInspections] = useState<Set<string>>(new Set());
   const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -290,6 +291,34 @@ const PropertyDetailPage = () => {
     setShowPropertyForm(false);
   };
 
+  const handleDeleteProperty = async () => {
+    if (!property || !isAdmin) {
+      toast.error('Only admins can delete properties');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete "${property.name}"? This action cannot be undone and will remove all associated inspections, reports, and data.`)) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      
+      const { deleteProperty } = await import('../../lib/properties');
+      const success = await deleteProperty(property.id);
+      
+      if (success) {
+        toast.success('Property deleted successfully');
+        navigate('/dashboard/properties');
+      }
+    } catch (error: any) {
+      console.error('Error deleting property:', error);
+      toast.error('Failed to delete property');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const getPropertyTypeIcon = (type: string) => {
     switch (type) {
       case 'apartment':
@@ -370,14 +399,26 @@ const PropertyDetailPage = () => {
           {/* Edit Button */}
           {isAdmin && (
             <div className="absolute top-6 right-6">
-              <Button
-                variant="secondary"
-                size="sm"
-                leftIcon={<Edit size={16} />}
-                onClick={handleEditProperty}
-              >
-                Edit
-              </Button>
+              <div className="flex space-x-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  leftIcon={<Edit size={16} />}
+                  onClick={handleEditProperty}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Trash2 size={16} />}
+                  onClick={handleDeleteProperty}
+                  className="text-red-600 hover:text-red-700 border-red-300 hover:border-red-400 hover:bg-red-50"
+                  disabled={deleting}
+                >
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
             </div>
           )}
         </div>
