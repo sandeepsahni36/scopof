@@ -95,8 +95,7 @@ export async function getPropertyChecklist(propertyId: string): Promise<Property
           templates (
             id,
             name,
-            description,
-            template_items(count)
+            description
           )
         )
       `)
@@ -140,7 +139,7 @@ export async function getPropertyChecklist(propertyId: string): Promise<Property
             id: pct.templates.id,
             name: pct.templates.name,
             description: pct.templates.description,
-            itemCount: pct.templates.template_items?.[0]?.count || 0,
+            itemCount: 0,
           } : undefined,
         })) || [],
     };
