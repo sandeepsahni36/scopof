@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Check, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Check, ArrowRight, AlertTriangle, CreditCard } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { createCheckoutSession } from '../../lib/stripe';
