@@ -803,3 +803,127 @@ export async function deleteTemplate(id: string) {
     throw error;
   }
 }
+export async function duplicateTemplate(id: string) {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Duplicating mock template:', id);
+      const originalTemplate = mockTemplatesState.find(t => t.id === id);
+      if (!originalTemplate) {
+        throw new Error('Template not found');
+      }
+      
+      const duplicatedTemplate: Template = {
+        ...originalTemplate,
+        id: `mock-template-${Date.now()}`,
+        name: `${originalTemplate.name} (Copy)`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      mockTemplatesState.push(duplicatedTemplate);
+      
+      // Duplicate template items
+      const originalItems = mockTemplateItemsState.filter(item => item.templateId === id);
+      const duplicatedItems: TemplateItem[] = originalItems.map((item, index) => ({
+        ...item,
+        id: `mock-item-${Date.now()}-${index}`,
+        templateId: duplicatedTemplate.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
+      
+      mockTemplateItemsState.push(...duplicatedItems);
+      
+      return { template: duplicatedTemplate, items: duplicatedItems };
+    }
+
+    // Get the original template and its items
+    const originalData = await getTemplate(id);
+    if (!originalData) {
+      throw new Error('Template not found');
+    }
+
+    // Get the admin_id for the current user
+    const { data: adminData, error: adminError } = await supabase
+      .from('admin')
+      .select('id')
+      .eq('owner_id', user.id)
+      .single();
+
+    if (adminError || !adminData) {
+      throw new Error('Admin account not found for current user');
+    }
+
+    // Create the duplicated template
+    const { data: duplicatedTemplate, error: templateError } = await supabase
+      .from('templates')
+      .insert([{
+        admin_id: adminData.id,
+        name: `${originalData.template.name} (Copy)`,
+        category_id: originalData.template.category_id,
+        description: originalData.template.description,
+      }])
+      .select()
+      .single();
+
+    if (templateError) {
+      if (templateError.message?.includes('user_not_found') || templateError.message?.includes('JWT')) {
+        await handleAuthError(templateError);
+        return null;
+      }
+      throw templateError;
+    }
+
+    // Duplicate template items
+    if (originalData.items.length > 0) {
+      const duplicatedItems = [];
+      
+      for (const item of originalData.items) {
+        const { data: insertedItem, error: itemError } = await supabase
+          .from('template_items')
+          .insert({
+            template_id: duplicatedTemplate.id,
+            type: item.type,
+            label: item.label,
+            required: item.required,
+            options: item.options,
+            report_enabled: item.reportEnabled,
+            report_recipient_id: item.reportRecipientId,
+            order: item.order,
+          })
+          .select()
+          .single();
+        
+        if (itemError) {
+          console.error('Error duplicating item:', itemError);
+          if (itemError.message?.includes('user_not_found') || itemError.message?.includes('JWT')) {
+            await handleAuthError(itemError);
+            return null;
+          }
+          throw itemError;
+        }
+        
+        duplicatedItems.push(insertedItem);
+      }
+
+      return { template: duplicatedTemplate, items: duplicatedItems };
+    }
+
+    return { template: duplicatedTemplate, items: [] };
+  } catch (error: any) {
+    console.error('Error duplicating template:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
+}

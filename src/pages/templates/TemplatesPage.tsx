@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { LayoutTemplate, Plus, Search, Filter, Pencil, Trash2, FolderPlus } from 'lucide-react';
+import { LayoutTemplate, Plus, Search, Filter, Pencil, Trash2, FolderPlus, Copy } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Template, TemplateCategory } from '../../types';
-import { getTemplates, getTemplateCategories, createTemplateCategory, deleteTemplate } from '../../lib/templates';
+import { getTemplates, getTemplateCategories, createTemplateCategory, deleteTemplate, duplicateTemplate } from '../../lib/templates';
 import { toast } from 'sonner';
 
 function TemplatesPage() {
@@ -102,6 +102,19 @@ function TemplatesPage() {
     }
   };
 
+  const handleDuplicateTemplate = async (templateId: string) => {
+    try {
+      const result = await duplicateTemplate(templateId);
+      if (result) {
+        toast.success('Template duplicated successfully');
+        // Reload templates to show the new duplicate
+        loadTemplates();
+      }
+    } catch (error: any) {
+      console.error('Error duplicating template:', error);
+      toast.error('Failed to duplicate template');
+    }
+  };
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = searchTerm === '' || 
       template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -228,6 +241,14 @@ function TemplatesPage() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      leftIcon={<Copy size={16} />}
+                      onClick={() => handleDuplicateTemplate(template.id)}
+                    >
+                      Duplicate
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       leftIcon={<Trash2 size={16} />}
                       onClick={() => handleDeleteTemplate(template.id)}
                     >
@@ -240,12 +261,6 @@ function TemplatesPage() {
                     {template.description}
                   </p>
                 )}
-                <div className="mt-4 text-sm text-gray-500">
-                  Created {template.createdAt && !isNaN(new Date(template.createdAt).getTime()) 
-                    ? new Date(template.createdAt).toLocaleDateString()
-                    : 'N/A'
-                  }
-                </div>
               </div>
             </div>
           ))}
