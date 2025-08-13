@@ -808,17 +808,31 @@ const PropertyDetailPage = () => {
                                 }
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  isLoading={deletingInspections.has(inspection.id)}
-                                  disabled={deletingInspections.has(inspection.id)}
-                                  leftIcon={<Trash2 size={16} />}
-                                  onClick={() => handleDeleteInspection(inspection.id)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  Delete
-                                </Button>
+                                <div className="flex justify-end space-x-2">
+                                  {inspection.status === 'in_progress' && (
+                                    <Link to={`/dashboard/inspections/${inspection.id}`}>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        leftIcon={<Camera size={16} />}
+                                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                      >
+                                        Continue
+                                      </Button>
+                                    </Link>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    isLoading={deletingInspections.has(inspection.id)}
+                                    disabled={deletingInspections.has(inspection.id)}
+                                    leftIcon={<Trash2 size={16} />}
+                                    onClick={() => handleDeleteInspection(inspection.id)}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    Delete
+                                  </Button>
+                                </div>
                               </td>
                             </tr>
                           ))}
