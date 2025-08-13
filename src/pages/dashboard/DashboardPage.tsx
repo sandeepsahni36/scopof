@@ -249,16 +249,6 @@ const DashboardPage = () => {
             { name: 'Downtown Loft 5A', count: 2 },
             { name: 'Mountain View Villa', count: 1 },
           ];
-          propertiesByType = {
-            'apartment': 2,
-            'villa': 1,
-            'condo': 0,
-          };
-          topPropertiesByInspections = [
-            { name: 'Oceanview Apartment 2B', count: 3 },
-            { name: 'Downtown Loft 5A', count: 2 },
-            { name: 'Mountain View Villa', count: 1 },
-          ];
         }
         
         setStats({
@@ -272,8 +262,6 @@ const DashboardPage = () => {
         setChartData({
           inspectionsByType,
           issuesByValue,
-          propertiesByType,
-          topPropertiesByInspections,
           propertiesByType,
           topPropertiesByInspections,
         });
@@ -301,8 +289,6 @@ const DashboardPage = () => {
             'Damaged': 0,
             'Missing': 0,
           },
-          propertiesByType: {},
-          topPropertiesByInspections: [],
           propertiesByType: {},
           topPropertiesByInspections: [],
         });
@@ -622,6 +608,44 @@ const DashboardPage = () => {
                 </div>
               </div>
             </div>
+            <div className="bg-gray-50 px-5 py-3">
+              <div className="text-sm">
+                <span className="text-gray-500">
+                  {stats.pendingInspections === 0 ? 'No pending inspections' : 'In progress'}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white overflow-hidden shadow rounded-lg"
+          >
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-red-100 rounded-md p-3">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Flagged Items</dt>
+                    <dd>
+                      <div className="text-lg font-medium text-gray-900">{stats.issuesDetected}</div>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 px-5 py-3">
+              <div className="text-sm">
+                <span className="text-gray-500">
+                  {stats.issuesDetected === 0 ? 'No issues detected' : 'Require attention'}
+                </span>
+              </div>
+            </div>
+          </motion.div>
           
           {/* Average Inspection Duration KPI */}
           <motion.div
