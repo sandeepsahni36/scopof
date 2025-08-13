@@ -274,7 +274,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       
       // Add 10 second timeout
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Save operation timed out')), 10000)
+        setTimeout(() => reject(new Error('Save operation timed out')), 30000)
       );
       
       await Promise.race([savePromise, timeoutPromise]);
