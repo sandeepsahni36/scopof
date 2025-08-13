@@ -129,6 +129,7 @@ export async function createInspection(
             required,
             options,
             report_enabled,
+            order,
             maintenance_email,
             report_recipient_id,
             order
@@ -149,7 +150,9 @@ export async function createInspection(
       for (const checklistTemplate of checklistTemplates) {
         const template = checklistTemplate.templates;
         if (template && template.template_items) {
-          for (const templateItem of template.template_items) {
+          // Sort template items by their order before creating inspection items
+          const sortedTemplateItems = template.template_items.sort((a, b) => a.order - b.order);
+          for (const templateItem of sortedTemplateItems) {
             inspectionItems.push({
               inspection_id: inspection.id,
               template_item_id: templateItem.id,
