@@ -31,7 +31,6 @@ const PropertyDetailPage = () => {
   const [deletingInspections, setDeletingInspections] = useState<Set<string>>(new Set());
   const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -292,18 +291,13 @@ const PropertyDetailPage = () => {
   };
 
   const handleDeleteProperty = async () => {
-    if (!property || !isAdmin) {
-      toast.error('Only admins can delete properties');
-      return;
-    }
+    if (!property) return;
 
-    if (!window.confirm(`Are you sure you want to delete "${property.name}"? This action cannot be undone and will remove all associated inspections, reports, and data.`)) {
+    if (!window.confirm('Are you sure you want to delete this property? This action cannot be undone and will remove all associated inspections and checklists.')) {
       return;
     }
 
     try {
-      setDeleting(true);
-      
       const { deleteProperty } = await import('../../lib/properties');
       const success = await deleteProperty(property.id);
       
@@ -314,8 +308,6 @@ const PropertyDetailPage = () => {
     } catch (error: any) {
       console.error('Error deleting property:', error);
       toast.error('Failed to delete property');
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -414,9 +406,8 @@ const PropertyDetailPage = () => {
                   leftIcon={<Trash2 size={16} />}
                   onClick={handleDeleteProperty}
                   className="text-red-600 hover:text-red-700 border-red-300 hover:border-red-400 hover:bg-red-50"
-                  disabled={deleting}
                 >
-                  {deleting ? 'Deleting...' : 'Delete'}
+                  Delete
                 </Button>
               </div>
             </div>
