@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Building2, Users, CreditCard, Upload, X, Check, AlertTriangle, Crown } from 'lucide-react';
+import { Building2, Users, CreditCard, Upload, X, Check, AlertTriangle, Crown, Mail, Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuthStore } from '../../store/authStore';
@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { uploadFile } from '../../lib/storage';
 import { isImageValid, resizeAndOptimizeImage } from '../../lib/utils';
 import { createCheckoutSession, createCustomerPortalSession, getCurrentSubscription } from '../../lib/stripe';
+import { getReportServiceTeams, createReportServiceTeam, updateReportServiceTeam, deleteReportServiceTeam, ReportServiceTeam } from '../../lib/reportServiceTeams';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { toast } from 'sonner';
 
@@ -25,15 +26,25 @@ interface TeamMember {
   createdAt: string;
 }
 
+interface ReportTeamFormData {
+  designation: string;
+  email: string;
+}
+
 const AdminSettingsPage = () => {
   const { user, company, isAdmin } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'company' | 'users' | 'subscription'>('company');
+  const [activeTab, setActiveTab] = useState<'company' | 'users' | 'subscription' | 'report-teams'>('company');
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [teamLoading, setTeamLoading] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [reportTeams, setReportTeams] = useState<ReportServiceTeam[]>([]);
+  const [reportTeamsLoading, setReportTeamsLoading] = useState(false);
+  const [showReportTeamForm, setShowReportTeamForm] = useState(false);
+  const [editingReportTeam, setEditingReportTeam] = useState<ReportServiceTeam | null>(null);
+  const [reportTeamFormLoading, setReportTeamFormLoading] = useState(false);
 
   const isStarterTier = company?.tier === 'starter';
 
@@ -51,6 +62,19 @@ const AdminSettingsPage = () => {
     },
   });
 
+  const {
+    register: registerReportTeam,
+    handleSubmit: handleSubmitReportTeam,
+    setValue: setValueReportTeam,
+    reset: resetReportTeam,
+    formState: { errors: reportTeamErrors },
+  } = useForm<ReportTeamFormData>({
+    defaultValues: {
+      designation: '',
+      email: '',
+    },
+  });
+
   useEffect(() => {
     if (company) {
       setValue('companyName', company.name);
@@ -64,6 +88,8 @@ const AdminSettingsPage = () => {
       loadTeamMembers();
     } else if (activeTab === 'subscription') {
       loadSubscriptionData();
+    } else if (activeTab === 'report-teams') {
+      loadReportTeams();
     }
   }, [activeTab]);
 
@@ -112,6 +138,21 @@ const AdminSettingsPage = () => {
       toast.error('Failed to load subscription data');
     } finally {
       setSubscriptionLoading(false);
+    }
+  };
+
+  const loadReportTeams = async () => {
+    try {
+      setReportTeamsLoading(true);
+      const teams = await getReportServiceTeams();
+      if (teams) {
+        setReportTeams(teams);
+      }
+    } catch (error: any) {
+      console.error('Error loading report teams:', error);
+      toast.error('Failed to load report teams');
+    } finally {
+      setReportTeamsLoading(false);
     }
   };
 
@@ -225,6 +266,70 @@ const AdminSettingsPage = () => {
     }
   };
 
+  const handleAddReportTeam = () => {
+    setEditingReportTeam(null);
+    resetReportTeam();
+    setShowReportTeamForm(true);
+  };
+
+  const handleEditReportTeam = (team: ReportServiceTeam) => {
+    setEditingReportTeam(team);
+    setValueReportTeam('designation', team.designation);
+    setValueReportTeam('email', team.email);
+    setShowReportTeamForm(true);
+  };
+
+  const handleDeleteReportTeam = async (team: ReportServiceTeam) => {
+    if (!window.confirm(`Are you sure you want to delete the report team "${team.designation}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const success = await deleteReportServiceTeam(team.id);
+      if (success) {
+        toast.success('Report team deleted successfully');
+        loadReportTeams();
+      }
+    } catch (error: any) {
+      console.error('Error deleting report team:', error);
+      toast.error('Failed to delete report team');
+    }
+  };
+
+  const onSubmitReportTeam = async (data: ReportTeamFormData) => {
+    try {
+      setReportTeamFormLoading(true);
+
+      if (editingReportTeam) {
+        const updatedTeam = await updateReportServiceTeam(editingReportTeam.id, data);
+        if (updatedTeam) {
+          toast.success('Report team updated successfully');
+        }
+      } else {
+        const newTeam = await createReportServiceTeam(data);
+        if (newTeam) {
+          toast.success('Report team created successfully');
+        }
+      }
+
+      setShowReportTeamForm(false);
+      setEditingReportTeam(null);
+      resetReportTeam();
+      loadReportTeams();
+    } catch (error: any) {
+      console.error('Error saving report team:', error);
+      toast.error(editingReportTeam ? 'Failed to update report team' : 'Failed to create report team');
+    } finally {
+      setReportTeamFormLoading(false);
+    }
+  };
+
+  const handleCancelReportTeamForm = () => {
+    setShowReportTeamForm(false);
+    setEditingReportTeam(null);
+    resetReportTeam();
+  };
+
   if (!isAdmin) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -273,6 +378,18 @@ const AdminSettingsPage = () => {
             >
               <Users className="w-4 h-4 inline mr-2" />
               User Management
+            </button>
+            <button
+              onClick={() => setActiveTab('report-teams')}
+              className={`
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                ${activeTab === 'report-teams'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+              `}
+            >
+              <Mail className="w-4 h-4 inline mr-2" />
+              Report Teams
             </button>
             <button
               onClick={() => setActiveTab('subscription')}
@@ -544,6 +661,114 @@ const AdminSettingsPage = () => {
             </div>
           )}
 
+          {activeTab === 'report-teams' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Report Service Teams</h3>
+                  <p className="text-sm text-gray-500">
+                    Manage email recipients for inspection issue alerts. These teams will receive emails when items are marked for report during inspections.
+                  </p>
+                </div>
+                <Button 
+                  leftIcon={<Plus size={16} />}
+                  onClick={handleAddReportTeam}
+                >
+                  Add Team
+                </Button>
+              </div>
+
+              {reportTeamsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading report teams...</p>
+                </div>
+              ) : reportTeams.length > 0 ? (
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Designation
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Email Address
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Created
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {reportTeams.map((team) => (
+                        <tr key={team.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
+                                <Mail className="h-4 w-4 text-primary-600" />
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {team.designation}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{team.email}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(team.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end space-x-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                leftIcon={<Edit size={16} />}
+                                onClick={() => handleEditReportTeam(team)}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                leftIcon={<Trash2 size={16} />}
+                                onClick={() => handleDeleteReportTeam(team)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-white border border-gray-200 rounded-lg">
+                  <Mail className="mx-auto h-16 w-16 text-gray-400" />
+                  <h3 className="mt-4 text-lg font-semibold text-gray-900">No Report Teams</h3>
+                  <p className="mt-2 text-base text-gray-500">
+                    Create report teams to receive email alerts when inspection items are marked for attention.
+                  </p>
+                  <div className="mt-6">
+                    <Button 
+                      leftIcon={<Plus size={16} />}
+                      onClick={handleAddReportTeam}
+                    >
+                      Add Your First Team
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'subscription' && (
             <div className="space-y-6">
               <div>
@@ -648,6 +873,91 @@ const AdminSettingsPage = () => {
           )}
         </div>
       </div>
+
+      {/* Report Team Form Modal */}
+      {showReportTeamForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {editingReportTeam ? 'Edit Report Team' : 'Add Report Team'}
+              </h2>
+              <button
+                onClick={handleCancelReportTeamForm}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmitReportTeam(onSubmitReportTeam)} className="p-6 space-y-4">
+              <Input
+                label="Team Designation"
+                error={reportTeamErrors.designation?.message}
+                {...registerReportTeam('designation', {
+                  required: 'Designation is required',
+                  minLength: {
+                    value: 2,
+                    message: 'Designation must be at least 2 characters',
+                  },
+                })}
+                placeholder="e.g., Maintenance Team, Cleaning Staff, Operations Manager"
+              />
+
+              <Input
+                label="Email Address"
+                type="email"
+                error={reportTeamErrors.email?.message}
+                {...registerReportTeam('email', {
+                  required: 'Email address is required',
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'Invalid email address',
+                  },
+                })}
+                placeholder="team@example.com"
+              />
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <Mail className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-blue-800">How it works</h4>
+                    <div className="mt-2 text-sm text-blue-700">
+                      <p>
+                        When inspectors mark items for report during inspections, an email alert will be sent to this team's email address with details about the flagged item.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleCancelReportTeamForm}
+                  disabled={reportTeamFormLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  isLoading={reportTeamFormLoading}
+                  disabled={reportTeamFormLoading}
+                >
+                  {editingReportTeam ? 'Update Team' : 'Add Team'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
