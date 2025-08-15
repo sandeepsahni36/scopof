@@ -36,6 +36,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initialize: async () => {
     try {
       console.log("Initializing auth store...");
+      console.log("=== AUTH STORE INITIALIZATION DEBUG START ===");
+      console.log("Current URL:", window.location.href);
+      console.log("Dev mode enabled:", devModeEnabled());
       
       // Check if dev mode is enabled
       if (devModeEnabled()) {
@@ -74,6 +77,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
+      console.log("=== CHECKING CURRENT SESSION ===");
+      // First, let's check what's in localStorage
+      const authKeys = Object.keys(localStorage).filter(key => key.startsWith('supabase.auth'));
+      console.log("Auth keys in localStorage:", authKeys);
+      
+      // Check if there's a session in localStorage
+      authKeys.forEach(key => {
+        try {
+          const value = localStorage.getItem(key);
+          if (value) {
+            const parsed = JSON.parse(value);
+            console.log(`LocalStorage ${key}:`, {
+              hasAccessToken: !!parsed.access_token,
+              hasRefreshToken: !!parsed.refresh_token,
+              hasUser: !!parsed.user,
+              userEmail: parsed.user?.email,
+              expiresAt: parsed.expires_at
+            });
+          }
+        } catch (e) {
+          console.log(`LocalStorage ${key}: Could not parse`);
+        }
+      });
+
       console.log("Getting current user from Supabase...");
       
       // Add explicit session refresh attempt before getting user
@@ -82,12 +109,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
         if (refreshError) {
           console.log("Session refresh failed (this may be normal):", refreshError.message);
+          console.log("Session refresh error details:", {
+            message: refreshError.message,
+            status: refreshError.status,
+            code: refreshError.code
+          });
         } else if (refreshData.session) {
           console.log("Session refreshed successfully");
+          console.log("Refreshed session details:", {
+            hasAccessToken: !!refreshData.session.access_token,
+            hasRefreshToken: !!refreshData.session.refresh_token,
+            hasUser: !!refreshData.session.user,
+            userEmail: refreshData.session.user?.email,
+            expiresAt: refreshData.session.expires_at
+          });
         }
       } catch (refreshErr) {
         console.log("Session refresh threw error (this may be normal):", refreshErr);
       }
+      
+      // Check session directly
+      console.log("=== CHECKING SESSION DIRECTLY ===");
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      console.log("Direct session check:", {
+        hasSession: !!sessionData.session,
+        hasUser: !!sessionData.session?.user,
+        userEmail: sessionData.session?.user?.email,
+        sessionError: sessionError?.message,
+        expiresAt: sessionData.session?.expires_at
+      });
       
       const { data: { user } } = await supabase.auth.getUser();
       console.log("Raw user data from Supabase:", {
@@ -101,6 +151,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       if (!user) {
         console.log("No user found, setting unauthenticated state");
+        console.log("=== AUTH STORE INITIALIZATION DEBUG END (NO USER) ===");
         set({ 
           loading: false, 
           isAuthenticated: false,
@@ -459,6 +510,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         requiresPayment,
         needsPaymentSetup
       });
+      console.log("=== AUTH STORE INITIALIZATION DEBUG END (SUCCESS) ===");
     } catch (error) {
       console.error('Error initializing auth state:', error);
       console.error('Auth initialization error details:', {
@@ -466,6 +518,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         stack: error.stack,
         name: error.name
       });
+      console.log("=== AUTH STORE INITIALIZATION DEBUG END (ERROR) ===");
       set({ 
         loading: false, 
         isAuthenticated: false,
