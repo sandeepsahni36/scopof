@@ -201,7 +201,8 @@ export type PropertyChecklistTemplate = {
 export type TierLimits = {
   properties: number;
   storage: number;
-  users: number;
+  users: number; // Total users (admins + members)
+  adminUsers: number; // Limit for admin roles (owner + admin)
   features: string[];
 };
 
@@ -209,19 +210,22 @@ export const TIER_LIMITS: Record<string, TierLimits> = {
   starter: {
     properties: 10,
     storage: 2,
-    users: 1,
+    users: 2, // 1 Admin + 1 User
+    adminUsers: 1,
     features: ['basic-ai', 'standard-templates', 'pdf-reports', 'email-support'],
   },
   professional: {
     properties: 45,
     storage: 5,
-    users: 3,
+    users: 5, // 2 Admins + 3 Users
+    adminUsers: 2,
     features: ['advanced-ai', 'custom-templates', 'branded-reports', 'priority-support'],
   },
   enterprise: {
     properties: Infinity,
     storage: Infinity,
-    users: Infinity,
+    users: 15, // 5 Admins + 10 Users
+    adminUsers: 5,
     features: [
       'enterprise-ai',
       'team-collaboration',
