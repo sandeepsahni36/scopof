@@ -45,12 +45,12 @@ export async function validateUserSession() {
     const sessionResponse = await supabase.auth.getSession();
     console.log('Session response:', sessionResponse);
     
-    if (!sessionResponse || !sessionResponse.data) {
+    if (!sessionResponse?.data) {
       console.log('No session response data');
       return null;
     }
     
-    const { session } = sessionResponse.data;
+    const session = sessionResponse.data?.session;
     
     const { data: { user }, error } = await supabase.auth.getUser();
     console.log('validateUserSession result:', {
