@@ -435,6 +435,8 @@ const AdminSettingsPage = () => {
                 {/* Company Name */}
                 <Input
                   label="Company Name"
+                 readOnly={true}
+                 className="bg-gray-100 cursor-not-allowed"
                   error={errors.companyName?.message}
                   {...register('companyName', {
                     required: 'Company name is required',
