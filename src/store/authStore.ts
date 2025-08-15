@@ -112,7 +112,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
-      console.log("User found:", { id: user.id, email: user.email });
+      console.log("AuthStore Init: User found:", { id: user.id, email: user.email });
 
       // Fetch user profile
       console.log("Fetching user profile...");
@@ -137,6 +137,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           fullName: profile.full_name
         });
       }
+
+      console.log("AuthStore Init: Profile fetched:", profile);
 
       // Check if user has registration type in metadata (for new users)
       const registrationType = user.user_metadata?.registration_type;
@@ -167,11 +169,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log("Admin status fetched:", adminStatus);
       }
 
+      console.log("AuthStore Init: Admin status fetched:", adminStatus);
       const isAdmin = adminStatus?.is_admin || false;
       
       // Fix isAdmin calculation - check for owner or admin role
       const isAdminRole = adminStatus?.role === 'owner' || adminStatus?.role === 'admin';
       console.log("User is admin:", isAdminRole, "Role:", adminStatus?.role);
+      console.log("AuthStore Init: Is Admin Role calculated as:", isAdminRole);
 
       // Transform data to match our types
       const userData: User = {
@@ -213,7 +217,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             subscriptionStatus: admin.subscription_status,
             customerId: admin.customer_id
           });
+        }
 
+        console.log("AuthStore Init: Admin data fetched:", admin);
+
+        if (admin) {
           // Fetch subscription data if customer_id exists
           let subscription = null;
           let subscriptionError = null;
@@ -237,6 +245,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 hint: subscriptionError.hint
               });
             }
+
+            console.log("AuthStore Init: Stripe subscription fetched:", subscription);
 
             // --- START REVISED LOGIC FOR SUBSCRIPTION STATUS ---
             const admin_subscription_status = admin.subscription_status;
@@ -417,17 +427,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log('DEBUG: Dev mode override: payment not required, active subscription forced.');
       }
 
+      console.log('AuthStore Init: Final state before setting:');
+      console.log('  isAuthenticated:', true); // Should be true if user object exists
+      console.log('  isAdmin:', isAdminRole);
+      console.log('  hasActiveSubscription:', hasActiveSubscription);
+      console.log('  isTrialExpired:', isTrialExpired);
+      console.log('  requiresPayment:', requiresPayment);
+      console.log('  needsPaymentSetup:', needsPaymentSetup);
+      console.log('  companyData:', companyData);
+
       set({
         user: userData,
         company: companyData,
         loading: false,
-        isAuthenticated: true,
+        isAuthenticated: true, // Always true if user object is present
         isAdmin: isAdminRole,
         hasActiveSubscription,
         isTrialExpired,
         requiresPayment,
         needsPaymentSetup
       });
+      
+      console.log('AuthStore Init: State set successfully.');
       console.log('=== FINAL AUTH STATE ===', {
         user: userData?.email,
         company: companyData?.name,
