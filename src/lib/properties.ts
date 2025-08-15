@@ -393,25 +393,31 @@ export async function checkPropertyLimit() {
       };
     }
 
-    // Get user's admin data and current property count
-    const [adminResponse, propertiesResponse] = await Promise.all([
-      supabase
-        .from('admin')
-        .select('subscription_tier')
-        .eq('owner_id', user.id)
-        .single(),
-      supabase
-        .from('properties')
-        .select('id', { count: 'exact' })
-        .eq('admin_id', (await supabase.from('admin').select('id').eq('owner_id', user.id).single()).data?.id)
-    ]);
+    // First get admin data
+    const { data: adminData, error: adminError } = await supabase
+      .from('admin')
+      .select('id, subscription_tier')
+      .eq('owner_id', user.id)
+      .single();
 
-    if (adminResponse.error || propertiesResponse.error) {
-      throw new Error('Failed to check property limits');
+    if (adminError || !adminData) {
+      console.error('Admin data error:', adminError);
+      throw new Error('Admin access required to check property limits');
     }
 
-    const tier = adminResponse.data.subscription_tier;
-    const currentCount = propertiesResponse.count || 0;
+    // Then get property count using the valid admin_id
+    const { count, error: countError } = await supabase
+      .from('properties')
+      .select('id', { count: 'exact' })
+      .eq('admin_id', adminData.id);
+
+    if (countError) {
+      console.error('Property count error:', countError);
+      throw new Error('Failed to get property count');
+    }
+
+    const tier = adminData.subscription_tier;
+    const currentCount = count || 0;
 
     // Define tier limits
     const limits = {

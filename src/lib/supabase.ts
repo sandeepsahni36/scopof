@@ -1,280 +1,438 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
+import { Property } from '../types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+// Helper function to map database property to frontend Property type
+function mapDbPropertyToProperty(dbProperty: any): Property {
+  console.log('=== MAPPING DB PROPERTY TO FRONTEND ===');
+  console.log('Input dbProperty:', dbProperty);
+  console.log('created_at value:', dbProperty.created_at);
+  console.log('updated_at value:', dbProperty.updated_at);
+  
+  const mapped = {
+    id: dbProperty.id,
+    companyId: dbProperty.admin_id,
+    name: dbProperty.name,
+    address: dbProperty.address,
+    type: dbProperty.type,
+    bedrooms: dbProperty.bedrooms,
+    bathrooms: dbProperty.bathrooms,
+    notes: dbProperty.notes,
+    createdAt: dbProperty.created_at,
+    updatedAt: dbProperty.updated_at,
+  };
+  
+  console.log('Mapped property:', mapped);
+  console.log('=== END MAPPING ===');
+  
+  return mapped;
 }
 
-// Get the current site URL for redirects
-const getSiteUrl = () => {
-  // In development, use the current window's origin.
-  // This ensures that PKCE flow works correctly during local development.
-  if (import.meta.env.DEV) {
-    return window.location.origin;
-  }
-  // For production builds, use the hardcoded production URL.
-  // In production, window.location.origin will already be 'https://app.scopostay.com'.
-  return 'https://app.scopostay.com';
-};
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
+// Mock data for dev mode
+const MOCK_PROPERTIES: Property[] = [
+  {
+    id: 'mock-property-1',
+    companyId: 'dev-company-id',
+    name: 'Oceanview Apartment 2B',
+    address: '123 Beach Boulevard, Miami, FL 33139',
+    type: 'apartment',
+    bedrooms: '2',
+    bathrooms: '2',
+    notes: 'Beautiful oceanfront property with stunning views',
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   },
-});
+  {
+    id: 'mock-property-2',
+    companyId: 'dev-company-id',
+    name: 'Downtown Loft 5A',
+    address: '456 Main Street, Downtown, FL 33101',
+    type: 'condo',
+    bedrooms: '1',
+    bathrooms: '1',
+    notes: 'Modern loft in the heart of downtown',
+    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'mock-property-3',
+    companyId: 'dev-company-id',
+    name: 'Mountain View Villa',
+    address: '789 Highland Drive, Mountain View, FL 33456',
+    type: 'villa',
+    bedrooms: '4',
+    bathrooms: '3',
+    notes: 'Luxury villa with mountain views and private pool',
+    createdAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
 
-// Helper function to check if user session is valid
-export async function validateUserSession() {
+let mockPropertiesState = [...MOCK_PROPERTIES];
+
+export async function getProperties(searchTerm?: string, filters?: {
+  type?: string;
+  bedrooms?: string;
+  bathrooms?: string;
+}) {
   try {
-    // Check if dev mode is enabled
-    if (devModeEnabled()) {
-      console.log('Dev mode enabled - returning mock user');
-      return {
-        id: 'dev-user-id',
-        email: 'dev@example.com',
-        created_at: new Date().toISOString(),
-      };
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
     }
 
-    console.log('=== VALIDATE USER SESSION START ===');
-    const { data: { user }, error } = await supabase.auth.getUser();
-    console.log('validateUserSession result:', {
-      hasUser: !!user,
-      userId: user?.id,
-      userEmail: user?.email,
-      error: error?.message
-    });
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Returning mock properties');
+      let filteredProperties = [...mockPropertiesState];
+
+      // Apply search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        filteredProperties = filteredProperties.filter(property =>
+          property.name.toLowerCase().includes(searchLower) ||
+          property.address.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Apply type filter
+      if (filters?.type && filters.type !== 'all') {
+        filteredProperties = filteredProperties.filter(property => property.type === filters.type);
+      }
+
+      // Apply bedrooms filter
+      if (filters?.bedrooms && filters.bedrooms !== 'all') {
+        filteredProperties = filteredProperties.filter(property => property.bedrooms === filters.bedrooms);
+      }
+
+      // Apply bathrooms filter
+      if (filters?.bathrooms && filters.bathrooms !== 'all') {
+        filteredProperties = filteredProperties.filter(property => property.bathrooms === filters.bathrooms);
+      }
+
+      return filteredProperties;
+    }
+
+    let query = supabase
+      .from('properties')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // Apply search filter
+    if (searchTerm) {
+      query = query.or(`name.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%`);
+    }
+
+    // Apply type filter
+    if (filters?.type && filters.type !== 'all') {
+      query = query.eq('type', filters.type);
+    }
+
+    // Apply bedrooms filter
+    if (filters?.bedrooms && filters.bedrooms !== 'all') {
+      query = query.eq('bedrooms', filters.bedrooms);
+    }
+
+    // Apply bathrooms filter
+    if (filters?.bathrooms && filters.bathrooms !== 'all') {
+      query = query.eq('bathrooms', filters.bathrooms);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return null;
+      }
+      throw error;
+    }
+
+    return data?.map(mapDbPropertyToProperty) || [];
+  } catch (error: any) {
+    console.error('Error fetching properties:', error);
     
-    if (error || !user) {
-      console.warn('Invalid user session:', error?.message);
-      console.log('=== VALIDATE USER SESSION FAILED ===');
-      await handleAuthError(error || new Error('User session is invalid. Please sign in again.'));
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
       return null;
     }
-    console.log('=== VALIDATE USER SESSION SUCCESS ===');
-    return user;
-  } catch (error) {
-    console.error('Error validating user session:', error);
-    console.log('=== VALIDATE USER SESSION ERROR ===');
-    await handleAuthError(error);
-    return null;
-  }
-}
-
-// Helper function to handle authentication errors and redirect
-export async function handleAuthError(error: any) {
-  console.error('Authentication error:', error);
-  
-  // In dev mode, don't redirect or sign out
-  if (devModeEnabled()) {
-    console.warn('Dev mode: Skipping auth error handling');
-    return;
-  }
-  
-  // Clear any invalid session
-  await supabase.auth.signOut();
-  
-  // Redirect to login with error message
-  const errorMessage = encodeURIComponent(
-    error?.message || 'Authentication session expired. Please sign in again.'
-  );
-  window.location.href = `/login?error=${errorMessage}`;
-}
-
-export async function signUp(email: string, password: string, metadata?: { full_name?: string; company_name?: string }) {
-  try {
-    // Use getSiteUrl() to ensure consistent production URL for email redirects
-    const redirectUrl = `${getSiteUrl()}/auth/callback`;
-    console.log('SignUp: Using redirect URL:', redirectUrl);
     
-    // Create the auth user with metadata included
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: metadata?.full_name,
-          company_name: metadata?.company_name,
-          registration_type: metadata?.registration_type,
-        },
-      },
-    });
-
-    if (signUpError) {
-      console.error('Signup error:', signUpError);
-      throw signUpError;
-    }
-
-    if (!signUpData.user) {
-      throw new Error('No user data returned from signup');
-    }
-
-    return { data: signUpData, error: null };
-  } catch (error) {
-    console.error('Signup process error:', error);
-    return { 
-      data: null, 
-      error: error instanceof Error ? error : new Error('An unexpected error occurred') 
-    };
+    throw error;
   }
 }
 
-export async function signIn(email: string, password: string) {
-  console.log('=== SUPABASE SIGNIN START ===');
-  console.log('Signing in with email:', email);
-  
-  const result = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  
-  console.log('SignIn result from Supabase:', {
-    hasError: !!result.error,
-    errorMessage: result.error?.message,
-    errorCode: result.error?.code,
-    hasData: !!result.data,
-    hasUser: !!result.data?.user,
-    hasSession: !!result.data?.session,
-    userEmail: result.data?.user?.email,
-    userId: result.data?.user?.id,
-    sessionExpiresAt: result.data?.session?.expires_at,
-    sessionAccessToken: result.data?.session?.access_token ? 'Present' : 'Missing',
-    sessionRefreshToken: result.data?.session?.refresh_token ? 'Present' : 'Missing'
-  });
-  
-  // Check if session was persisted
-  if (result.data?.session) {
-    console.log('Session returned from signIn, checking persistence...');
-    setTimeout(() => {
-      const { data: { session } } = supabase.auth.getSession();
-      console.log('Session check after signIn:', {
-        hasSession: !!session,
-        userEmail: session?.user?.email,
-        expiresAt: session?.expires_at
-      });
-    }, 100);
-  }
-  
-  console.log('=== SUPABASE SIGNIN END ===');
-  return result;
-}
-
-export async function signOut() {
-  return supabase.auth.signOut();
-}
-
-export async function resetPassword(email: string) {
-  return supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${getSiteUrl()}/reset-password`,
-  });
-}
-
-export async function updatePassword(newPassword: string) {
-  return supabase.auth.updateUser({
-    password: newPassword,
-  });
-}
-
-export async function updateEmail(newEmail: string) {
-  return supabase.auth.updateUser({
-    email: newEmail,
-  }, {
-    emailRedirectTo: `${getSiteUrl()}/auth/callback?type=emailChange`,
-  });
-}
-
-export async function getCurrentUser() {
-  return supabase.auth.getUser();
-}
-
-export async function resendConfirmationEmail(email: string) {
-  // Use getSiteUrl() to ensure consistent production URL for email redirects
-  const redirectUrl = `${getSiteUrl()}/auth/callback`;
-  console.log('ResendConfirmation: Using redirect URL:', redirectUrl);
-  
-  return supabase.auth.resend({
-    type: 'signup',
-    email,
-    options: {
-      emailRedirectTo: redirectUrl,
-    },
-  });
-}
-
-// Development mode function to bypass authentication
-export function devModeEnabled() {
-  return import.meta.env.VITE_DEV_MODE === 'true';
-}
-
-export async function createUserProfileAndAdmin(
-  user_id: string,
-  email: string,
-  full_name: string,
-  company_name: string,
-  registration_type: string = 'trial'
-) {
+export async function getProperty(id: string) {
   try {
-    // Start a transaction by disabling realtime
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert([{ 
-        id: user_id, 
-        email, 
-        full_name 
-      }], { 
-        onConflict: 'id'
-      });
-
-    if (profileError) {
-      throw profileError;
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
     }
 
-    // Determine initial subscription status based on registration type
-    const initialSubscriptionStatus = registration_type === 'no_trial' ? 'not_started' : 'trialing';
-    const trialStartedAt = registration_type === 'no_trial' ? null : new Date().toISOString();
-    const trialEndsAt = registration_type === 'no_trial' ? null : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Returning mock property for ID:', id);
+      const property = mockPropertiesState.find(p => p.id === id);
+      if (!property) {
+        throw new Error('Property not found');
+      }
+      return property;
+    }
 
-    // Create admin record
+    const { data, error } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return null;
+      }
+      throw error;
+    }
+
+    return mapDbPropertyToProperty(data);
+  } catch (error: any) {
+    console.error('Error fetching property:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
+}
+
+export async function createProperty(propertyData: Omit<Property, 'id' | 'createdAt' | 'updatedAt'>) {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Creating mock property');
+      const newProperty: Property = {
+        id: `mock-property-${Date.now()}`,
+        companyId: 'dev-company-id',
+        name: propertyData.name,
+        address: propertyData.address,
+        type: propertyData.type,
+        bedrooms: propertyData.bedrooms,
+        bathrooms: propertyData.bathrooms,
+        notes: propertyData.notes,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      mockPropertiesState.push(newProperty);
+      return newProperty;
+    }
+
+    // Get user's admin ID
     const { data: adminData, error: adminError } = await supabase
       .from('admin')
-      .insert([{ 
-        owner_id: user_id,
-        billing_manager_id: user_id,
-        company_name,
-        subscription_tier: 'starter',
-        subscription_status: initialSubscriptionStatus,
-        trial_started_at: trialStartedAt,
-        trial_ends_at: trialEndsAt
+      .select('id')
+      .eq('owner_id', user.id)
+      .single();
+
+    if (adminError || !adminData) {
+      throw new Error('Admin access required to create properties');
+    }
+
+    const { data, error } = await supabase
+      .from('properties')
+      .insert([{
+        admin_id: adminData.id,
+        name: propertyData.name,
+        address: propertyData.address,
+        type: propertyData.type,
+        bedrooms: propertyData.bedrooms,
+        bathrooms: propertyData.bathrooms,
+        notes: propertyData.notes,
       }])
       .select()
       .single();
 
-    if (adminError) {
-      throw adminError;
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return null;
+      }
+      throw error;
     }
 
-    // Create team member record
-    const { error: teamMemberError } = await supabase
-      .from('team_members')
-      .insert([{ 
-        admin_id: adminData.id, 
-        profile_id: user_id, 
-        role: 'owner' 
-      }]);
-
-    if (teamMemberError) {
-      throw teamMemberError;
-    }
-
-    console.log('Successfully created user profile, admin, and team member records');
+    return data ? mapDbPropertyToProperty(data) : null;
   } catch (error: any) {
-    console.error('Error creating user records:', error);
-    throw new Error(`Failed to create user records: ${error.message}`);
+    console.error('Error creating property:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
+}
+
+export async function updateProperty(id: string, propertyData: Partial<Omit<Property, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>>) {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Updating mock property:', id);
+      const propertyIndex = mockPropertiesState.findIndex(p => p.id === id);
+      if (propertyIndex === -1) {
+        throw new Error('Property not found');
+      }
+      
+      const updatedProperty = {
+        ...mockPropertiesState[propertyIndex],
+        ...propertyData,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      mockPropertiesState[propertyIndex] = updatedProperty;
+      return updatedProperty;
+    }
+
+    const { data, error } = await supabase
+      .from('properties')
+      .update(propertyData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return null;
+      }
+      throw error;
+    }
+
+    return mapDbPropertyToProperty(data);
+  } catch (error: any) {
+    console.error('Error updating property:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
+}
+
+export async function deleteProperty(id: string) {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Deleting mock property:', id);
+      const propertyIndex = mockPropertiesState.findIndex(p => p.id === id);
+      if (propertyIndex === -1) {
+        throw new Error('Property not found');
+      }
+      
+      mockPropertiesState.splice(propertyIndex, 1);
+      return true;
+    }
+
+    const { error } = await supabase
+      .from('properties')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return false;
+      }
+      throw error;
+    }
+
+    return true;
+  } catch (error: any) {
+    console.error('Error deleting property:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return false;
+    }
+    
+    throw error;
+  }
+}
+
+export async function checkPropertyLimit() {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Returning mock property limits');
+      return {
+        currentCount: mockPropertiesState.length,
+        limit: 45, // Professional tier limit for dev mode
+        canCreate: mockPropertiesState.length < 45,
+        tier: 'professional'
+      };
+    }
+
+        .select('subscription_tier')
+        .eq('owner_id', user.id)
+        .single(),
+      supabase
+        .from('properties')
+        .select('id', { count: 'exact' })
+        .eq('admin_id', (await supabase.from('admin').select('id').eq('owner_id', user.id).single()).data?.id)
+    ]);
+
+    if (adminResponse.error || propertiesResponse.error) {
+      throw new Error('Failed to check property limits');
+    }
+
+    const tier = adminResponse.data.subscription_tier;
+    const currentCount = propertiesResponse.count || 0;
+
+    // Define tier limits
+    const limits = {
+      starter: 10,
+      professional: 45,
+      enterprise: Infinity
+    };
+
+    const limit = limits[tier as keyof typeof limits] || 10;
+    const canCreate = currentCount < limit;
+
+    return {
+      currentCount,
+      limit,
+      canCreate,
+      tier
+    };
+  } catch (error: any) {
+    console.error('Error checking property limit:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
   }
 }
