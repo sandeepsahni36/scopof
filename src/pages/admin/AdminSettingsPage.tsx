@@ -441,6 +441,19 @@ const AdminSettingsPage = () => {
                   })}
                 />
 
+                {/* Company Email (Owner's Email) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Company Email (Owner)
+                  </label>
+                  <Input
+                    type="email"
+                    value={user?.email || ''} // Display the owner's email
+                    readOnly={true} // Make it read-only
+                    className="bg-gray-100 cursor-not-allowed" // Style as read-only
+                  />
+                </div>
+
                 {/* Company Logo */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
