@@ -221,12 +221,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       console.log("AuthStore Init: Admin status fetched:", adminStatus);
-      const isAdmin = adminStatus?.is_admin || false;
       
       // Fix isAdmin calculation - check for owner or admin role
       const isAdminRole = adminStatus?.role === 'owner' || adminStatus?.role === 'admin';
       console.log("User is admin:", isAdminRole, "Role:", adminStatus?.role);
       console.log("AuthStore Init: Is Admin Role calculated as:", isAdminRole);
+      
+      // Additional debugging for admin status
+      console.log("AuthStore Init: Full admin status object:", {
+        profile_id: adminStatus?.profile_id,
+        admin_id: adminStatus?.admin_id,
+        role: adminStatus?.role,
+        is_owner: adminStatus?.is_owner,
+        subscription_status: adminStatus?.subscription_status,
+        customer_id: adminStatus?.customer_id,
+        has_active_subscription: adminStatus?.has_active_subscription
+      });
 
       // Transform data to match our types
       const userData: User = {

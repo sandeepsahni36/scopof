@@ -41,15 +41,26 @@ export async function validateUserSession() {
       };
     }
 
+    console.log('=== VALIDATE USER SESSION START ===');
     const { data: { user }, error } = await supabase.auth.getUser();
+    console.log('validateUserSession result:', {
+      hasUser: !!user,
+      userId: user?.id,
+      userEmail: user?.email,
+      error: error?.message
+    });
+    
     if (error || !user) {
       console.warn('Invalid user session:', error?.message);
+      console.log('=== VALIDATE USER SESSION FAILED ===');
       await handleAuthError(error || new Error('User session is invalid. Please sign in again.'));
       return null;
     }
+    console.log('=== VALIDATE USER SESSION SUCCESS ===');
     return user;
   } catch (error) {
     console.error('Error validating user session:', error);
+    console.log('=== VALIDATE USER SESSION ERROR ===');
     await handleAuthError(error);
     return null;
   }
