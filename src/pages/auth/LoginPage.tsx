@@ -32,9 +32,50 @@ const LoginPage = () => {
     setLoading(true);
     
     try {
+      console.log('=== LOGIN PROCESS START ===');
+      console.log('Attempting login for email:', data.email);
+      
+      // Check localStorage before login
+      const authKeysBefore = Object.keys(localStorage).filter(key => key.startsWith('supabase.auth'));
+      console.log('Auth keys in localStorage BEFORE login:', authKeysBefore);
+      
       const { error, data: authData } = await signIn(data.email, data.password);
       
+      console.log('SignIn response:', {
+        hasError: !!error,
+        errorMessage: error?.message,
+        hasAuthData: !!authData,
+        hasUser: !!authData?.user,
+        hasSession: !!authData?.session,
+        userEmail: authData?.user?.email,
+        sessionExpiresAt: authData?.session?.expires_at
+      });
+      
+      // Check localStorage after login
+      const authKeysAfter = Object.keys(localStorage).filter(key => key.startsWith('supabase.auth'));
+      console.log('Auth keys in localStorage AFTER login:', authKeysAfter);
+      
+      // Check what's actually stored
+      authKeysAfter.forEach(key => {
+        try {
+          const value = localStorage.getItem(key);
+          if (value) {
+            const parsed = JSON.parse(value);
+            console.log(`LocalStorage ${key} after login:`, {
+              hasAccessToken: !!parsed.access_token,
+              hasRefreshToken: !!parsed.refresh_token,
+              hasUser: !!parsed.user,
+              userEmail: parsed.user?.email,
+              expiresAt: parsed.expires_at
+            });
+          }
+        } catch (e) {
+          console.log(`LocalStorage ${key}: Could not parse after login`);
+        }
+      });
+      
       if (error) {
+        console.log('Login error occurred:', error.message);
         if (error.message.includes('Email not confirmed')) {
           setNeedsConfirmation(true);
           toast.error('Please confirm your email before logging in.');
@@ -52,11 +93,16 @@ const LoginPage = () => {
         return;
       }
       
+      console.log('Login successful, calling initialize...');
       await initialize();
+      console.log('Initialize completed, showing success toast...');
       toast.success('Logged in successfully');
+      console.log('Navigating to dashboard...');
       navigate('/dashboard');
+      console.log('=== LOGIN PROCESS END ===');
     } catch (error) {
       console.error('Login error:', error);
+      console.log('=== LOGIN PROCESS ERROR ===', error);
       toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);

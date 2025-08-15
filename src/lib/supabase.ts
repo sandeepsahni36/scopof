@@ -115,10 +115,43 @@ export async function signUp(email: string, password: string, metadata?: { full_
 }
 
 export async function signIn(email: string, password: string) {
-  return supabase.auth.signInWithPassword({
+  console.log('=== SUPABASE SIGNIN START ===');
+  console.log('Signing in with email:', email);
+  
+  const result = await supabase.auth.signInWithPassword({
     email,
     password,
   });
+  
+  console.log('SignIn result from Supabase:', {
+    hasError: !!result.error,
+    errorMessage: result.error?.message,
+    errorCode: result.error?.code,
+    hasData: !!result.data,
+    hasUser: !!result.data?.user,
+    hasSession: !!result.data?.session,
+    userEmail: result.data?.user?.email,
+    userId: result.data?.user?.id,
+    sessionExpiresAt: result.data?.session?.expires_at,
+    sessionAccessToken: result.data?.session?.access_token ? 'Present' : 'Missing',
+    sessionRefreshToken: result.data?.session?.refresh_token ? 'Present' : 'Missing'
+  });
+  
+  // Check if session was persisted
+  if (result.data?.session) {
+    console.log('Session returned from signIn, checking persistence...');
+    setTimeout(() => {
+      const { data: { session } } = supabase.auth.getSession();
+      console.log('Session check after signIn:', {
+        hasSession: !!session,
+        userEmail: session?.user?.email,
+        expiresAt: session?.expires_at
+      });
+    }, 100);
+  }
+  
+  console.log('=== SUPABASE SIGNIN END ===');
+  return result;
 }
 
 export async function signOut() {
