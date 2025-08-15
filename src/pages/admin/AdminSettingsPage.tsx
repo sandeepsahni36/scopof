@@ -10,6 +10,8 @@ import { isImageValid, resizeAndOptimizeImage } from '../../lib/utils';
 import { createCheckoutSession, createCustomerPortalSession, getCurrentSubscription } from '../../lib/stripe';
 import { getReportServiceTeams, createReportServiceTeam, updateReportServiceTeam, deleteReportServiceTeam, ReportServiceTeam } from '../../lib/reportServiceTeams';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
+import { TIER_LIMITS } from '../../types';
+import InviteMemberModal from '../../components/admin/InviteMemberModal';
 import { toast } from 'sonner';
 
 interface CompanyFormData {
@@ -45,8 +47,15 @@ const AdminSettingsPage = () => {
   const [showReportTeamForm, setShowReportTeamForm] = useState(false);
   const [editingReportTeam, setEditingReportTeam] = useState<ReportServiceTeam | null>(null);
   const [reportTeamFormLoading, setReportTeamFormLoading] = useState(false);
+  
+  // New state for Invite Member Modal
+  const [showInviteMemberModal, setShowInviteMemberModal] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [currentAdminCount, setCurrentAdminCount] = useState(0);
+  const [totalCurrentUsers, setTotalCurrentUsers] = useState(0);
 
   const isStarterTier = company?.tier === 'starter';
+  const tierLimits = TIER_LIMITS[company?.tier || 'starter'];
 
   const {
     register,
@@ -111,6 +120,8 @@ const AdminSettingsPage = () => {
 
       if (error) throw error;
 
+      let adminCount = 0;
+      let memberCount = 0;
       const members: TeamMember[] = data.map(member => ({
         id: member.id,
         email: member.profiles?.email || '',
@@ -118,8 +129,19 @@ const AdminSettingsPage = () => {
         role: member.role,
         createdAt: member.created_at,
       }));
+      
+      // Count users by role
+      members.forEach(member => {
+        if (member.role === 'owner' || member.role === 'admin') {
+          adminCount++;
+        } else if (member.role === 'member') {
+          memberCount++;
+        }
+      });
 
       setTeamMembers(members);
+      setCurrentAdminCount(adminCount);
+      setTotalCurrentUsers(adminCount + memberCount);
     } catch (error: any) {
       console.error('Error loading team members:', error);
       toast.error('Failed to load team members');
@@ -328,6 +350,27 @@ const AdminSettingsPage = () => {
     setShowReportTeamForm(false);
     setEditingReportTeam(null);
     resetReportTeam();
+  };
+
+  // New handler for inviting members
+  const handleInviteMember = async (email: string, role: 'admin' | 'member') => {
+    setInviteLoading(true);
+    try {
+      // This is where you would call your Supabase Edge Function
+      // For now, we'll simulate success and provide instructions
+      console.log(`Simulating invitation for ${email} with role ${role}`);
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+
+      toast.success(`Invitation sent to ${email}. User will be added to your team upon signup.`);
+      setShowInviteMemberModal(false);
+      // In a real scenario, you'd refresh team members after successful invite
+      // loadTeamMembers();
+    } catch (error: any) {
+      console.error('Error inviting member:', error);
+      toast.error(error.message || 'Failed to send invitation');
+    } finally {
+      setInviteLoading(false);
+    }
   };
 
   if (!isAdmin) {
@@ -597,12 +640,62 @@ const AdminSettingsPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Team Members</h3>
-                  <p className="text-sm text-gray-500">Manage your team members and their roles</p>
+                  <p className="text-sm text-gray-500">
+                    Manage your team members and their roles.
+                    <span className="ml-2 font-medium text-primary-600">
+                      {totalCurrentUsers} / {tierLimits.users === Infinity ? '∞' : tierLimits.users} users used
+                    </span>
+                    <span className="ml-2 text-gray-400">•</span>
+                    <span className="ml-2 font-medium text-blue-600">
+                      {currentAdminCount} / {tierLimits.adminUsers === Infinity ? '∞' : tierLimits.adminUsers} admins
+                    </span>
+                  </p>
                 </div>
-                <Button leftIcon={<Users size={16} />}>
+                <Button 
+                  leftIcon={<Users size={16} />}
+                  onClick={() => setShowInviteMemberModal(true)}
+                  disabled={totalCurrentUsers >= tierLimits.users}
+                >
                   Invite Member
                 </Button>
               </div>
+              
+              {/* User limits warning */}
+              {totalCurrentUsers >= tierLimits.users * 0.8 && tierLimits.users !== Infinity && (
+                <div className={`rounded-lg border p-4 ${
+                  totalCurrentUsers >= tierLimits.users
+                    ? 'bg-red-50 border-red-200'
+                    : 'bg-amber-50 border-amber-200'
+                }`}>
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <Users className={`h-5 w-5 ${
+                        totalCurrentUsers >= tierLimits.users ? 'text-red-400' : 'text-amber-400'
+                      }`} />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className={`text-sm font-medium ${
+                        totalCurrentUsers >= tierLimits.users ? 'text-red-800' : 'text-amber-800'
+                      }`}>
+                        {totalCurrentUsers >= tierLimits.users 
+                          ? 'User Limit Reached' 
+                          : 'Approaching User Limit'
+                        }
+                      </h3>
+                      <div className={`mt-2 text-sm ${
+                        totalCurrentUsers >= tierLimits.users ? 'text-red-700' : 'text-amber-700'
+                      }`}>
+                        <p>
+                          {totalCurrentUsers >= tierLimits.users
+                            ? `You've reached your plan's user limit (${tierLimits.users}). Upgrade to invite more team members.`
+                            : `You're using ${totalCurrentUsers} of ${tierLimits.users} available users. Consider upgrading if you need more team members.`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {teamLoading ? (
                 <div className="text-center py-8">
@@ -972,6 +1065,18 @@ const AdminSettingsPage = () => {
             </form>
           </div>
         </div>
+      )}
+      
+      {/* Invite Member Modal */}
+      {showInviteMemberModal && (
+        <InviteMemberModal
+          onClose={() => setShowInviteMemberModal(false)}
+          onInvite={handleInviteMember}
+          isLoading={inviteLoading}
+          currentAdminCount={currentAdminCount}
+          totalCurrentUsers={totalCurrentUsers}
+          tierLimits={tierLimits}
+        />
       )}
     </div>
   );

@@ -10,7 +10,7 @@ export const STRIPE_PRODUCTS = {
     features: [
       'Unlimited properties',
       'Unlimited storage',
-      'Unlimited users',
+      'Up to 15 users (5 admins + 10 members)',
       'Enterprise-grade AI detection',
       'Team collaboration tools',
       'API access',
@@ -28,7 +28,7 @@ export const STRIPE_PRODUCTS = {
     features: [
       'Up to 45 properties',
       '5 GB Storage',
-      'Up to 3 users',
+      'Up to 5 users (2 admins + 3 members)',
       'Advanced AI damage detection',
       'Custom inspection templates',
       'Branded PDF reports',
@@ -47,7 +47,7 @@ export const STRIPE_PRODUCTS = {
     features: [
       'Up to 10 properties',
       '2 GB Storage',
-      'Up to 1 user',
+      'Up to 2 users (1 admin + 1 member)',
       'Basic AI damage detection',
       'Standard inspection templates',
       'PDF report generation',
