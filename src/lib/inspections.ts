@@ -240,7 +240,443 @@ export async function getInspectionDetails(inspectionId: string): Promise<{
           template_items (
             id,
             template_id,
-           template_id,
+            type,
+            label,
+            required,
+            options,
+            report_enabled
+          )
+        `)
+        .eq('inspection_id', inspectionId)
+        .order('order_index'),
+      // NEW: Fetch the checklist templates associated with this inspection
+      supabase
+        .from('property_checklists')
+        .select(`
+          property_checklist_templates (
+            template_id,
+            order_index,
+            templates (
+              id,
+              name,
+              description
+            )
+          )
+        `)
+        .eq('id', inspectionResponse.data.property_checklist_id) // Use the checklist ID from the inspection
+        .single()
+    ]);
+
+    if (inspectionResponse.error) {
+      if (inspectionResponse.error.message?.includes('user_not_found') || inspectionResponse.error.message?.includes('JWT')) {
+        await handleAuthError(inspectionResponse.error);
+        return null;
+      }
+      throw inspectionResponse.error;
+    }
+
+    if (itemsResponse.error) {
+      if (itemsResponse.error.message?.includes('user_not_found') || itemsResponse.error.message?.includes('JWT')) {
+        await handleAuthError(itemsResponse.error);
+        return null;
+      }
+      throw itemsResponse.error;
+    }
+
+    if (checklistResponse.error) {
+      console.error('Error fetching checklist templates:', checklistResponse.error);
+      // Do not throw, as inspection items might still be valid
+    }
+
+    return {
+      inspection: inspectionResponse.data,
+      items: itemsResponse.data.map(item => ({
+        ...item,
+        templateItem: item.template_items
+      })),
+      checklistTemplates: checklistResponse.data?.property_checklist_templates || []
+    };
+  } catch (error: any) {
+    console.error('Error fetching inspection details:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
+}
+
+export async function updateInspectionItem(
+  inspectionItemId: string,
+  value: any,
+  notes?: string,
+  photoUrls?: string[],
+  markedForReport?: boolean,
+  reportRecipientId?: string
+): Promise<InspectionItem | null> {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Updating mock inspection item:', inspectionItemId);
+      const itemIndex = mockInspectionItemsState.findIndex(item => item.id === inspectionItemId);
+      if (itemIndex === -1) {
+        throw new Error('Inspection item not found');
+      }
+      
+      const updatedItem = {
+        ...mockInspectionItemsState[itemIndex],
+        value,
+        notes,
+        photoUrls,
+        markedForReport,
+        reportRecipientId,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      mockInspectionItemsState[itemIndex] = updatedItem;
+      return updatedItem;
+    }
+
+    const updateData: any = { value };
+    if (notes !== undefined) updateData.notes = notes;
+    if (photoUrls !== undefined) updateData.photo_urls = photoUrls;
+    if (markedForReport !== undefined) updateData.marked_for_report = markedForReport;
+    if (reportRecipientId !== undefined) updateData.report_recipient_id = reportRecipientId;
+
+    const { data, error } = await supabase
+      .from('inspection_items')
+      .update(updateData)
+      .eq('id', inspectionItemId)
+      .select('id, inspection_id, template_item_id, value, notes, photo_urls, marked_for_report, report_recipient_id, order_index, created_at, updated_at');
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return null;
+      }
+      throw error;
+    }
+
+    return data?.[0] || null;
+  } catch (error: any) {
+    console.error('Error updating inspection item:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
+}
+
+export async function updateInspectionStatus(
+  inspectionId: string,
+  status: InspectionStatus,
+  primaryContactSignatureUrl?: string,
+  inspectorSignatureImageUrl?: string,
+  endTime?: string,
+  durationSeconds?: number
+): Promise<Inspection | null> {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Updating mock inspection status:', inspectionId);
+      const inspectionIndex = mockInspectionsState.findIndex(i => i.id === inspectionId);
+      if (inspectionIndex === -1) {
+        throw new Error('Inspection not found');
+      }
+      
+      const updatedInspection = {
+        ...mockInspectionsState[inspectionIndex],
+        status,
+        primaryContactSignatureUrl,
+        inspectorSignatureImageUrl,
+        endTime,
+        durationSeconds,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      mockInspectionsState[inspectionIndex] = updatedInspection;
+      return updatedInspection;
+    }
+
+    const updateData: any = { status };
+    if (primaryContactSignatureUrl !== undefined) updateData.primary_contact_signature_url = primaryContactSignatureUrl;
+    if (inspectorSignatureImageUrl !== undefined) updateData.inspector_signature_image_url = inspectorSignatureImageUrl;
+    if (endTime !== undefined) updateData.end_time = endTime;
+    if (durationSeconds !== undefined) updateData.duration_seconds = durationSeconds;
+
+    const { data, error } = await supabase
+      .from('inspections')
+      .update(updateData)
+      .eq('id', inspectionId)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Error updating inspection status:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
+}
+
+export async function uploadInspectionPhoto(
+  file: File,
+  inspectionId: string,
+  itemId: string
+): Promise<string | null> {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Mock photo upload for inspection:', inspectionId);
+      // Return a mock URL
+      return `https://example.com/mock-photo-${Date.now()}.jpeg`;
+    }
+
+    // Optimize image (client-side conversion to JPEG)
+    const { resizeAndOptimizeImage } = await import('../lib/utils');
+    const optimizedFile = await resizeAndOptimizeImage(file, 800, 600, 0.8);
+    
+    // Upload via custom storage API
+    const uploadResult = await uploadFile(optimizedFile, 'photo', inspectionId, itemId);
+    
+    console.log('=== PHOTO UPLOAD RESULT ===');
+    console.log('Upload result:', {
+      fileUrl: uploadResult?.fileUrl,
+      fileKey: uploadResult?.fileKey,
+      metadataId: uploadResult?.metadataId
+    });
+    console.log('=== END PHOTO UPLOAD RESULT ===');
+    
+    if (!uploadResult) {
+      throw new Error('Failed to upload photo');
+    }
+    
+    return uploadResult.fileUrl;
+  } catch (error: any) {
+    console.error('Error uploading inspection photo:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
+}
+
+
+export async function getInspectionsForProperty(propertyId: string): Promise<Inspection[] | null> {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Getting mock inspections for property:', propertyId);
+      return mockInspectionsState.filter(i => i.propertyId === propertyId);
+    }
+
+    const { data, error } = await supabase
+      .from('inspections')
+      .select(`*, inspection_items(id)`) // Select inspection and a minimal indicator of items
+      .eq('property_id', propertyId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return null;
+      }
+      throw error;
+    }
+
+    // Filter the results: show completed OR (in_progress AND has_items)
+    const filteredData = data.filter(inspection => {
+      if (inspection.status === 'completed') {
+        return true;
+      }
+      if (inspection.status === 'in_progress') {
+        // Check if the inspection_items array is not empty (meaning it has saved items)
+        return inspection.inspection_items && inspection.inspection_items.length > 0;
+      }
+      return false; // Don't show other statuses or empty in_progress inspections
+    });
+    return filteredData.map(i => { const { inspection_items, ...rest } = i; return rest; });
+  } catch (error: any) {
+    console.error('Error fetching inspections for property:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
+}
+
+export async function deleteInspection(inspectionId: string): Promise<boolean> {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Deleting mock inspection:', inspectionId);
+      const inspectionIndex = mockInspectionsState.findIndex(i => i.id === inspectionId);
+      if (inspectionIndex === -1) {
+        throw new Error('Inspection not found');
+      }
+      
+      mockInspectionsState.splice(inspectionIndex, 1);
+      mockInspectionItemsState = mockInspectionItemsState.filter(item => item.inspectionId !== inspectionId);
+      return true;
+    }
+
+    // First, get all files associated with this inspection for cleanup
+    const { data: filesToDelete, error: filesError } = await supabase
+      .from('file_metadata')
+      .select('file_key')
+      .eq('inspection_id', inspectionId);
+
+    if (filesError) {
+      console.error('Error fetching files for deletion:', filesError);
+      // Continue with inspection deletion even if file cleanup fails
+    }
+
+    // Clean up files from MinIO storage
+    if (filesToDelete && filesToDelete.length > 0) {
+      const { deleteFile } = await import('./storage');
+      
+      for (const file of filesToDelete) {
+        try {
+          await deleteFile(file.file_key);
+          console.log('Deleted file from storage:', file.file_key);
+        } catch (fileError) {
+          console.error('Error deleting file from storage:', file.file_key, fileError);
+          // Continue with other files even if one fails
+        }
+      }
+    }
+
+    // Delete the inspection (cascade should handle inspection_items and reports)
+    const { error } = await supabase
+      .from('inspections')
+      .delete()
+      .eq('id', inspectionId);
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return false;
+      }
+      throw error;
+    }
+
+    return true;
+  } catch (error: any) {
+    console.error('Error deleting inspection:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return false;
+    }
+    
+    throw error;
+  }
+}
+
+export async function deleteIncompleteInspections(): Promise<{ deleted: number; errors: string[] }> {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Cleaning up mock incomplete inspections');
+      const incompleteCount = mockInspectionsState.filter(i => i.status === 'in_progress').length;
+      mockInspectionsState = mockInspectionsState.filter(i => i.status !== 'in_progress');
+      return { deleted: incompleteCount, errors: [] };
+    }
+
+    // Get all incomplete inspections for this admin
+    const { data: incompleteInspections, error: inspectionsError } = await supabase
+      .from('inspections')
+      .select(`
+        id,
+        properties!inner(admin_id)
+      `)
+      .eq('status', 'in_progress')
+      .eq('properties.admin_id', (await supabase.from('admin').select('id').eq('owner_id', user.id).single()).data?.id);
+
+    if (inspectionsError) {
+      throw inspectionsError;
+    }
+
+    const errors: string[] = [];
+    let deletedCount = 0;
+
+    for (const inspection of incompleteInspections || []) {
+      try {
+        const success = await deleteInspection(inspection.id);
+        if (success) {
+          deletedCount++;
+        }
+      } catch (error: any) {
+        errors.push(`Failed to delete inspection ${inspection.id}: ${error.message}`);
+      }
+    }
+
+    return { deleted: deletedCount, errors };
+  } catch (error: any) {
+    console.error('Error cleaning up incomplete inspections:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return { deleted: 0, errors: ['Authentication failed'] };
+    }
+    
+    throw error;
+  }
+}
             type,
             label,
             required,

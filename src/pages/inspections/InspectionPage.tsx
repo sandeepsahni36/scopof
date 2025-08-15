@@ -18,6 +18,17 @@ interface DisplayStep {
   items: any[];
 }
 
+// Update the type definition for getInspectionDetails return
+interface InspectionDetails {
+  inspection: Inspection;
+  items: InspectionItem[];
+  checklistTemplates: Array<{
+    template_id: string;
+    order_index: number;
+    templates: { id: string; name: string; description: string; };
+  }>;
+}
+
 const InspectionPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -103,7 +114,7 @@ const InspectionPage = () => {
     try {
       setLoading(true);
       const data = await getInspectionDetails(inspectionId);
-      
+
       if (!data) {
         toast.error('Inspection not found');
         navigate('/dashboard');
@@ -120,7 +131,7 @@ const InspectionPage = () => {
       }
 
       // Build display steps from inspection items
-      // Filter out items with invalid UUIDs
+      // Filter out items with invalid UUIDs (should not happen with proper creation)
       const validItems = data.items.filter(item => {
         if (!item.id || !isValidUUID(item.id)) {
           console.warn('Filtering out inspection item with invalid ID:', item.id);
@@ -128,8 +139,8 @@ const InspectionPage = () => {
         }
         return true;
       });
-      
-      const steps = buildDisplaySteps(validItems);
+
+      const steps = buildDisplaySteps(validItems, data.checklistTemplates); // Pass checklistTemplates
       setDisplaySteps(steps);
       
       console.log('Built display steps:', steps);
@@ -142,43 +153,48 @@ const InspectionPage = () => {
     }
   };
 
-  const buildDisplaySteps = (items: any[]): DisplayStep[] => {
-    // Group items by their template to keep related items together
+  const buildDisplaySteps = (inspectionItems: any[], checklistTemplates: any[]): DisplayStep[] => {
     const steps: DisplayStep[] = [];
-    
-    // Group items by template_id from template_items
-    const itemsByTemplate = new Map<string, any[]>();
-    const templateNames = new Map<string, string>();
-    
-    items.forEach(item => {
-      const templateId = item.template_items?.template_id || item.templateItem?.template_id || 'unknown';
-      const templateName = item.template_items?.templates?.name || item.templateItem?.templates?.name || 'General Section';
-      
-      if (!itemsByTemplate.has(templateId)) {
-        itemsByTemplate.set(templateId, []);
-        templateNames.set(templateId, templateName);
+    const itemsByTemplateId = new Map<string, any[]>();
+
+    // Group inspection items by their template_id
+    inspectionItems.forEach(item => {
+      const templateId = item.template_items?.template_id || item.templateItem?.template_id;
+      if (templateId) {
+        if (!itemsByTemplateId.has(templateId)) {
+          itemsByTemplateId.set(templateId, []);
+        }
+        itemsByTemplateId.get(templateId)!.push(item);
       }
-      itemsByTemplate.get(templateId)!.push(item);
     });
-    
-    // Create one step per template to keep dividers with their template
-    itemsByTemplate.forEach((templateItems, templateId) => {
+
+    // Iterate through the checklist templates in their defined order
+    checklistTemplates.sort((a, b) => a.order_index - b.order_index).forEach(clTemplate => {
+      const template = clTemplate.templates;
+      if (template) {
+        const itemsForThisTemplate = itemsByTemplateId.get(template.id) || [];
+        
+        // Add a step for each template in the checklist
       steps.push({
         type: 'items',
-        name: templateNames.get(templateId) || 'General Section',
-        items: templateItems.sort((a, b) => a.order_index - b.order_index)
+          name: template.name,
+          items: itemsForThisTemplate.sort((a, b) => a.order_index - b.order_index)
       });
+      }
     });
-    
-    // If no templates found, create a single step with all items
-    if (steps.length === 0 && items.length > 0) {
+
+    // If there are any inspection items not linked to a checklist template (e.g., due to data inconsistencies),
+    // add them to a 'General Section' at the end.
+    // This is a fallback and ideally should not be needed if data is consistent.
+    const unlinkedItems = inspectionItems.filter(item => !checklistTemplates.some(clt => clt.templates.id === (item.template_items?.template_id || item.templateItem?.template_id)));
+    if (unlinkedItems.length > 0) {
       steps.push({
         type: 'items',
-        name: 'General Section',
-        items: items.sort((a, b) => a.order_index - b.order_index)
+        name: 'General Section (Unlinked Items)',
+        items: unlinkedItems.sort((a, b) => a.order_index - b.order_index)
       });
     }
-    
+
     return steps;
   };
 
