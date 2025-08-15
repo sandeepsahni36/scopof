@@ -226,12 +226,23 @@ export async function getInspectionDetails(inspectionId: string): Promise<{
       return { inspection, items };
     }
 
-    const [inspectionResponse, itemsResponse, checklistResponse] = await Promise.all([
-      supabase
-        .from('inspections')
-        .select('*')
-        .eq('id', inspectionId)
-        .single(),
+    // First fetch the inspection to get the property_checklist_id
+    const inspectionResponse = await supabase
+      .from('inspections')
+      .select('*')
+      .eq('id', inspectionId)
+      .single();
+
+    if (inspectionResponse.error) {
+      if (inspectionResponse.error.message?.includes('user_not_found') || inspectionResponse.error.message?.includes('JWT')) {
+        await handleAuthError(inspectionResponse.error);
+        return null;
+      }
+      throw inspectionResponse.error;
+    }
+
+    // Now fetch items and checklist templates concurrently
+    const [itemsResponse, checklistResponse] = await Promise.all([
       supabase
         .from('inspection_items')
         .select(`
@@ -249,7 +260,7 @@ export async function getInspectionDetails(inspectionId: string): Promise<{
         `)
         .eq('inspection_id', inspectionId)
         .order('order_index'),
-      // NEW: Fetch the checklist templates associated with this inspection
+      // Fetch the checklist templates associated with this inspection
       supabase
         .from('property_checklists')
         .select(`
@@ -263,17 +274,9 @@ export async function getInspectionDetails(inspectionId: string): Promise<{
             )
           )
         `)
-        .eq('id', inspectionResponse.data.property_checklist_id) // Use the checklist ID from the inspection
+        .eq('id', inspectionResponse.data.property_checklist_id)
         .single()
     ]);
-
-    if (inspectionResponse.error) {
-      if (inspectionResponse.error.message?.includes('user_not_found') || inspectionResponse.error.message?.includes('JWT')) {
-        await handleAuthError(inspectionResponse.error);
-        return null;
-      }
-      throw inspectionResponse.error;
-    }
 
     if (itemsResponse.error) {
       if (itemsResponse.error.message?.includes('user_not_found') || itemsResponse.error.message?.includes('JWT')) {
