@@ -42,20 +42,19 @@ export async function validateUserSession() {
     }
 
     console.log('=== VALIDATE USER SESSION START ===');
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    console.log('Session response:', { data: sessionData, error: sessionError });
+    const sessionResult = await supabase.auth.getSession();
+    console.log('Session response:', { data: sessionResult.data, error: sessionResult.error });
     
-    if (sessionError) {
-      console.log('Session error:', sessionError.message);
+    if (sessionResult.error) {
+      console.log('Session error:', sessionResult.error.message);
       return null;
     }
     
-    if (!sessionData) {
+    const session = sessionResult.data?.session;
+    if (!session) {
       console.log('No session data');
       return null;
     }
-    
-    const session = sessionData.session;
     
     const { data: { user }, error } = await supabase.auth.getUser();
     console.log('validateUserSession result:', {
