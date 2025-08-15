@@ -114,14 +114,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             status: refreshError.status,
             code: refreshError.code
           });
-        } else if (refreshData.session) {
+        } else if (refreshData?.session) {
           console.log("Session refreshed successfully");
           console.log("Refreshed session details:", {
-            hasAccessToken: !!refreshData.session.access_token,
-            hasRefreshToken: !!refreshData.session.refresh_token,
-            hasUser: !!refreshData.session.user,
-            userEmail: refreshData.session.user?.email,
-            expiresAt: refreshData.session.expires_at
+            hasAccessToken: !!refreshData.session?.access_token,
+            hasRefreshToken: !!refreshData.session?.refresh_token,
+            hasUser: !!refreshData.session?.user,
+            userEmail: refreshData.session?.user?.email,
+            expiresAt: refreshData.session?.expires_at
           });
         }
       } catch (refreshErr) {
@@ -132,11 +132,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log("=== CHECKING SESSION DIRECTLY ===");
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       console.log("Direct session check:", {
-        hasSession: !!sessionData.session,
-        hasUser: !!sessionData.session?.user,
-        userEmail: sessionData.session?.user?.email,
+        hasSession: !!sessionData?.session,
+        hasUser: !!sessionData?.session?.user,
+        userEmail: sessionData?.session?.user?.email,
         sessionError: sessionError?.message,
-        expiresAt: sessionData.session?.expires_at
+        expiresAt: sessionData?.session?.expires_at
       });
       
       const { data: { user } } = await supabase.auth.getUser();
