@@ -272,7 +272,7 @@ export async function sendInvitationEmail(
     }
 
     // Get Resend API key from environment
-    const resendApiKey = import.meta.env.VITE_RESEND_API_KEY;
+    const resendApiKey = import.meta.env.VITE_RESEND_API_KEY || 're_demo_key_placeholder';
     if (!resendApiKey) {
       throw new Error('Resend API key not configured');
     }
