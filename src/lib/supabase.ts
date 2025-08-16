@@ -115,7 +115,7 @@ export async function signUp(email: string, password: string, metadata?: { full_
         data: {
           full_name: metadata?.full_name,
           company_name: metadata?.company_name,
-          registration_type: metadata?.registration_type,
+          invitation_token: (metadata as any)?.invitation_token,
         },
       },
     });

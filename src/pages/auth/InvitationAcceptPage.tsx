@@ -77,7 +77,7 @@ const InvitationAcceptPage = () => {
         {
           full_name: data.full_name,
           invitation_token: invitation.token, // Include token in metadata for trigger
-        }
+        } as any
       );
 
       if (signUpError) {
