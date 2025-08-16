@@ -9,6 +9,7 @@ import { uploadFile } from '../../lib/storage';
 import { isImageValid, resizeAndOptimizeImage } from '../../lib/utils';
 import { createCheckoutSession, createCustomerPortalSession, getCurrentSubscription } from '../../lib/stripe';
 import { getReportServiceTeams, createReportServiceTeam, updateReportServiceTeam, deleteReportServiceTeam, ReportServiceTeam } from '../../lib/reportServiceTeams';
+import { getInvitations, cancelInvitation } from '../../lib/invitations';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { TIER_LIMITS } from '../../types';
 import InviteMemberModal from '../../components/admin/InviteMemberModal';
@@ -53,6 +54,10 @@ const AdminSettingsPage = () => {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [currentAdminCount, setCurrentAdminCount] = useState(0);
   const [totalCurrentUsers, setTotalCurrentUsers] = useState(0);
+  
+  // State for invitations
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(true);
 
   const isStarterTier = company?.tier === 'starter';
   const tierLimits = TIER_LIMITS[company?.tier || 'starter'];
@@ -95,6 +100,7 @@ const AdminSettingsPage = () => {
   useEffect(() => {
     if (activeTab === 'users') {
       loadTeamMembers();
+      loadInvitations();
     } else if (activeTab === 'subscription') {
       loadSubscriptionData();
     } else if (activeTab === 'report-teams') {
@@ -147,6 +153,36 @@ const AdminSettingsPage = () => {
       toast.error('Failed to load team members');
     } finally {
       setTeamLoading(false);
+    }
+  };
+
+  const loadInvitations = async () => {
+    try {
+      setInvitationsLoading(true);
+      const invitationsData = await getInvitations();
+      setInvitations(invitationsData || []);
+    } catch (error: any) {
+      console.error('Error loading invitations:', error);
+      toast.error('Failed to load invitations');
+    } finally {
+      setInvitationsLoading(false);
+    }
+  };
+
+  const handleCancelInvitation = async (invitation: any) => {
+    if (!window.confirm(`Are you sure you want to cancel the invitation for ${invitation.email}?`)) {
+      return;
+    }
+
+    try {
+      const success = await cancelInvitation(invitation.id);
+      if (success) {
+        toast.success('Invitation cancelled successfully');
+        loadInvitations();
+      }
+    } catch (error: any) {
+      console.error('Error cancelling invitation:', error);
+      toast.error('Failed to cancel invitation');
     }
   };
 
@@ -363,8 +399,7 @@ const AdminSettingsPage = () => {
 
       toast.success(`Invitation sent to ${email}. User will be added to your team upon signup.`);
       setShowInviteMemberModal(false);
-      // In a real scenario, you'd refresh team members after successful invite
-      // loadTeamMembers();
+      loadInvitations();
     } catch (error: any) {
       console.error('Error inviting member:', error);
       toast.error(error.message || 'Failed to send invitation');
