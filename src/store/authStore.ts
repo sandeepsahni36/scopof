@@ -168,10 +168,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Fetch user profile
       console.log("Fetching user profile...");
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+  .from('profiles')
+  .select('*')
+  .eq('id', user.id)
+  .maybeSingle();  // Changed to maybeSingle
 
       if (profileError) {
         console.error("Error fetching profile:", profileError);
