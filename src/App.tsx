@@ -5,6 +5,7 @@ import { useAuthStore } from './store/authStore';
 import AuthCallbackPage from './pages/auth/AuthCallbackPage';
 import StartTrialPage from './pages/auth/StartTrialPage';
 import EmailConfirmationPage from './pages/auth/EmailConfirmationPage';
+import InvitationAcceptPage from './pages/auth/InvitationAcceptPage';
 import SubscriptionRequiredPage from './pages/auth/SubscriptionRequiredPage';
 import AccessRestrictedPage from './pages/auth/AccessRestrictedPage';
 
@@ -159,6 +160,9 @@ function App() {
 
           {/* Add the auth callback route */}
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          
+          {/* Invitation acceptance route */}
+          <Route path="/invite/accept" element={<InvitationAcceptPage />} />
           
           {/* Start inspection route (outside dashboard layout) */}
           <Route 

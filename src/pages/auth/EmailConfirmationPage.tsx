@@ -53,8 +53,9 @@ const EmailConfirmationPage = () => {
           
           <p className="mt-2 text-xs text-center text-gray-500">
             Please verify your email address by following the instructions sent to your email.
-            {registrationType === 'trial' && ' After confirmation, you\'ll be able to start your 14-day free trial.'}
-            {registrationType === 'no_trial' && ' After confirmation, you\'ll be able to choose your plan and get started.'}
+            {isInvitedUser && ' After confirmation, you\'ll be automatically added to your team and can start using scopoStay.'}
+            {!isInvitedUser && registrationType === 'trial' && ' After confirmation, you\'ll be able to start your 14-day free trial.'}
+            {!isInvitedUser && registrationType === 'no_trial' && ' After confirmation, you\'ll be able to choose your plan and get started.'}
           </p>
         </div>
 

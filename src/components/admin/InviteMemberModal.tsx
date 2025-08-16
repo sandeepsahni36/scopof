@@ -52,7 +52,37 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       return;
     }
 
-    await onInvite(data.email, data.role);
+    try {
+      if (!company?.id) {
+        throw new Error('Company information not available');
+      }
+
+      // Create invitation record and get invitation URL
+      const result = await createInvitation(data.email, data.role, company.id);
+      
+      if (!result) {
+        throw new Error('Failed to create invitation');
+      }
+
+      // Send invitation email
+      const emailSent = await sendInvitationEmail(
+        data.email,
+        result.invitationUrl,
+        user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email || 'Team Admin',
+        company.name,
+        data.role
+      );
+
+      if (!emailSent) {
+        throw new Error('Failed to send invitation email');
+      }
+
+      toast.success(`Invitation sent to ${data.email}. They will receive an email with instructions to join your team.`);
+      onClose();
+    } catch (error: any) {
+      console.error('Error sending invitation:', error);
+      toast.error(error.message || 'Failed to send invitation');
+    }
   };
 
   const canInviteAdmin = currentAdminCount < tierLimits.adminUsers;

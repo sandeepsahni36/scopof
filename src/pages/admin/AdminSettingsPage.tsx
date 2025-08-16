@@ -703,7 +703,11 @@ const AdminSettingsPage = () => {
                   <p className="text-gray-600">Loading team members...</p>
                 </div>
               ) : (
-                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="space-y-6">
+                  {/* Team Members Table */}
+                  <div>
+                    <h4 className="text-base font-medium text-gray-900 mb-3">Current Team Members</h4>
+                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
@@ -764,6 +768,86 @@ const AdminSettingsPage = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+                  </div>
+
+                  {/* Pending Invitations */}
+                  <div>
+                    <h4 className="text-base font-medium text-gray-900 mb-3">Pending Invitations</h4>
+                    {invitationsLoading ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600 mx-auto mb-2"></div>
+                        <p className="text-sm text-gray-600">Loading invitations...</p>
+                      </div>
+                    ) : invitations.filter(inv => inv.status === 'pending').length > 0 ? (
+                      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Email
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Role
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Expires
+                              </th>
+                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {invitations.filter(inv => inv.status === 'pending').map((invitation) => (
+                              <tr key={invitation.id} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
+                                      <Mail className="h-4 w-4 text-amber-600" />
+                                    </div>
+                                    <div className="ml-4">
+                                      <div className="text-sm font-medium text-gray-900">
+                                        {invitation.email}
+                                      </div>
+                                      <div className="text-sm text-gray-500">Invitation pending</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    invitation.role === 'admin'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {invitation.role}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {new Date(invitation.expiresAt).toLocaleDateString()}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleCancelInvitation(invitation)}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 bg-gray-50 border border-gray-200 rounded-lg">
+                        <Mail className="mx-auto h-8 w-8 text-gray-400" />
+                        <p className="mt-2 text-sm text-gray-500">No pending invitations</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
