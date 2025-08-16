@@ -4,6 +4,8 @@ import { X, Mail, UserPlus, Users, Crown } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { toast } from 'sonner';
+import { useAuthStore } from '../../store/authStore';
+import { createInvitation, sendInvitationEmail } from '../../lib/invitations';
 
 interface InviteMemberModalProps {
   onClose: () => void;
@@ -27,6 +29,8 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   totalCurrentUsers,
   tierLimits,
 }) => {
+  const { user, company } = useAuthStore();
+
   const {
     register,
     handleSubmit,
