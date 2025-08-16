@@ -90,7 +90,7 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">Invite Team Member</h2>
           <button
@@ -101,7 +101,8 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto">
+          <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
           <Input
             label="Email Address"
             type="email"
@@ -229,14 +230,14 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
             )}
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <div className="flex">
               <div className="flex-shrink-0">
                 <Mail className="h-5 w-5 text-blue-400" />
               </div>
               <div className="ml-3">
-                <h4 className="text-sm font-medium text-blue-800">How it works</h4>
-                <div className="mt-2 text-sm text-blue-700">
+                <h4 className="text-xs font-medium text-blue-800">How it works</h4>
+                <div className="mt-1 text-xs text-blue-700">
                   <p>
                     An invitation email will be sent to the provided address with a secure invitation link. The user will be prompted to create an account with their own password. Once they sign up, they will automatically be added to your team with the selected role.
                   </p>
@@ -244,8 +245,34 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
               </div>
             </div>
           </div>
+          </form>
+        </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+        <div className="flex-shrink-0 flex justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSubmit(onSubmit)}
+            isLoading={isLoading}
+            disabled={
+              isLoading || 
+              (!canInviteMember) || 
+              (!canInviteAdmin && selectedRole === 'admin')
+            }
+            leftIcon={<UserPlus size={16} />}
+          >
+            Send Invitation
+          </Button>
+        </div>
+      </div>
+    </div>
             <Button
               type="button"
               variant="secondary"
