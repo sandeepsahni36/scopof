@@ -1,4 +1,3 @@
-```sql
 -- Drop existing policies to prevent conflicts
 DROP POLICY IF EXISTS admin_owner_access ON public.admin;
 DROP POLICY IF EXISTS admin_postgres_access ON public.admin;
@@ -155,4 +154,3 @@ CREATE OR REPLACE VIEW public.user_admin_status AS
    FROM profiles p
      JOIN team_members tm ON ((p.id = tm.profile_id))
      JOIN admin a ON ((tm.admin_id = a.id));
-```
