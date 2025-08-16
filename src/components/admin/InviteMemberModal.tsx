@@ -273,38 +273,6 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
         </div>
       </div>
     </div>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              isLoading={isLoading}
-              disabled={
-                isLoading || 
-                (!canInviteMember) || 
-                (!canInviteAdmin && selectedRole === 'admin')
-              }
-              leftIcon={<UserPlus size={16} />}
-            >
-              Send Invitation
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 };
 
