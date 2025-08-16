@@ -7,15 +7,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Get the current site URL for redirects
-const getSiteUrl = () => {
+// Helper function to get the current site URL for redirects
+// This function is used for both client-side redirects and server-side email links.
+// For email links, it should always return the production domain.
+export const getSiteUrl = (forEmail: boolean = false) => {
+  if (forEmail) {
+    return 'https://app.scopostay.com';
+  }
   // In development, use the current window's origin.
   // This ensures that PKCE flow works correctly during local development.
   if (import.meta.env.DEV) {
     return window.location.origin;
   }
   // For production builds, use the hardcoded production URL.
-  // In production, window.location.origin will already be 'https://app.scopostay.com'.
   return 'https://app.scopostay.com';
 };
 
@@ -102,8 +106,8 @@ export async function handleAuthError(error: any) {
 
 export async function signUp(email: string, password: string, metadata?: { full_name?: string; company_name?: string }) {
   try {
-    // Use getSiteUrl() to ensure consistent production URL for email redirects
-    const redirectUrl = `${getSiteUrl()}/auth/callback`;
+    // Use getSiteUrl(true) to ensure consistent production URL for email redirects
+    const redirectUrl = `${getSiteUrl(true)}/auth/callback`;
     console.log('SignUp: Using redirect URL:', redirectUrl);
     
     // Create the auth user with metadata included
@@ -185,7 +189,7 @@ export async function signOut() {
 
 export async function resetPassword(email: string) {
   return supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${getSiteUrl()}/reset-password`,
+    redirectTo: `${getSiteUrl(true)}/reset-password`,
   });
 }
 
@@ -199,7 +203,7 @@ export async function updateEmail(newEmail: string) {
   return supabase.auth.updateUser({
     email: newEmail,
   }, {
-    emailRedirectTo: `${getSiteUrl()}/auth/callback?type=emailChange`,
+    emailRedirectTo: `${getSiteUrl(true)}/auth/callback?type=emailChange`,
   });
 }
 
@@ -208,8 +212,8 @@ export async function getCurrentUser() {
 }
 
 export async function resendConfirmationEmail(email: string) {
-  // Use getSiteUrl() to ensure consistent production URL for email redirects
-  const redirectUrl = `${getSiteUrl()}/auth/callback`;
+  // Use getSiteUrl(true) to ensure consistent production URL for email redirects
+  const redirectUrl = `${getSiteUrl(true)}/auth/callback`;
   console.log('ResendConfirmation: Using redirect URL:', redirectUrl);
   
   return supabase.auth.resend({
