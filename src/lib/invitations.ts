@@ -1,6 +1,16 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
 
+// Helper function to get the correct site URL
+const getSiteUrl = () => {
+  // In development, use the current window's origin for testing
+  if (import.meta.env.DEV) {
+    return window.location.origin;
+  }
+  // For production builds, always use the production URL
+  return 'https://app.scopostay.com';
+};
+
 export interface Invitation {
   id: string;
   email: string;
@@ -50,7 +60,7 @@ export async function createInvitation(
       
       mockInvitationsState.push(newInvitation);
       
-      const invitationUrl = `${window.location.origin}/invite/accept?token=${token}`;
+      const invitationUrl = `${getSiteUrl()}/invite/accept?token=${token}`;
       return { invitation: newInvitation, invitationUrl };
     }
 
@@ -94,7 +104,7 @@ export async function createInvitation(
       updatedAt: invitation.updated_at,
     };
 
-    const invitationUrl = `${window.location.origin}/invite/accept?token=${token}`;
+    const invitationUrl = `${getSiteUrl()}/invite/accept?token=${token}`;
 
     return { invitation: invitationData, invitationUrl };
   } catch (error: any) {
