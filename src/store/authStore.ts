@@ -255,99 +255,198 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       let needsPaymentSetup = false;
 
       if (isAdminRole) {
-        // Fetch admin data
-        console.log("Fetching admin data for user:", user.id);
-        const { data: admin, error: adminError } = await supabase
-          .from('admin')
-          .select('*')
-          .eq('owner_id', user.id)
-          .single();
+        // =====================================================================
+        // START OF CHANGED SECTION - ADMIN DATA FETCHING
+        // =====================================================================
+        // Use the admin ID from user_admin_status view
+        const adminId = adminStatus?.admin_id;
+        
+        if (adminId) {
+          console.log("Fetching admin data by ID:", adminId);
+          const { data: admin, error: adminError } = await supabase
+            .from('admin')
+            .select('*')
+            .eq('id', adminId)
+            .single();
 
-        if (adminError) {
-          console.error("Error fetching admin data:", adminError);
-          console.error("Admin data error details:", {
-            message: adminError.message,
-            code: adminError.code,
-            details: adminError.details,
-            hint: adminError.hint
-          });
-        } else {
-          console.log("Admin data fetched:", { 
-            id: admin.id,
-            companyName: admin.company_name,
-            subscriptionStatus: admin.subscription_status,
-            customerId: admin.customer_id
-          });
-        }
-
-        console.log("AuthStore Init: Admin data fetched:", admin);
-
-        if (admin) {
-          // Fetch subscription data if customer_id exists
-          let subscription = null;
-          let subscriptionError = null;
-          
-          if (admin.customer_id) {
-            console.log("Fetching subscription data for customer:", admin.customer_id);
-            const result = await supabase
-              .from('stripe_subscriptions')
-              .select('*')
-              .eq('customer_id', admin.customer_id)
-              .maybeSingle();
+          if (adminError) {
+            console.error("Error fetching admin data:", adminError);
+            console.error("Admin data error details:", {
+              message: adminError.message,
+              code: adminError.code,
+              details: adminError.details,
+              hint: adminError.hint
+            });
+          } else {
+            console.log("Admin data fetched:", { 
+              id: admin.id,
+              companyName: admin.company_name,
+              subscriptionStatus: admin.subscription_status,
+              customerId: admin.customer_id
+            });
             
-            subscription = result.data;
-            subscriptionError = result.error;
+            // Fetch subscription data if customer_id exists
+            let subscription = null;
+            let subscriptionError = null;
+            
+            if (admin.customer_id) {
+              console.log("Fetching subscription data for customer:", admin.customer_id);
+              const result = await supabase
+                .from('stripe_subscriptions')
+                .select('*')
+                .eq('customer_id', admin.customer_id)
+                .maybeSingle();
+              
+              subscription = result.data;
+              subscriptionError = result.error;
 
-            if (subscriptionError) {
-              console.error("Subscription data error details:", {
-                message: subscriptionError.message,
-                code: subscriptionError.code,
-                details: subscriptionError.details,
-                hint: subscriptionError.hint
+              if (subscriptionError) {
+                console.error("Subscription data error details:", {
+                  message: subscriptionError.message,
+                  code: subscriptionError.code,
+                  details: subscriptionError.details,
+                  hint: subscriptionError.hint
+                });
+              }
+
+              console.log("AuthStore Init: Stripe subscription fetched:", subscription);
+
+              // --- START REVISED LOGIC FOR SUBSCRIPTION STATUS ---
+              const admin_subscription_status = admin.subscription_status;
+              const stripe_subscription_status = subscription?.status;
+
+              console.log("Subscription status analysis:", {
+                admin_status: admin_subscription_status,
+                stripe_status: stripe_subscription_status,
+                customer_id: admin.customer_id,
+                trial_ends_at: admin.trial_ends_at
               });
+              if (admin_subscription_status === 'trialing') {
+                const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
+                const now = new Date();
+                
+                console.log("Trial status check:", {
+                  trialEnd: trialEnd?.toISOString(),
+                  now: now.toISOString(),
+                  isTrialActive: trialEnd && now < trialEnd,
+                  hasCustomerId: !!admin.customer_id
+                });
+                
+                if (trialEnd && now < trialEnd) { // Trial is active
+                  // Check if payment setup is truly complete by verifying Stripe subscription status
+                  if (!admin.customer_id || admin.customer_id === '' || !stripe_subscription_status || stripe_subscription_status === 'incomplete') {
+                    hasActiveSubscription = false; // Not truly active until payment setup
+                    needsPaymentSetup = true;
+                    requiresPayment = false; // Not requiring payment yet, but needs setup
+                    console.log('DEBUG: Trial user needs payment setup - missing customer_id or incomplete Stripe subscription.');
+                  } else { // Trial is active AND customer_id exists
+                    hasActiveSubscription = true;
+                    needsPaymentSetup = false;
+                    requiresPayment = false;
+                    console.log('DEBUG: Active trial with payment setup complete.');
+                  }
+                } else { // Trial expired
+                  isTrialExpired = true;
+                  requiresPayment = true;
+                  needsPaymentSetup = true;
+                  hasActiveSubscription = false;
+                  console.log('DEBUG: Trial expired, payment required.');
+                }
+              } else if (admin_subscription_status === 'active' || stripe_subscription_status === 'active') {
+                hasActiveSubscription = true;
+                needsPaymentSetup = false;
+                requiresPayment = false;
+                console.log('DEBUG: Active paid subscription.');
+              } else if (admin_subscription_status === 'past_due' || admin_subscription_status === 'canceled' || admin_subscription_status === 'unpaid') {
+                requiresPayment = true;
+                needsPaymentSetup = true;
+                hasActiveSubscription = false;
+                console.log('DEBUG: Subscription past due/canceled/unpaid, requires payment.');
+              } else {
+                // Default case for new users or unknown states (e.g., 'not_started')
+                hasActiveSubscription = false;
+                needsPaymentSetup = true;
+                requiresPayment = false; // Not requiring payment yet, but needs setup
+                console.log('DEBUG: Default case - needs payment setup (e.g., not_started).');
+              }
+              // --- END REVISED LOGIC FOR SUBSCRIPTION STATUS ---
+            }
+            
+            if (subscription) {
+              console.log("Subscription data fetched:", {
+                subscriptionId: subscription.subscription_id,
+                status: subscription.status,
+                priceId: subscription.price_id,
+                currentPeriodEnd: subscription.current_period_end
+              });
+            } else {
+              console.log("No subscription data found for customer:", admin.customer_id);
             }
 
-            console.log("AuthStore Init: Stripe subscription fetched:", subscription);
+            // Determine the actual subscription tier based on Stripe data
+            let actualTier = admin.subscription_tier || 'starter';
+            
+            if (subscription?.price_id) {
+              // Find the plan that matches the price_id
+              const matchingPlan = Object.entries(STRIPE_PRODUCTS).find(
+                ([key, product]) => product.priceId === subscription.price_id
+              );
+              
+              if (matchingPlan) {
+                actualTier = matchingPlan[0]; // Use the key (starter, professional, enterprise)
+                console.log('Found matching plan for price_id ' + subscription.price_id + ': ' + actualTier);
+              } else {
+                console.warn('No matching plan found for price_id: ' + subscription.price_id);
+              }
+            }
+
+            companyData = {
+              id: admin.id,
+              name: admin.company_name,
+              logo: admin.logo_url,
+              brandColor: admin.brand_color,
+              reportBackground: admin.report_background,
+              tier: actualTier as any,
+              trialEndsAt: admin.trial_ends_at,
+              subscription_status: admin.subscription_status,
+              createdAt: admin.created_at,
+              updatedAt: admin.updated_at,
+            };
+
+            // Check subscription status with improved logic
+            const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
+            const now = new Date(); // This is the correct declaration
+
+            console.log('Subscription status check:', {
+              subscription_status: admin.subscription_status,
+              stripe_status: subscription?.status,
+              trial_ends_at: admin.trial_ends_at,
+              now: now.toISOString(),
+              trialEnd: trialEnd?.toISOString(),
+              customer_id: admin.customer_id
+            });
 
             // --- START REVISED LOGIC FOR SUBSCRIPTION STATUS ---
             const admin_subscription_status = admin.subscription_status;
             const stripe_subscription_status = subscription?.status;
 
-            console.log("Subscription status analysis:", {
-              admin_status: admin_subscription_status,
-              stripe_status: stripe_subscription_status,
-              customer_id: admin.customer_id,
-              trial_ends_at: admin.trial_ends_at
-            });
+            
             if (admin_subscription_status === 'trialing') {
-              const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
-              const now = new Date();
-              
-              console.log("Trial status check:", {
-                trialEnd: trialEnd?.toISOString(),
-                now: now.toISOString(),
-                isTrialActive: trialEnd && now < trialEnd,
-                hasCustomerId: !!admin.customer_id
-              });
-              
-              if (trialEnd && now < trialEnd) { // Trial is active
+              if (trialEnd && now < trialEnd) {
                 // Check if payment setup is truly complete by verifying Stripe subscription status
                 if (!admin.customer_id || admin.customer_id === '' || !stripe_subscription_status || stripe_subscription_status === 'incomplete') {
-                  hasActiveSubscription = false; // Not truly active until payment setup
+                  hasActiveSubscription = false;
                   needsPaymentSetup = true;
-                  requiresPayment = false; // Not requiring payment yet, but needs setup
                   console.log('DEBUG: Trial user needs payment setup - missing customer_id or incomplete Stripe subscription.');
-                } else { // Trial is active AND customer_id exists
+                } else {
                   hasActiveSubscription = true;
                   needsPaymentSetup = false;
-                  requiresPayment = false;
                   console.log('DEBUG: Active trial with payment setup complete.');
                 }
-              } else { // Trial expired
+              } else {
                 isTrialExpired = true;
                 requiresPayment = true;
                 needsPaymentSetup = true;
-                hasActiveSubscription = false;
                 console.log('DEBUG: Trial expired, payment required.');
               }
             } else if (admin_subscription_status === 'active' || stripe_subscription_status === 'active') {
@@ -365,116 +464,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               hasActiveSubscription = false;
               needsPaymentSetup = true;
               requiresPayment = false; // Not requiring payment yet, but needs setup
-              console.log('DEBUG: Default case - needs payment setup (e.g., not_started).');
+              console.log('DEBUG: Default case - needs payment setup. Status:', admin_subscription_status);
             }
             // --- END REVISED LOGIC FOR SUBSCRIPTION STATUS ---
-          }
-          
-          if (subscription) {
-            console.log("Subscription data fetched:", {
-              subscriptionId: subscription.subscription_id,
-              status: subscription.status,
-              priceId: subscription.price_id,
-              currentPeriodEnd: subscription.current_period_end
+
+            console.log('DEBUG: Final subscription state for user (before set):', {
+              hasActiveSubscription,
+              isTrialExpired,
+              requiresPayment,
+              needsPaymentSetup,
+              customer_id: admin.customer_id,
+              subscription_status: admin.subscription_status
             });
-          } else {
-            console.log("No subscription data found for customer:", admin.customer_id);
           }
-
-          // Determine the actual subscription tier based on Stripe data
-          let actualTier = admin.subscription_tier || 'starter';
-          
-          if (subscription?.price_id) {
-            // Find the plan that matches the price_id
-            const matchingPlan = Object.entries(STRIPE_PRODUCTS).find(
-              ([key, product]) => product.priceId === subscription.price_id
-            );
-            
-            if (matchingPlan) {
-              actualTier = matchingPlan[0]; // Use the key (starter, professional, enterprise)
-              console.log('Found matching plan for price_id ' + subscription.price_id + ': ' + actualTier);
-            } else {
-              console.warn('No matching plan found for price_id: ' + subscription.price_id);
-            }
-          }
-
-          companyData = {
-            id: admin.id,
-            name: admin.company_name,
-            logo: admin.logo_url,
-            brandColor: admin.brand_color,
-            reportBackground: admin.report_background,
-            tier: actualTier as any,
-            trialEndsAt: admin.trial_ends_at,
-            subscription_status: admin.subscription_status,
-            createdAt: admin.created_at,
-            updatedAt: admin.updated_at,
-          };
-
-          // Check subscription status with improved logic
-          const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
-          const now = new Date(); // This is the correct declaration
-
-          console.log('Subscription status check:', {
-            subscription_status: admin.subscription_status,
-            stripe_status: subscription?.status,
-            trial_ends_at: admin.trial_ends_at,
-            now: now.toISOString(),
-            trialEnd: trialEnd?.toISOString(),
-            customer_id: admin.customer_id
+        } else {
+          // =====================================================================
+          // NEW ERROR HANDLING FOR MISSING ADMIN ID
+          // =====================================================================
+          console.error("User has admin role but no admin ID found in user_admin_status");
+          // Handle case where user is admin but not associated with any company
+          set({ 
+            loading: false,
+            needsPaymentSetup: true,
+            requiresPayment: false,
+            hasActiveSubscription: false
           });
-
-          // --- START REVISED LOGIC FOR SUBSCRIPTION STATUS ---
-          const admin_subscription_status = admin.subscription_status;
-          const stripe_subscription_status = subscription?.status;
-
-          
-          if (admin_subscription_status === 'trialing') {
-            if (trialEnd && now < trialEnd) {
-              // Check if payment setup is truly complete by verifying Stripe subscription status
-              if (!admin.customer_id || admin.customer_id === '' || !stripe_subscription_status || stripe_subscription_status === 'incomplete') {
-                hasActiveSubscription = false;
-                needsPaymentSetup = true;
-                console.log('DEBUG: Trial user needs payment setup - missing customer_id or incomplete Stripe subscription.');
-              } else {
-                hasActiveSubscription = true;
-                needsPaymentSetup = false;
-                console.log('DEBUG: Active trial with payment setup complete.');
-              }
-            } else {
-              isTrialExpired = true;
-              requiresPayment = true;
-              needsPaymentSetup = true;
-              console.log('DEBUG: Trial expired, payment required.');
-            }
-          } else if (admin_subscription_status === 'active' || stripe_subscription_status === 'active') {
-            hasActiveSubscription = true;
-            needsPaymentSetup = false;
-            requiresPayment = false;
-            console.log('DEBUG: Active paid subscription.');
-          } else if (admin_subscription_status === 'past_due' || admin_subscription_status === 'canceled' || admin_subscription_status === 'unpaid') {
-            requiresPayment = true;
-            needsPaymentSetup = true;
-            hasActiveSubscription = false;
-            console.log('DEBUG: Subscription past due/canceled/unpaid, requires payment.');
-          } else {
-            // Default case for new users or unknown states (e.g., 'not_started')
-            hasActiveSubscription = false;
-            needsPaymentSetup = true;
-            requiresPayment = false; // Not requiring payment yet, but needs setup
-            console.log('DEBUG: Default case - needs payment setup. Status:', admin_subscription_status);
-          }
-          // --- END REVISED LOGIC FOR SUBSCRIPTION STATUS ---
-
-          console.log('DEBUG: Final subscription state for user (before set):', {
-            hasActiveSubscription,
-            isTrialExpired,
-            requiresPayment,
-            needsPaymentSetup,
-            customer_id: admin.customer_id,
-            subscription_status: admin.subscription_status
-          });
+          return;
         }
+        // =====================================================================
+        // END OF CHANGED SECTION
+        // =====================================================================
       } else {
         // If user is not admin (member role), they don't have company data
         console.log('User is a team member (not admin) - no company data available');
