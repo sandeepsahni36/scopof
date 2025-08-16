@@ -31,6 +31,7 @@ const InvitationAcceptPage = () => {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<AcceptInvitationFormInputs>();
 
@@ -56,6 +57,8 @@ const InvitationAcceptPage = () => {
       }
 
       setInvitation(invitationData);
+      // Set the email value in the form when invitation is loaded
+      setValue('email', invitationData.email);
     } catch (error: any) {
       console.error('Error validating invitation:', error);
       setError('Failed to validate invitation. Please try again or contact support.');
@@ -226,13 +229,18 @@ const InvitationAcceptPage = () => {
 
           {/* Registration Form */}
           <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-            <Input
-              label="Email address"
-              type="email"
-              value={invitation.email}
-              readOnly
-              className="bg-gray-100 cursor-not-allowed"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email address
+              </label>
+              <input
+                type="email"
+                value={invitation.email}
+                readOnly
+                className="h-10 w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm cursor-not-allowed"
+                {...register('email', { value: invitation.email })}
+              />
+            </div>
 
             <Input
               label="Full Name"
