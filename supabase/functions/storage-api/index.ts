@@ -173,15 +173,35 @@ serve(async (req) => {
 
       console.log("User authenticated:", { id: user.id, email: user.email });
 
-      // Fetch admin_id and tier for the authenticated user using user_admin_status view
+      // Fetch admin_id for the authenticated user using user_admin_status view
       const { data: userAdminStatus, error: userAdminStatusError } = await supabase
         .from('user_admin_status')
-        .select('admin_id') // Only select admin_id from user_admin_status
+        .select('admin_id')
         .eq('profile_id', user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle to handle cases where no record exists
 
-      if (userAdminStatusError || !userAdminStatus || !userAdminStatus.admin_id) {
-        console.error("Auth: Admin data not found for user:", user.id, userAdminStatusError?.message);
+      console.log("User admin status query result:", {
+        found: !!userAdminStatus,
+        error: userAdminStatusError?.message,
+        adminId: userAdminStatus?.admin_id
+      });
+
+      if (userAdminStatusError) {
+        console.error("Auth: Error querying user admin status for user:", user.id, userAdminStatusError?.message);
+        return new Response(JSON.stringify({
+          error: "Internal Server Error: Could not query user admin status"
+        }), {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
+      }
+
+      if (!userAdminStatus || !userAdminStatus.admin_id) {
+        console.error("Auth: User not associated with any company:", user.id);
+        console.log("Debug: User admin status data:", userAdminStatus);
         return new Response(JSON.stringify({
           error: "Forbidden: User not associated with a company or admin data not found"
         }), {
@@ -194,7 +214,7 @@ serve(async (req) => {
       }
 
       const adminId = userAdminStatus.admin_id;
-      console.log("Admin data found:", { adminId: adminId });
+      console.log("Admin ID found from user_admin_status:", adminId);
 
       // Now fetch the subscription_tier from the 'admin' table using the adminId
       const { data: adminDetails, error: adminDetailsError } = await supabase
@@ -204,7 +224,10 @@ serve(async (req) => {
         .single();
 
       if (adminDetailsError || !adminDetails || !adminDetails.subscription_tier) {
-        console.error("Auth: Subscription tier not found for admin:", adminId, adminDetailsError?.message);
+        console.error("Auth: Subscription tier not found for admin:", adminId, {
+          error: adminDetailsError?.message,
+          adminDetails: adminDetails
+        });
         return new Response(JSON.stringify({
           error: "Internal Server Error: Could not determine subscription tier"
         }), {
@@ -217,7 +240,7 @@ serve(async (req) => {
       }
 
       const subscriptionTier = adminDetails.subscription_tier;
-      console.log("Subscription tier found:", subscriptionTier);
+      console.log("Subscription tier found from admin table:", subscriptionTier);
 
       // Fetch current storage usage for the admin
       const { data: usageData, error: usageDbError } = await supabase
@@ -227,7 +250,11 @@ serve(async (req) => {
         .maybeSingle(); // Use maybeSingle if a record might not exist yet
 
       if (usageDbError && usageDbError.code !== 'PGRST116') {
-        console.error("Auth: Error fetching storage usage from DB:", usageDbError?.message);
+        console.error("Auth: Error fetching storage usage from DB:", {
+          error: usageDbError?.message,
+          code: usageDbError?.code,
+          adminId: adminId
+        });
         return new Response(JSON.stringify({
           error: "Internal Server Error: Could not fetch usage"
         }), {
@@ -240,6 +267,12 @@ serve(async (req) => {
       }
 
       const currentUsageBytes = usageData?.total_bytes || 0;
+      console.log("Storage usage data:", {
+        currentUsage: currentUsageBytes,
+        photosUsage: usageData?.photos_bytes || 0,
+        reportsUsage: usageData?.reports_bytes || 0,
+        fileCount: usageData?.file_count || 0
+      });
 
       // Fetch storage quota for the admin's tier
       const { data: quotaData, error: quotaDbError } = await supabase
@@ -249,7 +282,10 @@ serve(async (req) => {
         .single();
 
       if (quotaDbError || !quotaData) {
-        console.error("Auth: Error fetching quota from DB:", quotaDbError?.message);
+        console.error("Auth: Error fetching quota from DB:", {
+          error: quotaDbError?.message,
+          tier: subscriptionTier
+        });
         return new Response(JSON.stringify({
           error: "Internal Server Error: Could not fetch quota"
         }), {
@@ -262,6 +298,10 @@ serve(async (req) => {
       }
 
       const quotaBytes = quotaData.quota_bytes;
+      console.log("Quota data:", {
+        tier: subscriptionTier,
+        quotaBytes: quotaBytes
+      });
 
       // User context for easy access in handlers
       userContext = {
