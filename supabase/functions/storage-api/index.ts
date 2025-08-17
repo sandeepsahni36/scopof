@@ -173,17 +173,17 @@ serve(async (req) => {
 
       console.log("User authenticated:", { id: user.id, email: user.email });
 
-      // Fetch admin_id and tier for the authenticated user
-      const { data: adminData, error: adminDbError } = await supabase
-        .from('admin')
-        .select('id, subscription_tier')
-        .eq('owner_id', user.id)
+      // Fetch admin_id and tier for the authenticated user using user_admin_status view
+      const { data: userAdminStatus, error: userAdminStatusError } = await supabase
+        .from('user_admin_status')
+        .select('admin_id, subscription_tier')
+        .eq('profile_id', user.id)
         .single();
 
-      if (adminDbError || !adminData) {
-        console.error("Auth: Admin data not found for user:", user.id, adminDbError?.message);
+      if (userAdminStatusError || !userAdminStatus || !userAdminStatus.admin_id) {
+        console.error("Auth: Admin data not found for user:", user.id, userAdminStatusError?.message);
         return new Response(JSON.stringify({
-          error: "Forbidden: Admin data not found"
+          error: "Forbidden: User not associated with a company or admin data not found"
         }), {
           status: 403,
           headers: {
@@ -193,13 +193,13 @@ serve(async (req) => {
         });
       }
 
-      console.log("Admin data found:", { adminId: adminData.id, tier: adminData.subscription_tier });
+      console.log("Admin data found:", { adminId: userAdminStatus.admin_id, tier: userAdminStatus.subscription_tier });
 
       // Fetch current storage usage for the admin
       const { data: usageData, error: usageDbError } = await supabase
         .from('storage_usage')
         .select('total_bytes, photos_bytes, reports_bytes, file_count')
-        .eq('admin_id', adminData.id)
+        .eq('admin_id', userAdminStatus.admin_id)
         .maybeSingle(); // Use maybeSingle if a record might not exist yet
 
       if (usageDbError && usageDbError.code !== 'PGRST116') {
@@ -221,7 +221,7 @@ serve(async (req) => {
       const { data: quotaData, error: quotaDbError } = await supabase
         .from('storage_quotas')
         .select('quota_bytes')
-        .eq('tier', adminData.subscription_tier)
+        .eq('tier', userAdminStatus.subscription_tier)
         .single();
 
       if (quotaDbError || !quotaData) {
@@ -243,8 +243,8 @@ serve(async (req) => {
       userContext = {
         isServiceRole: false,
         userId: user.id,
-        adminId: adminData.id,
-        tier: adminData.subscription_tier,
+        adminId: userAdminStatus.admin_id,
+        tier: userAdminStatus.subscription_tier,
         currentUsage: currentUsageBytes,
         quota: quotaBytes,
         photosUsage: usageData?.photos_bytes || 0,
