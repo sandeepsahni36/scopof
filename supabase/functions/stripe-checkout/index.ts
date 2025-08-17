@@ -248,6 +248,9 @@ Deno.serve(async (req) => {
       allow_promotion_codes: true,
       billing_address_collection: "auto",
       payment_method_collection: "always",
+      customer_update: {
+        address: 'auto',
+      },
      automatic_tax: {
        enabled: true,
      },
