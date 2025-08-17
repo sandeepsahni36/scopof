@@ -1,24 +1,25 @@
 /*
   # Debug handle_new_user function with detailed logging
 
-  1. Updated Function
-    - Added comprehensive RAISE NOTICE statements for debugging
-    - Uses explicit variable declarations for safer value extraction
-    - Includes detailed logging at each step to pinpoint failure location
-    - Re-enables team_members insert with captured admin_id
+  1. Dependency Fix
+    - First drops the trigger that depends on the function
+    - Then drops/recreates the function
+    - Finally recreates the trigger
+    - Maintains all debugging improvements and core logic
 
   2. Security
-    - Maintains SECURITY DEFINER for proper permissions
-    - Uses explicit public schema references
-    - No search_path modifications
+    - Preserves SECURITY DEFINER
+    - Maintains explicit public schema references
 
-  3. Debugging
-    - Logs function start/end
-    - Logs each major operation (profiles, admin, team_members inserts)
-    - Logs extracted metadata values
-    - Uses RETURNING clause to capture admin_id safely
+  3. Changes
+    - Added proper dependency order as per Bolt's solution
+    - Kept all logging and business logic unchanged
 */
 
+-- FIRST: Drop the trigger that depends on the function
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+-- SECOND: Recreate the function with all debugging improvements
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -101,8 +102,8 @@ BEGIN
 END;
 $$;
 
--- Recreate the trigger to ensure it uses the updated function definition
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+-- THIRD: Recreate the trigger
 CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+AFTER INSERT ON auth.users
+FOR EACH ROW
+EXECUTE FUNCTION public.handle_new_user();
