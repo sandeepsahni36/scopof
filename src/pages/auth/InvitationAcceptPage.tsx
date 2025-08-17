@@ -5,7 +5,7 @@ import { Mail, UserPlus, AlertTriangle, CheckCircle, Eye, EyeOff, Building2 } fr
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getInvitationByToken, Invitation } from '../../lib/invitations';
-import { signUp } from '../../lib/supabase';
+import { signUp, supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
 type AcceptInvitationFormInputs = {
@@ -90,7 +90,8 @@ const InvitationAcceptPage = () => {
         data.password,
         {
           full_name: data.full_name,
-          invitation_token: invitation.token, // Include token in metadata for trigger
+          invitation_token: invitation.token,
+          company_name: 'Invited User', // Add company_name to prevent errors
         } as any
       );
 
@@ -118,7 +119,43 @@ const InvitationAcceptPage = () => {
         return;
       }
 
-      // Success - user will be automatically assigned to team via database trigger
+      // Success - now manually create team member record as fallback
+      console.log('Signup successful, now creating team member record manually');
+      
+      try {
+        // Create team member record manually as fallback
+        const { error: teamMemberError } = await supabase
+          .from('team_members')
+          .insert([{
+            admin_id: invitation.adminId,
+            profile_id: signUpData.user.id,
+            role: invitation.role
+          }]);
+
+        if (teamMemberError) {
+          console.error('Error creating team member record:', teamMemberError);
+          // Don't throw error here, let the database trigger handle it
+        } else {
+          console.log('Team member record created successfully');
+        }
+
+        // Mark invitation as accepted
+        const { error: invitationUpdateError } = await supabase
+          .from('invitations')
+          .update({ 
+            status: 'accepted',
+            accepted_at: new Date().toISOString()
+          })
+          .eq('token', invitation.token);
+
+        if (invitationUpdateError) {
+          console.error('Error updating invitation status:', invitationUpdateError);
+        }
+      } catch (fallbackError) {
+        console.error('Error in manual team member creation:', fallbackError);
+        // Continue anyway, the database trigger might still work
+      }
+
       toast.success('Account created successfully! Welcome to the team.');
       navigate('/auth/confirm-email', { 
         state: { 

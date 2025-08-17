@@ -110,6 +110,10 @@ export async function signUp(email: string, password: string, metadata?: { full_
     const redirectUrl = `${getSiteUrl(true)}/auth/callback`;
     console.log('SignUp: Using redirect URL:', redirectUrl);
     
+    // Enhanced logging for invitation signup
+    console.log('SignUp: Metadata received:', metadata);
+    console.log('SignUp: Has invitation token:', !!(metadata as any)?.invitation_token);
+    
     // Create the auth user with metadata included
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
@@ -133,6 +137,11 @@ export async function signUp(email: string, password: string, metadata?: { full_
       throw new Error('No user data returned from signup');
     }
 
+    console.log('SignUp: User created successfully:', {
+      userId: signUpData.user.id,
+      email: signUpData.user.email,
+      hasInvitationToken: !!(signUpData.user.user_metadata?.invitation_token)
+    });
     return { data: signUpData, error: null };
   } catch (error) {
     console.error('Signup process error:', error);
