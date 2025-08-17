@@ -32,6 +32,8 @@ export async function createCheckoutSession(plan: StripePlan, skipTrial: boolean
         skip_trial: skipTrial,
         success_url: `${window.location.origin}/dashboard/admin/subscription?success=true`,
         cancel_url: `${window.location.origin}/dashboard/admin/subscription?canceled=true`,
+        success_url: `${window.location.origin}/dashboard?payment=success`,
+        cancel_url: `${window.location.origin}/start-trial?payment=canceled`,
       },
     });
 
