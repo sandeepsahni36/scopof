@@ -1,29 +1,16 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { Property } from '../types';
-  // Get property count using the admin_id from user_admin_status
+
 // Helper function to map database property to frontend Property type
 function mapDbPropertyToProperty(dbProperty: any): Property {
   console.log('=== MAPPING DB PROPERTY TO FRONTEND ===');
-    .eq('admin_id', adminData.admin_id);
   console.log('created_at value:', dbProperty.created_at);
   console.log('updated_at value:', dbProperty.updated_at);
   
   const mapped = {
     id: dbProperty.id,
     companyId: dbProperty.admin_id,
-  // Get subscription tier from admin table using the admin_id
-  const { data: tierData, error: tierError } = await supabase
-    .from('admin')
-    .select('subscription_tier')
-    .eq('id', adminData.admin_id)
-    .single();
-
-  if (tierError || !tierData) {
-    console.error('Tier data error:', tierError);
-    throw new Error('Failed to get subscription tier');
-  }
-
-  const tier = tierData.subscription_tier;
+    name: dbProperty.name,
     address: dbProperty.address,
     type: dbProperty.type,
     bedrooms: dbProperty.bedrooms,
@@ -405,30 +392,41 @@ export async function checkPropertyLimit() {
       };
     }
 
-    // First get admin data
+    // Get admin data from user_admin_status view
     const { data: adminData, error: adminError } = await supabase
-      .from('admin')
-      .select('id, subscription_tier')
-      .eq('owner_id', user.id)
+      .from('user_admin_status')
+      .select('admin_id, subscription_status')
+      .eq('profile_id', user.id)
       .single();
 
-    if (adminError || !adminData) {
-      console.error('Admin data error:', adminError);
-      throw new Error('Admin access required to check property limits');
+    if (adminError || !adminData || !adminData.admin_id) {
+      throw new Error('User is not associated with any company');
     }
 
-    // Then get property count using the valid admin_id
+    // Get property count using the admin_id from user_admin_status
     const { count, error: countError } = await supabase
       .from('properties')
       .select('id', { count: 'exact' })
-      .eq('admin_id', adminData.id);
+      .eq('admin_id', adminData.admin_id);
 
     if (countError) {
       console.error('Property count error:', countError);
       throw new Error('Failed to get property count');
     }
 
-    const tier = adminData.subscription_tier;
+    // Get subscription tier from admin table using the admin_id
+    const { data: tierData, error: tierError } = await supabase
+      .from('admin')
+      .select('subscription_tier')
+      .eq('id', adminData.admin_id)
+      .single();
+
+    if (tierError || !tierData) {
+      console.error('Tier data error:', tierError);
+      throw new Error('Failed to get subscription tier');
+    }
+
+    const tier = tierData.subscription_tier;
     const currentCount = count || 0;
 
     // Define tier limits
@@ -442,19 +440,19 @@ export async function checkPropertyLimit() {
     const canCreate = currentCount < limit;
 
     return {
-  // Get admin data from user_admin_status view
       currentCount,
-  const { data: adminData, error: adminError } = await supabase
+      limit,
+      canCreate,
+      tier
+    };
+  } catch (error: any) {
+    console.error('Error checking property limit:', error);
     
-    .from('user_admin_status')
     if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-    .select('admin_id, subscription_status')
       await handleAuthError(error);
-    .eq('profile_id', user.id)
       return null;
-    .single();
     }
-  if (adminError || !adminData || !adminData.admin_id) {
     
-    throw new Error('User is not associated with any company');
+    throw error;
   }
+}
