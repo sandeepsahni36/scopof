@@ -9,6 +9,7 @@ const EmailConfirmationPage = () => {
   const location = useLocation();
   const email = location.state?.email;
   const registrationType = location.state?.registrationType || 'trial';
+  const isInvitedUser = location.state?.isInvitedUser || false;
   const [resending, setResending] = React.useState(false);
 
   const handleResendEmail = async () => {
