@@ -514,22 +514,22 @@ export async function createTemplate(
       return { template: newTemplate, items: newItems };
     }
 
-    // Get the admin_id for the current user
+    // Get the admin_id for the current user from user_admin_status view
     const { data: adminData, error: adminError } = await supabase
-      .from('admin')
-      .select('id')
-      .eq('owner_id', user.id)
+      .from('user_admin_status')
+      .select('admin_id')
+      .eq('profile_id', user.id)
       .single();
 
-    if (adminError || !adminData) {
-      throw new Error('Admin account not found for current user');
+    if (adminError || !adminData || !adminData.admin_id) {
+      throw new Error('User is not associated with any company');
     }
 
     // Create template
     const { data: template, error: templateError } = await supabase
       .from('templates')
       .insert([{
-        admin_id: adminData.id,
+        admin_id: adminData.admin_id,
         name: templateData.name,
         category_id: null, // No longer using categories
         description: templateData.description,
@@ -849,22 +849,22 @@ export async function duplicateTemplate(id: string) {
       throw new Error('Template not found');
     }
 
-    // Get the admin_id for the current user
+    // Get the admin_id for the current user from user_admin_status view
     const { data: adminData, error: adminError } = await supabase
-      .from('admin')
-      .select('id')
-      .eq('owner_id', user.id)
+      .from('user_admin_status')
+      .select('admin_id')
+      .eq('profile_id', user.id)
       .single();
 
-    if (adminError || !adminData) {
-      throw new Error('Admin account not found for current user');
+    if (adminError || !adminData || !adminData.admin_id) {
+      throw new Error('User is not associated with any company');
     }
 
     // Create the duplicated template
     const { data: duplicatedTemplate, error: templateError } = await supabase
       .from('templates')
       .insert([{
-        admin_id: adminData.id,
+        admin_id: adminData.admin_id,
         name: `${originalData.template.name} (Copy)`,
         category_id: originalData.template.category_id,
         description: originalData.template.description,

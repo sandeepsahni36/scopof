@@ -113,21 +113,21 @@ export async function createReportServiceTeam(teamData: {
       return newTeam;
     }
 
-    // Get user's admin ID
+    // Get user's admin ID from user_admin_status view
     const { data: adminData, error: adminError } = await supabase
-      .from('admin')
-      .select('id')
-      .eq('owner_id', user.id)
+      .from('user_admin_status')
+      .select('admin_id')
+      .eq('profile_id', user.id)
       .single();
 
-    if (adminError || !adminData) {
-      throw new Error('Admin access required to create report service teams');
+    if (adminError || !adminData || !adminData.admin_id) {
+      throw new Error('User is not associated with any company');
     }
 
     const { data, error } = await supabase
       .from('report_service_teams')
       .insert([{
-        admin_id: adminData.id,
+        admin_id: adminData.admin_id,
         designation: teamData.designation,
         email: teamData.email,
       }])

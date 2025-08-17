@@ -1,17 +1,29 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { Property } from '../types';
-
+  // Get property count using the admin_id from user_admin_status
 // Helper function to map database property to frontend Property type
 function mapDbPropertyToProperty(dbProperty: any): Property {
   console.log('=== MAPPING DB PROPERTY TO FRONTEND ===');
-  console.log('Input dbProperty:', dbProperty);
+    .eq('admin_id', adminData.admin_id);
   console.log('created_at value:', dbProperty.created_at);
   console.log('updated_at value:', dbProperty.updated_at);
   
   const mapped = {
     id: dbProperty.id,
     companyId: dbProperty.admin_id,
-    name: dbProperty.name,
+  // Get subscription tier from admin table using the admin_id
+  const { data: tierData, error: tierError } = await supabase
+    .from('admin')
+    .select('subscription_tier')
+    .eq('id', adminData.admin_id)
+    .single();
+
+  if (tierError || !tierData) {
+    console.error('Tier data error:', tierError);
+    throw new Error('Failed to get subscription tier');
+  }
+
+  const tier = tierData.subscription_tier;
     address: dbProperty.address,
     type: dbProperty.type,
     bedrooms: dbProperty.bedrooms,
@@ -231,21 +243,21 @@ export async function createProperty(propertyData: Omit<Property, 'id' | 'create
       return newProperty;
     }
 
-    // Get user's admin ID
+    // Get user's admin ID from user_admin_status view
     const { data: adminData, error: adminError } = await supabase
-      .from('admin')
-      .select('id')
-      .eq('owner_id', user.id)
+      .from('user_admin_status')
+      .select('admin_id')
+      .eq('profile_id', user.id)
       .single();
 
-    if (adminError || !adminData) {
+    if (adminError || !adminData || !adminData.admin_id) {
       throw new Error('Admin access required to create properties');
     }
 
     const { data, error } = await supabase
       .from('properties')
       .insert([{
-        admin_id: adminData.id,
+        admin_id: adminData.admin_id,
         name: propertyData.name,
         address: propertyData.address,
         type: propertyData.type,
@@ -430,19 +442,19 @@ export async function checkPropertyLimit() {
     const canCreate = currentCount < limit;
 
     return {
+  // Get admin data from user_admin_status view
       currentCount,
-      limit,
-      canCreate,
-      tier
-    };
-  } catch (error: any) {
-    console.error('Error checking property limit:', error);
+  const { data: adminData, error: adminError } = await supabase
     
+    .from('user_admin_status')
     if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+    .select('admin_id, subscription_status')
       await handleAuthError(error);
+    .eq('profile_id', user.id)
       return null;
+    .single();
     }
+  if (adminError || !adminData || !adminData.admin_id) {
     
-    throw error;
+    throw new Error('User is not associated with any company');
   }
-}
