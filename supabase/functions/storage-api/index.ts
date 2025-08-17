@@ -176,7 +176,7 @@ serve(async (req) => {
       // Fetch admin_id and tier for the authenticated user using user_admin_status view
       const { data: userAdminStatus, error: userAdminStatusError } = await supabase
         .from('user_admin_status')
-        .select('admin_id, subscription_tier')
+        .select('admin_id') // Only select admin_id from user_admin_status
         .eq('profile_id', user.id)
         .single();
 
@@ -193,13 +193,37 @@ serve(async (req) => {
         });
       }
 
-      console.log("Admin data found:", { adminId: userAdminStatus.admin_id, tier: userAdminStatus.subscription_tier });
+      const adminId = userAdminStatus.admin_id;
+      console.log("Admin data found:", { adminId: adminId });
+
+      // Now fetch the subscription_tier from the 'admin' table using the adminId
+      const { data: adminDetails, error: adminDetailsError } = await supabase
+        .from('admin')
+        .select('subscription_tier')
+        .eq('id', adminId)
+        .single();
+
+      if (adminDetailsError || !adminDetails || !adminDetails.subscription_tier) {
+        console.error("Auth: Subscription tier not found for admin:", adminId, adminDetailsError?.message);
+        return new Response(JSON.stringify({
+          error: "Internal Server Error: Could not determine subscription tier"
+        }), {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          }
+        });
+      }
+
+      const subscriptionTier = adminDetails.subscription_tier;
+      console.log("Subscription tier found:", subscriptionTier);
 
       // Fetch current storage usage for the admin
       const { data: usageData, error: usageDbError } = await supabase
         .from('storage_usage')
         .select('total_bytes, photos_bytes, reports_bytes, file_count')
-        .eq('admin_id', userAdminStatus.admin_id)
+        .eq('admin_id', adminId)
         .maybeSingle(); // Use maybeSingle if a record might not exist yet
 
       if (usageDbError && usageDbError.code !== 'PGRST116') {
@@ -220,8 +244,8 @@ serve(async (req) => {
       // Fetch storage quota for the admin's tier
       const { data: quotaData, error: quotaDbError } = await supabase
         .from('storage_quotas')
-        .select('quota_bytes')
-        .eq('tier', userAdminStatus.subscription_tier)
+        .select('quota_bytes') // Select the quota_bytes
+        .eq('tier', subscriptionTier) // Use the subscriptionTier
         .single();
 
       if (quotaDbError || !quotaData) {
@@ -243,8 +267,8 @@ serve(async (req) => {
       userContext = {
         isServiceRole: false,
         userId: user.id,
-        adminId: userAdminStatus.admin_id,
-        tier: userAdminStatus.subscription_tier,
+        adminId: adminId,
+        tier: subscriptionTier,
         currentUsage: currentUsageBytes,
         quota: quotaBytes,
         photosUsage: usageData?.photos_bytes || 0,
