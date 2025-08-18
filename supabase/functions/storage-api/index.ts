@@ -37,6 +37,7 @@ serve(async (req) => {
     // 1. Get Environment Variables
     const supabaseUrl = getEnv("SUPABASE_URL");
     const supabaseServiceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY");
     const minioEndpoint = getEnv("MINIO_ENDPOINT");
     const minioAccessKey = getEnv("MINIO_ACCESS_KEY");
     const minioSecretKey = getEnv("MINIO_SECRET_KEY");
@@ -45,6 +46,7 @@ serve(async (req) => {
     console.log("Environment variables loaded:", {
       hasSupabaseUrl: !!supabaseUrl,
       hasSupabaseKey: !!supabaseServiceKey,
+      hasSupabaseAnonKey: !!supabaseAnonKey,
       minioEndpoint: minioEndpoint,
       hasMinioAccessKey: !!minioAccessKey,
       hasMinioSecretKey: !!minioSecretKey,
@@ -137,6 +139,16 @@ serve(async (req) => {
     } else {
       console.log("Auth: User request detected, validating user token");
       
+      // Create a user-authenticated Supabase client for user-specific queries
+      const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { persistSession: false },
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      });
+      
       // Try to decode the JWT to see what claims are present (for debugging)
       try {
         const tokenParts = token.split('.');
@@ -152,7 +164,7 @@ serve(async (req) => {
         console.error("Auth: Failed to decode JWT for debugging:", decodeError.message);
       }
 
-      const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+      const { data: { user }, error: userError } = await userSupabase.auth.getUser(token);
       
       if (userError || !user) {
         console.error("Auth: Invalid user token:", {
@@ -173,12 +185,11 @@ serve(async (req) => {
 
       console.log("User authenticated:", { id: user.id, email: user.email });
 
-      // Fetch admin_id for the authenticated user using user_admin_status view
-      const { data: userAdminStatus, error: userAdminStatusError } = await supabase
+      // Fetch admin_id for the authenticated user using user_admin_status view with user context
+      const { data: userAdminStatus, error: userAdminStatusError } = await userSupabase
         .from('user_admin_status')
         .select('admin_id')
-        .eq('profile_id', user.id)
-        .maybeSingle(); // Use maybeSingle to handle cases where no record exists
+        .maybeSingle(); // Remove .eq('profile_id', user.id) since the view filters by auth.uid()
 
       console.log("User admin status query result:", {
         found: !!userAdminStatus,
