@@ -150,7 +150,7 @@ function TemplatesPage() {
       toast.error('Failed to duplicate template');
     }
   };
-  const filteredTemplates = templates.filter(template => {
+
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
@@ -209,13 +209,6 @@ function TemplatesPage() {
     }
   };
 
-  // Group templates by category
-  const groupedTemplates = React.useMemo(() => {
-    const filtered = templates.filter(template => {
-      const matchesSearch = searchTerm === '' || 
-        template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        template.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || template.categoryId === selectedCategory;
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
