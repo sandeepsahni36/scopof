@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { LayoutTemplate, Plus, Search, Filter, Pencil, Trash2, FolderPlus, Copy } from 'lucide-react';
+import { LayoutTemplate, Plus, Search, Filter, FolderPlus, Folder } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Template, TemplateCategory } from '../../types';
-import { getTemplates, getTemplateCategories, createTemplateCategory, deleteTemplate, duplicateTemplate } from '../../lib/templates';
+import { getTemplates, getTemplateCategories, createTemplateCategory, deleteTemplate, duplicateTemplate, updateTemplateCategory } from '../../lib/templates';
+import TemplateCategoryCard from '../../components/templates/TemplateCategoryCard';
+import TemplateDisplayCard from '../../components/templates/TemplateDisplayCard';
 import { toast } from 'sonner';
 
 function TemplatesPage() {
@@ -16,6 +19,7 @@ function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [updatingTemplate, setUpdatingTemplate] = useState<string | null>(null);
 
   useEffect(() => {
     loadTemplatesAndCategories();
@@ -116,6 +120,95 @@ function TemplatesPage() {
     }
   };
   const filteredTemplates = templates.filter(template => {
+  const handleDragEnd = async (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+
+    // If dropped outside a valid droppable area
+    if (!destination) {
+      return;
+    }
+
+    // If dropped in the same position
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      return;
+    }
+
+    // Only handle drops onto category cards
+    if (!destination.droppableId.startsWith('category-')) {
+      return;
+    }
+
+    try {
+      setUpdatingTemplate(draggableId);
+      
+      // Extract category ID from droppable ID
+      const categoryId = destination.droppableId === 'category-uncategorized' 
+        ? null 
+        : destination.droppableId.replace('category-', '');
+
+      console.log('Updating template category:', {
+        templateId: draggableId,
+        newCategoryId: categoryId,
+        droppableId: destination.droppableId
+      });
+
+      const updatedTemplate = await updateTemplateCategory(draggableId, categoryId);
+      
+      if (updatedTemplate) {
+        // Update local state
+        setTemplates(prevTemplates => 
+          prevTemplates.map(template => 
+            template.id === draggableId 
+              ? { ...template, categoryId }
+              : template
+          )
+        );
+        
+        const categoryName = categoryId 
+          ? categories.find(c => c.id === categoryId)?.name || 'Unknown Category'
+          : 'Uncategorized';
+        
+        toast.success(`Template moved to ${categoryName}`);
+      }
+    } catch (error: any) {
+      console.error('Error updating template category:', error);
+      toast.error('Failed to move template');
+    } finally {
+      setUpdatingTemplate(null);
+    }
+  };
+
+  // Group templates by category
+  const groupedTemplates = React.useMemo(() => {
+    const filtered = templates.filter(template => {
+      const matchesSearch = searchTerm === '' || 
+        template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        template.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || template.categoryId === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+
+    const grouped: { [key: string]: Template[] } = {
+      uncategorized: [],
+    };
+
+    // Initialize category groups
+    categories.forEach(category => {
+      grouped[category.id] = [];
+    });
+
+    // Group templates
+    filtered.forEach(template => {
+      if (template.categoryId && grouped[template.categoryId]) {
+        grouped[template.categoryId].push(template);
+      } else {
+        grouped.uncategorized.push(template);
+      }
+    });
+
+    return grouped;
+  }, [templates, categories, searchTerm, selectedCategory]);
+
     const matchesSearch = searchTerm === '' || 
       template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       template.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -202,68 +295,167 @@ function TemplatesPage() {
                     {category.name}
                   </option>
                 ))}
+                <option value="">Uncategorized</option>
               </select>
             </div>
           </div>
         )}
       </div>
 
-      {/* Template List */}
-      {filteredTemplates.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTemplates.map(template => (
-            <div
-              key={template.id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
-            >
-              <div className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {template.name}
-                    </h3>
-                    {template.categoryId && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 mt-2">
-                        {categories.find(c => c.id === template.categoryId)?.name}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex space-x-2">
-                    <Link to={`/dashboard/templates/${template.id}`}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        leftIcon={<Pencil size={16} />}
-                      >
-                        Edit
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      leftIcon={<Copy size={16} />}
-                      onClick={() => handleDuplicateTemplate(template.id)}
-                    >
-                      Duplicate
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      leftIcon={<Trash2 size={16} />}
-                      onClick={() => handleDeleteTemplate(template.id)}
-                    >
-                      Delete
-                    </Button>
+      {/* Templates with Categories */}
+      <DragDropContext onDragEnd={handleDragEnd}>
+        {Object.keys(groupedTemplates).some(key => groupedTemplates[key].length > 0) || categories.length > 0 ? (
+          <div className="space-y-8">
+            {/* Categories */}
+            {categories.map(category => (
+              <div key={category.id} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Folder className="h-5 w-5 text-blue-600 mr-2" />
+                    <h2 className="text-xl font-semibold text-gray-900">{category.name}</h2>
+                    <span className="ml-2 text-sm text-gray-500">
+                      ({groupedTemplates[category.id]?.length || 0} templates)
+                    </span>
                   </div>
                 </div>
-                {template.description && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    {template.description}
-                  </p>
-                )}
+                
+                <Droppable droppableId={`category-${category.id}`} direction="horizontal">
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`
+                        min-h-[200px] rounded-lg border-2 border-dashed p-4 transition-all duration-200
+                        ${snapshot.isDraggingOver 
+                          ? 'border-blue-400 bg-blue-50' 
+                          : 'border-blue-200 bg-blue-25'
+                        }
+                      `}
+                    >
+                      {groupedTemplates[category.id]?.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {groupedTemplates[category.id].map((template, index) => (
+                            <Draggable key={template.id} draggableId={template.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                >
+                                  <TemplateDisplayCard
+                                    template={template}
+                                    onDuplicate={handleDuplicateTemplate}
+                                    onDelete={handleDeleteTemplate}
+                                    isDragging={snapshot.isDragging}
+                                  />
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-32 text-blue-600">
+                          <div className="text-center">
+                            <Folder className="h-8 w-8 mx-auto mb-2" />
+                            <p className="text-sm font-medium">Drop templates here</p>
+                            <p className="text-xs">Drag templates to organize them in this category</p>
+                          </div>
+                        </div>
+                      )}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            ))}
+
+            {/* Uncategorized Templates */}
+            {groupedTemplates.uncategorized?.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <LayoutTemplate className="h-5 w-5 text-gray-600 mr-2" />
+                    <h2 className="text-xl font-semibold text-gray-900">Uncategorized</h2>
+                    <span className="ml-2 text-sm text-gray-500">
+                      ({groupedTemplates.uncategorized.length} templates)
+                    </span>
+                  </div>
+                </div>
+                
+                <Droppable droppableId="category-uncategorized" direction="horizontal">
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`
+                        min-h-[200px] rounded-lg border-2 border-dashed p-4 transition-all duration-200
+                        ${snapshot.isDraggingOver 
+                          ? 'border-gray-400 bg-gray-50' 
+                          : 'border-gray-200 bg-gray-25'
+                        }
+                      `}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {groupedTemplates.uncategorized.map((template, index) => (
+                          <Draggable key={template.id} draggableId={template.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                              >
+                                <TemplateDisplayCard
+                                  template={template}
+                                  onDuplicate={handleDuplicateTemplate}
+                                  onDelete={handleDeleteTemplate}
+                                  isDragging={snapshot.isDragging}
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                      </div>
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Empty State */
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="text-center py-12">
+              <LayoutTemplate className="mx-auto h-16 w-16 text-gray-400" />
+              <h3 className="mt-4 text-lg font-semibold text-gray-900">No templates</h3>
+              <p className="mt-2 text-base text-gray-500">
+                {searchTerm || selectedCategory !== 'all'
+                  ? "Try adjusting your search or filters to find what you're looking for."
+                  : 'Get started by creating a new template.'}
+              </p>
+              <div className="mt-6">
+                <Link to="/dashboard/templates/new">
+                  <Button
+                    leftIcon={<Plus size={20} />}
+                  >
+                    Create Template
+                  </Button>
+                </Link>
               </div>
             </div>
-          ))}
+          </div>
+        )}
+      </DragDropContext>
+
+      {/* Loading overlay for template updates */}
+      {updatingTemplate && (
+        <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 shadow-xl">
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600 mr-3"></div>
+              <span className="text-gray-900">Moving template...</span>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">

@@ -456,7 +456,7 @@ function buildItemHierarchy(flatItems: any[]): TemplateItem[] {
 }
 
 export async function createTemplate(
-  templateData: { name: string; description?: string },
+  templateData: { name: string; description?: string; categoryId?: string | null },
   items: Array<{
     id: string;
     type: TemplateItemType;
@@ -484,7 +484,7 @@ export async function createTemplate(
       const newTemplate: Template = {
         id: `mock-template-${Date.now()}`,
         adminId: 'dev-company-id',
-        categoryId: null,
+        categoryId: templateData.categoryId || null,
         name: templateData.name,
         description: templateData.description || null,
         createdAt: new Date().toISOString(),
@@ -531,7 +531,7 @@ export async function createTemplate(
       .insert([{
         admin_id: adminData.admin_id,
         name: templateData.name,
-        category_id: null, // No longer using categories
+        category_id: templateData.categoryId || null,
         description: templateData.description,
       }])
       .select()
@@ -601,7 +601,7 @@ export async function createTemplate(
 
 export async function updateTemplate(
   id: string,
-  templateData: { name: string; description?: string },
+  templateData: { name: string; description?: string; categoryId?: string | null },
   items: Array<{
     id: string;
     type: TemplateItemType;
@@ -635,7 +635,7 @@ export async function updateTemplate(
       const updatedTemplate = {
         ...mockTemplatesState[templateIndex],
         name: templateData.name,
-        categoryId: null,
+        categoryId: templateData.categoryId || null,
         description: templateData.description || null,
         updatedAt: new Date().toISOString(),
       };
@@ -671,7 +671,7 @@ export async function updateTemplate(
       .from('templates')
       .update({
         name: templateData.name,
-        category_id: null, // No longer using categories
+        category_id: templateData.categoryId || null,
         description: templateData.description,
       })
       .eq('id', id)

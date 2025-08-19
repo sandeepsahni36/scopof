@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Building2, Bed, Bath, MapPin, ClipboardCheck, Camera, Edit, ArrowLeft, Calendar, User, Plus, X, Check, Trash2, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
+import { Building2, Bed, Bath, MapPin, ClipboardCheck, Camera, Edit, ArrowLeft, Calendar, User, Plus, X, Check, Trash2, GripVertical, ArrowUp, ArrowDown, Folder, LayoutTemplate } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Property, Template } from '../../types';
+import { Property, Template, TemplateCategory } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { getProperty, updateProperty } from '../../lib/properties';
-import { getTemplates } from '../../lib/templates';
+import { getTemplates, getTemplateCategories } from '../../lib/templates';
 import { getPropertyChecklist, createPropertyChecklist, updatePropertyChecklist, deletePropertyChecklist, reorderChecklistTemplates, PropertyChecklist } from '../../lib/propertyChecklists';
 import { getInspectionsForProperty } from '../../lib/inspections';
 import PropertyForm, { PropertyFormData } from '../../components/properties/PropertyForm';
@@ -22,6 +22,7 @@ const PropertyDetailPage = () => {
   const [activeTab, setActiveTab] = useState<'details' | 'checklist' | 'inspections'>('details');
   const [showCreateChecklistForm, setShowCreateChecklistForm] = useState(false);
   const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
+  const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [propertyChecklist, setPropertyChecklist] = useState<PropertyChecklist | null>(null);
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
@@ -75,9 +76,14 @@ const PropertyDetailPage = () => {
       const checklist = await getPropertyChecklist(id);
       setPropertyChecklist(checklist);
       
-      // Load available templates
-      const templates = await getTemplates();
+      // Load available templates and categories
+      const [templates, categoriesData] = await Promise.all([
+        getTemplates(),
+        getTemplateCategories()
+      ]);
+      
       setAvailableTemplates(templates || []);
+      setCategories(categoriesData || []);
       
       // Set default checklist name if creating new
       if (!checklist && property) {

@@ -2,6 +2,15 @@
 
 ## Recent Updates
 
+### Template Category System Implementation
+- **Added visual template organization** with drag-and-drop category management
+- **Category Cards**: Light blue folder-style cards for organizing templates (furnished, unfurnished, holiday home, etc.)
+- **Drag-and-Drop Interface**: Templates can be dragged between categories for easy organization
+- **Enhanced Checklist Builder**: Property checklist creation now shows templates grouped by category
+- **Dual Organization**: Both visual grouping and filter-based category selection available
+- **Database Integration**: Template category assignments are persisted and don't affect existing checklists
+- **User Experience**: Intuitive folder-based organization similar to file management systems
+
 ### Invitation System Implementation
 - **Added invitation token system** for secure team member invitations
 - **Database Schema**: Created `invitations` table with proper RLS policies
@@ -20,12 +29,18 @@
 - **Automatic cleanup** of expired invitations
 - **Email templates** with company branding
 - **Real-time invitation status** tracking
+- **Visual template organization** with category-based grouping
+- **Drag-and-drop template management** for intuitive organization
+- **Enhanced checklist building** with categorized template selection
 
 ### Technical Implementation
 - **Database Function**: `handle_new_invited_user()` for automatic role assignment
 - **Database Trigger**: `on_auth_user_created_assign_role` on auth.users table
 - **RLS Policies**: Secure access control for invitation management
 - **Frontend Integration**: Seamless invitation workflow with existing auth system
+- **Template Categories**: Visual organization system with drag-and-drop functionality
+- **Category Management**: Create, organize, and manage template categories
+- **Enhanced UX**: Improved template discovery and organization in checklist builder
 
 ## Project Overview
 
