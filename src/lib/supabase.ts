@@ -247,8 +247,8 @@ export async function createUserProfileAndAdmin(
   email: string,
   full_name: string,
   company_name: string,
-    registration_type?: 'trial' | 'no_trial';
-    invitation_token?: string;
+  registration_type?: 'trial' | 'no_trial',
+  invitation_token?: string,
   registration_type: string = 'trial'
 ) {
   try {
