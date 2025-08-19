@@ -21,6 +21,37 @@ function TemplatesPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [updatingTemplate, setUpdatingTemplate] = useState<string | null>(null);
 
+  // Group templates by category - must be called before any conditional returns
+  const groupedTemplates = React.useMemo(() => {
+    const filtered = templates.filter(template => {
+      const matchesSearch = searchTerm === '' || 
+        template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        template.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || template.categoryId === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+
+    const grouped: { [key: string]: Template[] } = {
+      uncategorized: [],
+    };
+
+    // Initialize category groups
+    categories.forEach(category => {
+      grouped[category.id] = [];
+    });
+
+    // Group templates
+    filtered.forEach(template => {
+      if (template.categoryId && grouped[template.categoryId]) {
+        grouped[template.categoryId].push(template);
+      } else {
+        grouped.uncategorized.push(template);
+      }
+    });
+
+    return grouped;
+  }, [templates, categories, searchTerm, selectedCategory]);
+
   useEffect(() => {
     loadTemplatesAndCategories();
   }, []);
@@ -185,37 +216,6 @@ function TemplatesPage() {
         template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         template.description?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || template.categoryId === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-
-    const grouped: { [key: string]: Template[] } = {
-      uncategorized: [],
-    };
-
-    // Initialize category groups
-    categories.forEach(category => {
-      grouped[category.id] = [];
-    });
-
-    // Group templates
-    filtered.forEach(template => {
-      if (template.categoryId && grouped[template.categoryId]) {
-        grouped[template.categoryId].push(template);
-      } else {
-        grouped.uncategorized.push(template);
-      }
-    });
-
-    return grouped;
-  }, [templates, categories, searchTerm, selectedCategory]);
-
-    const matchesSearch = searchTerm === '' || 
-      template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || template.categoryId === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
