@@ -865,7 +865,7 @@ Deno.serve(async (req) => {
 
           console.log("Updating admin record with active status:", {
             adminId: adminData.id,
-            status: "active",
+            status: subscription.status,
             tier: tier
           });
 
@@ -873,7 +873,7 @@ Deno.serve(async (req) => {
           const { data: adminUpdateData, error: adminUpdateError } = await supabase
             .from("admin")
             .update({
-              subscription_status: "active",
+              subscription_status: subscription.status,
               subscription_tier: tier,
             })
             .eq("id", adminData.id)

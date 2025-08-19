@@ -113,6 +113,7 @@ export async function signUp(email: string, password: string, metadata?: { full_
     // Enhanced logging for invitation signup
     console.log('SignUp: Metadata received:', metadata);
     console.log('SignUp: Has invitation token:', !!(metadata as any)?.invitation_token);
+    console.log('SignUp: Registration type:', metadata?.registration_type);
     
     // Create the auth user with metadata included
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -123,7 +124,8 @@ export async function signUp(email: string, password: string, metadata?: { full_
         data: {
           full_name: metadata?.full_name,
           company_name: metadata?.company_name,
-          invitation_token: (metadata as any)?.invitation_token,
+          invitation_token: metadata?.invitation_token,
+          registration_type: metadata?.registration_type,
         },
       },
     });
@@ -141,6 +143,7 @@ export async function signUp(email: string, password: string, metadata?: { full_
       userId: signUpData.user.id,
       email: signUpData.user.email,
       hasInvitationToken: !!(signUpData.user.user_metadata?.invitation_token)
+      registrationTypeInMetadata: signUpData.user.user_metadata?.registration_type
     });
     return { data: signUpData, error: null };
   } catch (error) {
@@ -244,6 +247,8 @@ export async function createUserProfileAndAdmin(
   email: string,
   full_name: string,
   company_name: string,
+    registration_type?: 'trial' | 'no_trial';
+    invitation_token?: string;
   registration_type: string = 'trial'
 ) {
   try {
