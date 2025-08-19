@@ -45,6 +45,11 @@ const InspectionPage = () => {
   const [cancelling, setCancelling] = useState(false);
   const itemRefs = useRef<{ [key: string]: any }>({});
   
+  // Scroll to top when step changes or when switching to/from signatures
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentStep, showSignatures]);
+
   // Signature refs
   const inspectorSignatureRef = useRef<SignatureCanvas>(null);
   const clientSignatureRef = useRef<SignatureCanvas>(null);
