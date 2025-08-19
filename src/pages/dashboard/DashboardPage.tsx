@@ -446,54 +446,6 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Subscription Status Alert */}
-      {(isTrialExpired || (!hasActiveSubscription && trialDaysRemaining <= 7)) && (
-        <div className={`mb-8 rounded-lg border p-4 ${
-          isTrialExpired 
-            ? 'bg-red-50 border-red-200' 
-            : 'bg-amber-50 border-amber-200'
-        }`}>
-          <div className="flex">
-            <div className="flex-shrink-0">
-              {isTrialExpired ? (
-                <AlertTriangle className="h-5 w-5 text-red-400" />
-              ) : (
-                <Clock className="h-5 w-5 text-amber-400" />
-              )}
-            </div>
-            <div className="ml-3 flex-1">
-              <h3 className={`text-sm font-medium ${
-                isTrialExpired ? 'text-red-800' : 'text-amber-800'
-              }`}>
-                {isTrialExpired 
-                  ? 'Trial Period Expired' 
-                  : `Trial Ending Soon - ${trialDaysRemaining} days remaining`
-                }
-              </h3>
-              <div className={`mt-2 text-sm ${
-                isTrialExpired ? 'text-red-700' : 'text-amber-700'
-              }`}>
-                <p>
-                  {isTrialExpired 
-                    ? 'Your free trial has ended. Upgrade to a paid plan to continue using all features.'
-                    : 'Your trial will end soon. Upgrade now to ensure uninterrupted access to your property management tools.'
-                  }
-                </p>
-              </div>
-              <div className="mt-4">
-                <Button
-                  size="sm"
-                  onClick={handleUpgradeClick}
-                  leftIcon={<CreditCard size={16} />}
-                >
-                  {isTrialExpired ? 'Upgrade Now' : 'Upgrade to Premium'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Trial Status Card */}
       {!isTrialExpired && !hasActiveSubscription && (
         <div className="mb-8 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg p-6 border border-primary-200">
