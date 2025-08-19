@@ -808,6 +808,7 @@ export async function updateTemplateCategory(templateId: string, categoryId: str
     throw error;
   }
 }
+
 export async function deleteTemplate(id: string) {
   try {
     const user = await validateUserSession();
@@ -854,7 +855,7 @@ export async function deleteTemplate(id: string) {
     throw error;
   }
 }
-export async function duplicateTemplate(id: string) {
+
 export async function deleteTemplateCategory(id: string) {
   try {
     const user = await validateUserSession();
@@ -921,6 +922,8 @@ export async function deleteTemplateCategory(id: string) {
     throw error;
   }
 }
+
+export async function duplicateTemplate(id: string) {
   try {
     const user = await validateUserSession();
     if (!user) {
