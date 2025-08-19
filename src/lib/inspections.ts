@@ -635,10 +635,23 @@ export async function deleteIncompleteInspections(): Promise<{ deleted: number; 
     // Handle dev mode
     if (devModeEnabled()) {
       console.log('Dev mode: Cleaning up mock incomplete inspections');
-      const incompleteCount = mockInspectionsState.filter(i => i.status === 'in_progress').length;
-      mockInspectionsState = mockInspectionsState.filter(i => i.status !== 'in_progress');
+      // Calculate 7 days ago for dev mode
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const oldIncompleteInspections = mockInspectionsState.filter(i => 
+        i.status === 'in_progress' && new Date(i.createdAt) <= sevenDaysAgo
+      );
+      const incompleteCount = oldIncompleteInspections.length;
+      mockInspectionsState = mockInspectionsState.filter(i => 
+        !(i.status === 'in_progress' && new Date(i.createdAt) <= sevenDaysAgo)
+      );
       return { deleted: incompleteCount, errors: [] };
     }
+
+    // Calculate 7 days ago timestamp
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+    
+    console.log('Deleting incomplete inspections older than:', sevenDaysAgoISO);
 
     // Get all incomplete inspections for this admin
     const { data: incompleteInspections, error: inspectionsError } = await supabase
@@ -648,26 +661,33 @@ export async function deleteIncompleteInspections(): Promise<{ deleted: number; 
         properties!inner(admin_id)
       `)
       .eq('status', 'in_progress')
+      .lte('created_at', sevenDaysAgoISO)
       .eq('properties.admin_id', (await supabase.from('admin').select('id').eq('owner_id', user.id).single()).data?.id);
 
     if (inspectionsError) {
       throw inspectionsError;
     }
 
+    console.log(`Found ${incompleteInspections?.length || 0} incomplete inspections older than 7 days to delete`);
+
     const errors: string[] = [];
     let deletedCount = 0;
 
     for (const inspection of incompleteInspections || []) {
       try {
+        console.log(`Deleting old incomplete inspection: ${inspection.id}`);
         const success = await deleteInspection(inspection.id);
         if (success) {
           deletedCount++;
+          console.log(`Successfully deleted inspection: ${inspection.id}`);
         }
       } catch (error: any) {
+        console.error(`Failed to delete inspection ${inspection.id}:`, error);
         errors.push(`Failed to delete inspection ${inspection.id}: ${error.message}`);
       }
     }
 
+    console.log(`Cleanup completed: ${deletedCount} inspections deleted, ${errors.length} errors`);
     return { deleted: deletedCount, errors };
   } catch (error: any) {
     console.error('Error cleaning up incomplete inspections:', error);
