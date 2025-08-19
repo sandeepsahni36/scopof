@@ -457,27 +457,6 @@ function TemplatesPage() {
             </div>
           </div>
         </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="text-center py-12">
-            <LayoutTemplate className="mx-auto h-16 w-16 text-gray-400" />
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">No templates</h3>
-            <p className="mt-2 text-base text-gray-500">
-              {searchTerm || selectedCategory !== 'all'
-                ? "Try adjusting your search or filters to find what you're looking for."
-                : 'Get started by creating a new template.'}
-            </p>
-            <div className="mt-6">
-              <Link to="/dashboard/templates/new">
-                <Button
-                  leftIcon={<Plus size={20} />}
-                >
-                  Create Template
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* New Category Modal */}
