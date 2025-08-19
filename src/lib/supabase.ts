@@ -142,7 +142,7 @@ export async function signUp(email: string, password: string, metadata?: { full_
     console.log('SignUp: User created successfully:', {
       userId: signUpData.user.id,
       email: signUpData.user.email,
-      hasInvitationToken: !!(signUpData.user.user_metadata?.invitation_token)
+      hasInvitationToken: !!(signUpData.user.user_metadata?.invitation_token),
       registrationTypeInMetadata: signUpData.user.user_metadata?.registration_type
     });
     return { data: signUpData, error: null };
