@@ -757,6 +757,57 @@ export async function updateTemplate(
   }
 }
 
+export async function updateTemplateCategory(templateId: string, categoryId: string | null) {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Updating template category:', templateId, 'to category:', categoryId);
+      const templateIndex = mockTemplatesState.findIndex(t => t.id === templateId);
+      if (templateIndex === -1) {
+        throw new Error('Template not found');
+      }
+      
+      mockTemplatesState[templateIndex] = {
+        ...mockTemplatesState[templateIndex],
+        categoryId,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      return mockTemplatesState[templateIndex];
+    }
+
+    const { data, error } = await supabase
+      .from('templates')
+      .update({ category_id: categoryId })
+      .eq('id', templateId)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Error updating template category:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return null;
+    }
+    
+    throw error;
+  }
+}
 export async function deleteTemplate(id: string) {
   try {
     const user = await validateUserSession();
