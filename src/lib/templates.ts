@@ -855,6 +855,72 @@ export async function deleteTemplate(id: string) {
   }
 }
 export async function duplicateTemplate(id: string) {
+export async function deleteTemplateCategory(id: string) {
+  try {
+    const user = await validateUserSession();
+    if (!user) {
+      throw new Error('User session is invalid. Please sign in again.');
+    }
+
+    // Handle dev mode
+    if (devModeEnabled()) {
+      console.log('Dev mode: Deleting mock category:', id);
+      const categoryIndex = mockCategoriesState.findIndex(c => c.id === id);
+      if (categoryIndex === -1) {
+        throw new Error('Category not found');
+      }
+      
+      // Move templates in this category to uncategorized
+      mockTemplatesState = mockTemplatesState.map(template => 
+        template.categoryId === id 
+          ? { ...template, categoryId: null, updatedAt: new Date().toISOString() }
+          : template
+      );
+      
+      mockCategoriesState.splice(categoryIndex, 1);
+      return true;
+    }
+
+    // First, move all templates in this category to uncategorized
+    const { error: updateError } = await supabase
+      .from('templates')
+      .update({ category_id: null })
+      .eq('category_id', id);
+
+    if (updateError) {
+      if (updateError.message?.includes('user_not_found') || updateError.message?.includes('JWT')) {
+        await handleAuthError(updateError);
+        return false;
+      }
+      throw updateError;
+    }
+
+    // Then delete the category
+    const { error } = await supabase
+      .from('template_categories')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+        await handleAuthError(error);
+        return false;
+      }
+      throw error;
+    }
+
+    return true;
+  } catch (error: any) {
+    console.error('Error deleting template category:', error);
+    
+    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
+      await handleAuthError(error);
+      return false;
+    }
+    
+    throw error;
+  }
+}
   try {
     const user = await validateUserSession();
     if (!user) {

@@ -151,6 +151,42 @@ function TemplatesPage() {
     }
   };
 
+  const handleDeleteCategory = async (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    const templatesInCategory = groupedTemplates[categoryId]?.length || 0;
+    
+    const confirmMessage = templatesInCategory > 0
+      ? `Are you sure you want to delete the "${category?.name}" category? This will move ${templatesInCategory} template${templatesInCategory !== 1 ? 's' : ''} to "Uncategorized". This action cannot be undone.`
+      : `Are you sure you want to delete the "${category?.name}" category? This action cannot be undone.`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const { deleteTemplateCategory } = await import('../../lib/templates');
+      const success = await deleteTemplateCategory(categoryId);
+      
+      if (success) {
+        toast.success('Category deleted successfully');
+        
+        // Update local state
+        setCategories(categories.filter(c => c.id !== categoryId));
+        
+        // Move templates to uncategorized in local state
+        setTemplates(prevTemplates => 
+          prevTemplates.map(template => 
+            template.categoryId === categoryId 
+              ? { ...template, categoryId: null }
+              : template
+          )
+        );
+      }
+    } catch (error: any) {
+      console.error('Error deleting category:', error);
+      toast.error('Failed to delete category');
+    }
+  };
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
@@ -347,13 +383,12 @@ function TemplatesPage() {
                           ))}
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center h-32 text-blue-600">
-                          <div className="text-center">
-                            <Folder className="h-8 w-8 mx-auto mb-2" />
-                            <p className="text-sm font-medium">Drop templates here</p>
-                            <p className="text-xs">Drag templates to organize them in this category</p>
-                          </div>
-                        </div>
+                        <TemplateCategoryCard
+                          category={category}
+                          templateCount={0}
+                          isDraggedOver={snapshot.isDraggingOver}
+                          onDelete={handleDeleteCategory}
+                        />
                       )}
                       {provided.placeholder}
                     </div>
