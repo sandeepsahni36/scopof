@@ -249,7 +249,6 @@ export async function createUserProfileAndAdmin(
   company_name: string,
   registration_type?: 'trial' | 'no_trial',
   invitation_token?: string,
-  registration_type: string = 'trial'
 ) {
   try {
     // Start a transaction by disabling realtime
