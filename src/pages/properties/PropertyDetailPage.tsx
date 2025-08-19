@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Property, Template, TemplateCategory } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { getProperty, updateProperty } from '../../lib/properties';
-import { getTemplates, getTemplateCategories } from '../../lib/templates';
+import { getTemplates } from '../../lib/templates';
 import { getPropertyChecklist, createPropertyChecklist, updatePropertyChecklist, deletePropertyChecklist, reorderChecklistTemplates, PropertyChecklist } from '../../lib/propertyChecklists';
 import { getInspectionsForProperty } from '../../lib/inspections';
 import PropertyForm, { PropertyFormData } from '../../components/properties/PropertyForm';
@@ -22,7 +22,6 @@ const PropertyDetailPage = () => {
   const [activeTab, setActiveTab] = useState<'details' | 'checklist' | 'inspections'>('details');
   const [showCreateChecklistForm, setShowCreateChecklistForm] = useState(false);
   const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
-  const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [propertyChecklist, setPropertyChecklist] = useState<PropertyChecklist | null>(null);
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
@@ -32,6 +31,7 @@ const PropertyDetailPage = () => {
   const [deletingInspections, setDeletingInspections] = useState<Set<string>>(new Set());
   const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [categories, setCategories] = useState<TemplateCategory[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -76,14 +76,9 @@ const PropertyDetailPage = () => {
       const checklist = await getPropertyChecklist(id);
       setPropertyChecklist(checklist);
       
-      // Load available templates and categories
-      const [templates, categoriesData] = await Promise.all([
-        getTemplates(),
-        getTemplateCategories()
-      ]);
-      
+      // Load available templates
+      const templates = await getTemplates();
       setAvailableTemplates(templates || []);
-      setCategories(categoriesData || []);
       
       // Set default checklist name if creating new
       if (!checklist && property) {
@@ -644,25 +639,23 @@ const PropertyDetailPage = () => {
                         {propertyChecklist.templates
                           .sort((a, b) => a.orderIndex - b.orderIndex)
                           .map((template, index) => (
-                          <div key={template.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between">
+                            <div
+                              key={template.templateId}
+                              className="border border-primary-200 bg-primary-50 rounded-lg p-4"
+                            >
                               <div className="flex items-center">
-                                <div className="flex items-center justify-center w-8 h-8 bg-primary-100 text-primary-700 rounded-full text-sm font-medium mr-3">
+                                <div className="flex items-center justify-center w-6 h-6 bg-primary-100 text-primary-700 rounded-full text-xs font-medium mr-3">
                                   {index + 1}
                                 </div>
                                 <div>
-                                  <h5 className="font-medium text-gray-900">{template.template?.name}</h5>
+                                  <h4 className="text-sm font-medium text-gray-900">{template.template?.name || 'Unknown Template'}</h4>
                                   {template.template?.description && (
-                                    <p className="text-sm text-gray-500 mt-1">{template.template.description}</p>
+                                    <p className="text-xs text-gray-500 mt-1">{template.template.description}</p>
                                   )}
                                 </div>
                               </div>
-                              <div className="text-xs text-gray-400">
-                                {template.template?.itemCount || 0} items
-                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     </div>
                   )}
@@ -691,6 +684,7 @@ const PropertyDetailPage = () => {
                   onCancel={handleCancelCreateChecklist}
                   loading={checklistLoading}
                   isEditing={!!propertyChecklist}
+                  categories={categories}
                 />
               ) : (
                 /* No Checklist - Create New */
@@ -895,6 +889,7 @@ interface ChecklistBuilderProps {
   onCancel: () => void;
   loading: boolean;
   isEditing: boolean;
+  categories: TemplateCategory[];
 }
 
 const ChecklistBuilder: React.FC<ChecklistBuilderProps> = ({
@@ -907,6 +902,7 @@ const ChecklistBuilder: React.FC<ChecklistBuilderProps> = ({
   onCancel,
   loading,
   isEditing,
+  categories,
 }) => {
   const handleTemplateAdd = (templateId: string) => {
     if (!selectedTemplates.includes(templateId)) {
@@ -943,27 +939,12 @@ const ChecklistBuilder: React.FC<ChecklistBuilderProps> = ({
               </Link>
             </div>
           ) : (
-            <div className="space-y-2">
-              {availableTemplates
-                .filter(template => !selectedTemplates.includes(template.id))
-                .map((template) => (
-                <div
-                  key={template.id}
-                  className="border border-gray-200 rounded-lg p-3 cursor-pointer transition-all hover:border-primary-300 hover:bg-primary-50"
-                  onClick={() => handleTemplateAdd(template.id)}
-                >
-                  <div className="flex items-center">
-                    <Plus className="h-4 w-4 text-gray-400 mr-2" />
-                    <div>
-                      <h5 className="text-sm font-medium text-gray-900">{template.name}</h5>
-                      {template.description && (
-                        <p className="text-xs text-gray-500 mt-1">{template.description}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <TemplateSelector
+              availableTemplates={availableTemplates}
+              selectedTemplates={selectedTemplates}
+              onTemplateAdd={handleTemplateAdd}
+              categories={categories}
+            />
           )}
         </div>
       </div>
@@ -1076,6 +1057,109 @@ const ChecklistBuilder: React.FC<ChecklistBuilderProps> = ({
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Enhanced Template Selector Component with Category Grouping
+interface TemplateSelectorProps {
+  availableTemplates: Template[];
+  selectedTemplates: string[];
+  onTemplateAdd: (templateId: string) => void;
+  categories: TemplateCategory[];
+}
+
+const TemplateSelector: React.FC<TemplateSelectorProps> = ({
+  availableTemplates,
+  selectedTemplates,
+  onTemplateAdd,
+  categories,
+}) => {
+  // Group available templates by category
+  const groupedTemplates = React.useMemo(() => {
+    const filtered = availableTemplates.filter(template => !selectedTemplates.includes(template.id));
+    
+    const grouped: { [key: string]: Template[] } = {
+      uncategorized: [],
+    };
+
+    // Initialize category groups
+    categories.forEach(category => {
+      grouped[category.id] = [];
+    });
+
+    // Group templates
+    filtered.forEach(template => {
+      if (template.categoryId && grouped[template.categoryId]) {
+        grouped[template.categoryId].push(template);
+      } else {
+        grouped.uncategorized.push(template);
+      }
+    });
+
+    return grouped;
+  }, [availableTemplates, selectedTemplates, categories]);
+
+  return (
+    <div className="space-y-4 max-h-96 overflow-y-auto">
+      {/* Categorized Templates */}
+      {categories.map(category => {
+        const categoryTemplates = groupedTemplates[category.id] || [];
+        if (categoryTemplates.length === 0) return null;
+
+        return (
+          <div key={category.id} className="space-y-2">
+            <div className="flex items-center text-sm font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
+              <Folder className="h-4 w-4 mr-1" />
+              {category.name} ({categoryTemplates.length})
+            </div>
+            {categoryTemplates.map((template) => (
+              <div
+                key={template.id}
+                className="border border-gray-200 rounded-lg p-3 cursor-pointer transition-all hover:border-primary-300 hover:bg-primary-50 ml-4"
+                onClick={() => onTemplateAdd(template.id)}
+              >
+                <div className="flex items-center">
+                  <Plus className="h-4 w-4 text-gray-400 mr-2" />
+                  <div>
+                    <h5 className="text-sm font-medium text-gray-900">{template.name}</h5>
+                    {template.description && (
+                      <p className="text-xs text-gray-500 mt-1">{template.description}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+
+      {/* Uncategorized Templates */}
+      {groupedTemplates.uncategorized.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded">
+            <LayoutTemplate className="h-4 w-4 mr-1" />
+            Uncategorized ({groupedTemplates.uncategorized.length})
+          </div>
+          {groupedTemplates.uncategorized.map((template) => (
+            <div
+              key={template.id}
+              className="border border-gray-200 rounded-lg p-3 cursor-pointer transition-all hover:border-primary-300 hover:bg-primary-50 ml-4"
+              onClick={() => onTemplateAdd(template.id)}
+            >
+              <div className="flex items-center">
+                <Plus className="h-4 w-4 text-gray-400 mr-2" />
+                <div>
+                  <h5 className="text-sm font-medium text-gray-900">{template.name}</h5>
+                  {template.description && (
+                    <p className="text-xs text-gray-500 mt-1">{template.description}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
