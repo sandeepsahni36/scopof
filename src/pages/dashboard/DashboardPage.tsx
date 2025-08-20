@@ -447,7 +447,7 @@ const DashboardPage = () => {
       </div>
 
       {/* Trial Status Card */}
-      {!isTrialExpired && !hasActiveSubscription && (
+      {!isTrialExpired && company?.subscription_status === 'trialing' && (
         <div className="mb-8 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg p-6 border border-primary-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
