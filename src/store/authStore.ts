@@ -238,6 +238,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         has_active_subscription: adminStatus?.has_active_subscription
       });
 
+      // Check if this is a new user without an admin record (not an invited user)
+      if (!adminStatus) {
+        console.log('AuthStore Init: New user detected without admin record - setting needsPaymentSetup to true');
+        set({
+          user: userData,
+          company: null,
+          loading: false,
+          isAuthenticated: true,
+          isAdmin: false,
+          hasActiveSubscription: false,
+          isTrialExpired: false,
+          requiresPayment: false,
+          needsPaymentSetup: true,
+        });
+        console.log('AuthStore Init: New user state set - will be redirected to start-trial');
+        console.log("=== AUTH STORE INITIALIZATION DEBUG END (NEW USER) ===");
+        return;
+      }
+
       // Transform data to match our types
       const userData: User = {
         id: user.id,
