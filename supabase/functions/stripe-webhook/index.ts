@@ -357,19 +357,22 @@ Deno.serve(async (req) => {
           trialEnd: new Date(subscription.trial_end * 1000).toISOString()
         });
         
-        // Get customer data from our database
+        // Get customer data from our database - use maybeSingle to handle missing customers
         const { data: customerData, error: customerError } = await supabase
           .from("stripe_customers")
           .select("user_id")
           .eq("customer_id", subscription.customer)
-          .single();
+          .maybeSingle();
 
-        if (customerError || !customerData) {
-          console.error(`Customer not found in database:`, {
-            stripeCustomerId: subscription.customer,
-            error: customerError
-          });
-          throw new Error(`Customer not found: ${subscription.customer}`);
+        if (customerError) {
+          console.error(`Error fetching customer:`, customerError);
+          // Skip processing this event if customer not found
+          break;
+        }
+
+        if (!customerData) {
+          console.log(`Customer ${subscription.customer} not found in database, skipping...`);
+          break;
         }
 
         // Get admin data
