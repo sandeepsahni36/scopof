@@ -5,7 +5,7 @@ import { Check, ArrowRight, AlertTriangle, CreditCard } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { createCheckoutSession } from '../../lib/stripe';
-import { validateUserSession, handleAuthError } from '../../lib/supabase';
+import { validateUserSession, handleAuthError, supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from 'sonner';
 

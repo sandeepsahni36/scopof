@@ -357,22 +357,19 @@ Deno.serve(async (req) => {
           trialEnd: new Date(subscription.trial_end * 1000).toISOString()
         });
         
-        // Get customer data from our database - use maybeSingle to handle missing customers
+        // Get customer data from our database
         const { data: customerData, error: customerError } = await supabase
           .from("stripe_customers")
           .select("user_id")
           .eq("customer_id", subscription.customer)
-          .maybeSingle();
+          .single();
 
-        if (customerError) {
-          console.error(`Error fetching customer:`, customerError);
-          // Skip processing this event if customer not found
-          break;
-        }
-
-        if (!customerData) {
-          console.log(`Customer ${subscription.customer} not found in database, skipping...`);
-          break;
+        if (customerError || !customerData) {
+          console.error(`Customer not found in database:`, {
+            stripeCustomerId: subscription.customer,
+            error: customerError
+          });
+          throw new Error(`Customer not found: ${subscription.customer}`);
         }
 
         // Get admin data
@@ -766,19 +763,22 @@ Deno.serve(async (req) => {
             priceId: subscription.items.data[0]?.price.id
           });
           
-          // Get customer data from our database
+          // Get customer data from our database - use maybeSingle to handle missing customers
           const { data: customerData, error: customerError } = await supabase
             .from("stripe_customers")
             .select("user_id")
             .eq("customer_id", invoice.customer)
-            .single();
+            .maybeSingle();
 
-          if (customerError || !customerData) {
-            console.error(`Customer not found in database:`, {
-              stripeCustomerId: invoice.customer,
-              error: customerError
-            });
-            throw new Error(`Customer not found: ${invoice.customer}`);
+          if (customerError) {
+            console.error(`Error fetching customer:`, customerError);
+            // Skip processing this event if customer not found
+            break;
+          }
+
+          if (!customerData) {
+            console.log(`Customer ${invoice.customer} not found in database, skipping...`);
+            break;
           }
 
           console.log("Found customer in database:", {
