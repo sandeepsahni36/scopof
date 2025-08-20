@@ -431,63 +431,63 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               reportBackground: admin.report_background,
               tier: actualTier as any,
               trialEndsAt: admin.trial_ends_at,
-              subscription_status: admin.subscription_status,
+              subscription_status: admin.subscription_status, // Use admin's status as primary
               createdAt: admin.created_at,
               updatedAt: admin.updated_at,
             };
 
-            // Check subscription status with improved logic
+            // --- START REVISED LOGIC FOR SUBSCRIPTION STATUS ---
+            const admin_subscription_status = admin.subscription_status;
             const trialEnd = admin.trial_ends_at ? new Date(admin.trial_ends_at) : null;
-            const now = new Date(); // This is the correct declaration
+            const now = new Date();
 
-            console.log('Subscription status check:', {
-              subscription_status: admin.subscription_status,
-              stripe_status: subscription?.status,
+            console.log('Subscription status check (REVISED):', {
+              admin_status: admin_subscription_status,
               trial_ends_at: admin.trial_ends_at,
               now: now.toISOString(),
               trialEnd: trialEnd?.toISOString(),
               customer_id: admin.customer_id
             });
 
-            // --- START REVISED LOGIC FOR SUBSCRIPTION STATUS ---
-            const admin_subscription_status = admin.subscription_status;
-            const stripe_subscription_status = subscription?.status;
-
-            
             if (admin_subscription_status === 'trialing') {
               if (trialEnd && now < trialEnd) {
-                // Check if payment setup is truly complete by verifying Stripe subscription status
-                if (!admin.customer_id || admin.customer_id === '' || !stripe_subscription_status || stripe_subscription_status === 'incomplete') {
-                  hasActiveSubscription = false;
-                  needsPaymentSetup = true;
-                  console.log('DEBUG: Trial user needs payment setup - missing customer_id or incomplete Stripe subscription.');
-                } else {
-                  hasActiveSubscription = true;
-                  needsPaymentSetup = false;
-                  console.log('DEBUG: Active trial with payment setup complete.');
-                }
+                // User is in trial and trial has not expired
+                hasActiveSubscription = true; // Consider trialing as active for dashboard access
+                needsPaymentSetup = false; // Payment setup is part of the trial flow, not a block
+                requiresPayment = false;
+                console.log('DEBUG: User is in active trial period.');
               } else {
+                // Trial has expired
                 isTrialExpired = true;
                 requiresPayment = true;
-                needsPaymentSetup = true;
+                needsPaymentSetup = true; // Needs to complete payment setup to reactivate
+                hasActiveSubscription = false;
                 console.log('DEBUG: Trial expired, payment required.');
               }
-            } else if (admin_subscription_status === 'active' || stripe_subscription_status === 'active') {
+            } else if (admin_subscription_status === 'active') {
+              // User has an active paid subscription
               hasActiveSubscription = true;
               needsPaymentSetup = false;
               requiresPayment = false;
-              console.log('DEBUG: Active paid subscription.');
+              console.log('DEBUG: User has an active paid subscription.');
+            } else if (admin_subscription_status === 'not_started') {
+              // User chose "no trial" and hasn't completed payment yet
+              needsPaymentSetup = true;
+              requiresPayment = false; // Not requiring payment yet, but needs setup
+              hasActiveSubscription = false;
+              console.log('DEBUG: User chose no trial, needs payment setup.');
             } else if (admin_subscription_status === 'past_due' || admin_subscription_status === 'canceled' || admin_subscription_status === 'unpaid') {
+              // Subscription is in a state requiring payment
               requiresPayment = true;
               needsPaymentSetup = true;
               hasActiveSubscription = false;
               console.log('DEBUG: Subscription past due/canceled/unpaid, requires payment.');
             } else {
-              // Default case for new users or unknown states (e.g., 'not_started')
-              hasActiveSubscription = false;
+              // Fallback for any other unexpected status
+              console.warn('DEBUG: Unexpected admin subscription status:', admin_subscription_status);
               needsPaymentSetup = true;
-              requiresPayment = false; // Not requiring payment yet, but needs setup
-              console.log('DEBUG: Default case - needs payment setup. Status:', admin_subscription_status);
+              requiresPayment = true; // Assume payment is required for unknown states
+              hasActiveSubscription = false;
             }
             // --- END REVISED LOGIC FOR SUBSCRIPTION STATUS ---
 
