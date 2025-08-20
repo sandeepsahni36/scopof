@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm, SubmitHandler } from 'react-hook-form';
+import { Eye, EyeOff } from 'lucide-react';
 import { signIn, resendConfirmationEmail } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { Button } from '../../components/ui/Button';
