@@ -222,8 +222,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       console.log("AuthStore Init: Admin status fetched:", adminStatus);
       
-      // Fix isAdmin calculation - check for owner or admin role
+      // Transform data to match our types first (before any conditional logic)
+      const userData: User = {
+        id: user.id,
+        email: user.email!,
+        firstName: profile?.full_name?.split(' ')[0],
+        lastName: profile?.full_name?.split(' ')[1],
+        role: 'user', // Will be updated below based on admin status
+        createdAt: profile?.created_at || user.created_at,
+      };
+
+      // Calculate isAdmin role - check for owner or admin role
       const isAdminRole = adminStatus?.role === 'owner' || adminStatus?.role === 'admin';
+      
+      // Update userData role based on admin status
+      userData.role = isAdminRole ? 'admin' : 'user';
+      
       console.log("User is admin:", isAdminRole, "Role:", adminStatus?.role);
       console.log("AuthStore Init: Is Admin Role calculated as:", isAdminRole);
       
@@ -256,16 +270,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log("=== AUTH STORE INITIALIZATION DEBUG END (NEW USER) ===");
         return;
       }
-
-      // Transform data to match our types
-      const userData: User = {
-        id: user.id,
-        email: user.email!,
-        firstName: profile?.full_name?.split(' ')[0],
-        lastName: profile?.full_name?.split(' ')[1],
-        role: isAdminRole ? 'admin' : 'user',
-        createdAt: profile?.created_at || user.created_at,
-      };
 
       let companyData: Company | null = null;
       let hasActiveSubscription = false;
