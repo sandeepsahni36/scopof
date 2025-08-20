@@ -79,6 +79,90 @@ const StartTrialPage = () => {
         return;
       }
 
+      console.log('Creating admin and team_members records for new user...');
+      
+      // Get user metadata for company information
+      const companyName = user.user_metadata?.company_name;
+      if (!companyName) {
+        throw new Error('Company name not found in user metadata');
+      }
+
+      console.log('User metadata:', {
+        companyName,
+        fullName: user.user_metadata?.full_name,
+        registrationType: user.user_metadata?.registration_type
+      });
+
+      // Determine initial subscription state based on user's choice
+      let initialSubscriptionStatus: string;
+      let initialTrialStartedAt: string | null;
+      let initialTrialEndsAt: string | null;
+
+      if (skipTrial) {
+        // User chose "Create Account (No Trial)"
+        initialSubscriptionStatus = 'not_started';
+        initialTrialStartedAt = null;
+        initialTrialEndsAt = null;
+        console.log('User chose no trial - setting status to not_started');
+      } else {
+        // User chose "Start 14-Day Free Trial"
+        initialSubscriptionStatus = 'trialing';
+        initialTrialStartedAt = new Date().toISOString();
+        initialTrialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+        console.log('User chose trial - setting status to trialing with trial dates:', {
+          trialStarted: initialTrialStartedAt,
+          trialEnds: initialTrialEndsAt
+        });
+      }
+
+      // Create admin record
+      console.log('Creating admin record with initial subscription state...');
+      const { data: newAdmin, error: adminError } = await supabase
+        .from('admin')
+        .insert({
+          owner_id: user.id,
+          billing_manager_id: user.id,
+          company_name: companyName,
+          subscription_tier: selectedTier,
+          subscription_status: initialSubscriptionStatus,
+          trial_started_at: initialTrialStartedAt,
+          trial_ends_at: initialTrialEndsAt,
+        })
+        .select()
+        .single();
+
+      if (adminError) {
+        console.error('Error creating admin record:', adminError);
+        throw new Error(`Failed to create company record: ${adminError.message}`);
+      }
+
+      console.log('Admin record created successfully:', {
+        adminId: newAdmin.id,
+        companyName: newAdmin.company_name,
+        subscriptionStatus: newAdmin.subscription_status,
+        subscriptionTier: newAdmin.subscription_tier,
+        trialEndsAt: newAdmin.trial_ends_at
+      });
+
+      // Create team_members record to link user as owner
+      console.log('Creating team_members record...');
+      const { error: teamMemberError } = await supabase
+        .from('team_members')
+        .insert({
+          admin_id: newAdmin.id,
+          profile_id: user.id,
+          role: 'owner',
+        });
+
+      if (teamMemberError) {
+        console.error('Error creating team member record:', teamMemberError);
+        // Try to clean up the admin record if team member creation fails
+        await supabase.from('admin').delete().eq('id', newAdmin.id);
+        throw new Error(`Failed to create team member record: ${teamMemberError.message}`);
+      }
+
+      console.log('Team member record created successfully - user is now owner of admin record');
+
       console.log('Starting trial with selected tier:', selectedTier);
       console.log('StartTrialPage: About to call createCheckoutSession');
       
