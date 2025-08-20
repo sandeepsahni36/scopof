@@ -6,7 +6,6 @@ import { useAuthStore } from '../../store/authStore';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { toast } from 'sonner';
-import { Eye, EyeOff } from 'lucide-react';
 A
 type LoginFormInputs = {
   email: string;
