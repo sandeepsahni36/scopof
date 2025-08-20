@@ -51,7 +51,7 @@ const DashboardLayout = () => {
     ? Math.max(0, Math.ceil((new Date(company.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
     : 0;
 
-  const showTrialWarning = !hasActiveSubscription && trialDaysRemaining <= 3 && trialDaysRemaining > 0;
+  const showTrialWarning = company?.subscription_status === 'trialing' && trialDaysRemaining <= 3 && trialDaysRemaining > 0;
   
   const handleLogout = async () => {
     await logout();
@@ -394,7 +394,7 @@ const DashboardLayout = () => {
           {/* Main content area */}
           <main className="flex-1 overflow-y-auto">
             {/* Subscription Status Alert - Global Trial Reminder */}
-            {(isTrialExpired || (!hasActiveSubscription && trialDaysRemaining <= 7)) && (
+            {(isTrialExpired || (company?.subscription_status === 'trialing' && trialDaysRemaining <= 7)) && (
               <div className={`mx-4 sm:mx-6 lg:mx-8 mt-6 rounded-lg border p-4 ${
                 isTrialExpired 
                   ? 'bg-red-50 border-red-200' 
