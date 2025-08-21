@@ -240,7 +240,7 @@ export async function resendConfirmationEmail(email: string) {
 // Development mode function to bypass authentication
 export function devModeEnabled() {
   const devModeValue = import.meta.env.VITE_DEV_MODE;
-  const isEnabled = devModeValue === 'true';
+  const isEnabled = devModeValue === 'true' || devModeValue === 'True';
   console.log('=== DEV MODE CHECK ===');
   console.log('VITE_DEV_MODE environment variable:', devModeValue);
   console.log('Dev mode enabled:', isEnabled);
