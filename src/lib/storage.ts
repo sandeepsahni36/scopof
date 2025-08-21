@@ -15,6 +15,18 @@ export interface StorageUsage {
   tier: string;
 }
 
+// Global variable to control mock storage usage in dev mode
+let _mockStorageUsage: StorageUsage | null = null;
+
+/**
+ * Sets the mock storage usage data for dev mode.
+ * Call this function from the browser console to simulate different storage states.
+ * @param usage The mock StorageUsage object to return, or null to revert to default mock.
+ */
+export function setMockStorageUsage(usage: StorageUsage | null) {
+  _mockStorageUsage = usage;
+}
+
 export async function uploadFile(
   file: File,
   fileType: 'photo' | 'report' | 'logo',
@@ -183,6 +195,9 @@ export async function getStorageUsage(): Promise<StorageUsage | null> {
     // Handle dev mode
     if (devModeEnabled()) {
       console.log('Dev mode: Mock storage usage');
+      if (_mockStorageUsage) {
+        return _mockStorageUsage; // Return controlled mock data if set
+      }
       return {
         currentUsage: 1024 * 1024 * 500, // 500MB
         photosUsage: 1024 * 1024 * 300, // 300MB
