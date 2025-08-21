@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Clock,
   HelpCircle,
+  CreditCard,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
