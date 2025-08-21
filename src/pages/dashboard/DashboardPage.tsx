@@ -841,10 +841,18 @@ const DashboardPage = () => {
               }
             </p>
             <Link to="/dashboard/properties">
-              <Button size="sm">
+              <Button 
+                size="sm"
+                disabled={!canStartInspections && storageStatus.status === 'critical'}
+              >
                 {stats.properties === 0 ? 'Add First Property' : 'Add Property'}
               </Button>
             </Link>
+            {!canStartInspections && storageStatus.status === 'critical' && (
+              <p className="mt-2 text-xs text-red-600">
+                Storage limit reached. Upgrade to add properties.
+              </p>
+            )}
           </div>
           
           <div className="bg-secondary-50 rounded-lg p-6 border border-secondary-100">

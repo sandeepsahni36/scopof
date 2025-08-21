@@ -4,6 +4,7 @@ import { MoreVertical, MapPin, Bed, Bath, Calendar, CheckCircle, Edit, Trash2, C
 import { Property } from '../../types';
 import { getPropertyChecklist } from '../../lib/propertyChecklists';
 import { supabase, devModeEnabled } from '../../lib/supabase';
+import { useAuthStore } from '../../store/authStore';
 import { getPropertyTypeIcon } from '../../lib/utils';
 
 interface PropertyCardProps {
@@ -14,6 +15,7 @@ interface PropertyCardProps {
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete, isAdmin }) => {
+  const { canStartInspections, storageStatus } = useAuthStore();
   const [showMenu, setShowMenu] = useState(false);
   const [hasChecklist, setHasChecklist] = useState(false);
   const [checklistLoading, setChecklistLoading] = useState(true);
@@ -194,9 +196,26 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
                 View Details
               </button>
             </Link>
-            {hasChecklist && (
+            {hasChecklist && canStartInspections && (
               <Link to={`/start-inspection/${property.id}`}>
                 <button className="inline-flex items-center text-sm text-green-600 hover:text-green-700 font-medium">
+                  <Camera size={14} className="mr-1" />
+                  Inspect
+                </button>
+              </Link>
+            )}
+            {hasChecklist && !canStartInspections && (
+              <button 
+                className="inline-flex items-center text-sm text-gray-400 font-medium cursor-not-allowed"
+                title={storageStatus.status === 'critical' ? 'Storage limit reached - cannot start inspections' : 'Upgrade required to start inspections'}
+                disabled
+              >
+                <Camera size={14} className="mr-1" />
+                Inspect
+              </button>
+            )}
+          </div>
+        </div>
                   <Camera size={14} className="mr-1" />
                   Inspect
                 </button>

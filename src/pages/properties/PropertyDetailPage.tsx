@@ -453,16 +453,28 @@ const PropertyDetailPage = () => {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:w-64">
-              <Link to={`/start-inspection/${property.id}`}>
+              {useAuthStore.getState().canStartInspections ? (
+                <Link to={`/start-inspection/${property.id}`}>
+                  <Button
+                    size="lg"
+                    leftIcon={<Camera size={20} />}
+                    className="w-full"
+                    disabled={!propertyChecklist}
+                  >
+                    Start Inspection
+                  </Button>
+                </Link>
+              ) : (
                 <Button
                   size="lg"
                   leftIcon={<Camera size={20} />}
                   className="w-full"
-                  disabled={!propertyChecklist}
+                  disabled
+                  title={useAuthStore.getState().storageStatus.status === 'critical' ? 'Storage limit reached' : 'Upgrade required'}
                 >
                   Start Inspection
                 </Button>
-              </Link>
+              )}
               <Button
                 variant="outline"
                 size="lg"

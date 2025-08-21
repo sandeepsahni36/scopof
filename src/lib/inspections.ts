@@ -461,6 +461,14 @@ export async function uploadInspectionPhoto(
       throw new Error('User session is invalid. Please sign in again.');
     }
 
+    // Check storage capacity before uploading
+    if (!devModeEnabled()) {
+      const storageUsage = await getStorageUsage();
+      if (storageUsage && isStorageAtLimit(storageUsage.currentUsage, storageUsage.quota)) {
+        throw new Error('Storage limit reached. Cannot upload photos. Please upgrade your plan or delete files.');
+      }
+    }
+
     // Handle dev mode
     if (devModeEnabled()) {
       console.log('Dev mode: Mock photo upload for inspection:', inspectionId);

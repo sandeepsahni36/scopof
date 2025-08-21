@@ -9,6 +9,7 @@ import { Property, InspectionType } from '../../types';
 import { getProperty } from '../../lib/properties';
 import { getPropertyChecklist } from '../../lib/propertyChecklists';
 import { createInspection } from '../../lib/inspections';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from 'sonner';
 
 interface StartInspectionFormData {
@@ -21,6 +22,7 @@ interface StartInspectionFormData {
 const StartInspectionPage = () => {
   const { propertyId } = useParams();
   const navigate = useNavigate();
+  const { canStartInspections, storageStatus, checkStorageStatus } = useAuthStore();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -48,6 +50,7 @@ const StartInspectionPage = () => {
     if (propertyId) {
       loadPropertyChecklist(propertyId);
       loadProperty(propertyId);
+      checkStorageStatus(); // Check storage when page loads
     }
   }, [propertyId]);
 
@@ -457,20 +460,53 @@ const StartInspectionPage = () => {
 
             {/* Start Button */}
             <div className="pt-6">
+              {!canStartInspections && storageStatus.status === 'critical' && (
+                <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <AlertTriangle className="h-5 w-5 text-red-400" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">
+                        Storage Limit Reached
+                      </h3>
+                      <div className="mt-2 text-sm text-red-700">
+                        <p>
+                          Your storage is at {storageStatus.percentage}% capacity. 
+                          Inspections are temporarily disabled to prevent data loss.
+                        </p>
+                        <p className="mt-2">
+                          Please upgrade your plan or delete unused files to continue.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               <Button
                 type="submit"
                 size="lg"
                 fullWidth
                 isLoading={submitting}
-                disabled={!propertyChecklist}
+                disabled={!propertyChecklist || !canStartInspections}
                 leftIcon={<Camera size={20} />}
                 className="bg-primary-600 hover:bg-primary-700"
               >
-                {submitting ? 'Starting Inspection...' : 'START INSPECTION'}
+                {submitting 
+                  ? 'Starting Inspection...' 
+                  : !canStartInspections && storageStatus.status === 'critical'
+                    ? 'STORAGE LIMIT REACHED'
+                    : 'START INSPECTION'
+                }
               </Button>
-              {!propertyChecklist && (
+              {!propertyChecklist && canStartInspections && (
                 <p className="mt-2 text-sm text-red-600 text-center">
                   A checklist is required to start an inspection. Please create one first.
+                </p>
+              )}
+              {!canStartInspections && storageStatus.status === 'critical' && (
+                <p className="mt-2 text-sm text-red-600 text-center">
+                  Storage limit reached. Upgrade your plan to continue inspections.
                 </p>
               )}
             </div>

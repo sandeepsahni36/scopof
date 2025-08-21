@@ -7,6 +7,7 @@ import { uploadInspectionPhoto } from '../../lib/inspections';
 import { updateInspectionItem } from '../../lib/inspections';
 import { getReportServiceTeams, ReportServiceTeam } from '../../lib/reportServiceTeams';
 import { getSignedUrlForFile } from '../../lib/storage';
+import { useAuthStore } from '../../store/authStore';
 import { RatingOption, RATING_COLORS } from '../../types';
 import { toast } from 'sonner';
 
@@ -21,6 +22,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
   inspectionId,
   onUpdate,
 }) => {
+  const { canStartInspections, storageStatus, checkStorageStatus } = useAuthStore();
   const [value, setValue] = useState(item.value);
   const [notes, setNotes] = useState(item.notes || '');
   const [photos, setPhotos] = useState<string[]>(item.photo_urls || []);
@@ -131,6 +133,16 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Check storage before upload
+    if (storageStatus.status === 'critical') {
+      toast.error('Storage limit reached. Cannot upload photos. Please upgrade your plan or delete files.');
+      setShowPhotoOptions(false);
+      if (target) {
+        target.value = '';
+      }
+      return;
+    }
+
     setShowPhotoOptions(false);
 
     try {
@@ -140,6 +152,8 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       if (photoUrl) {
         const newPhotos = [...photos, photoUrl];
         setPhotos(newPhotos);
+        // Update storage status after successful upload
+        await checkStorageStatus();
         toast.success('Photo uploaded successfully');
       }
     } catch (error: any) {
@@ -353,11 +367,22 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
                 type="button"
                 variant="outline"
                 onClick={() => setShowPhotoOptions(true)}
-                disabled={uploading}
+                disabled={uploading || storageStatus.status === 'critical'}
                 leftIcon={<Camera size={16} />}
               >
-                {uploading ? 'Uploading...' : 'Add Photo'}
+                {uploading 
+                  ? 'Uploading...' 
+                  : storageStatus.status === 'critical' 
+                    ? 'Storage Full' 
+                    : 'Add Photo'
+                }
               </Button>
+
+              {storageStatus.status === 'critical' && (
+                <p className="mt-2 text-xs text-red-600">
+                  Storage limit reached. Upgrade your plan to upload photos.
+                </p>
+              )}
 
               {/* Photo Options Modal */}
               {showPhotoOptions && (

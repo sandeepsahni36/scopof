@@ -3,10 +3,12 @@ import { HardDrive, AlertTriangle, CheckCircle, Gauge } from 'lucide-react';
 import { getStorageUsage, formatBytes, getUsagePercentage, StorageUsage } from '../../lib/storage';
 import { Button } from '../ui/Button';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from 'sonner';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const StorageUsageCard = () => {
+  const { checkStorageStatus } = useAuthStore();
   const [usage, setUsage] = useState<StorageUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -21,6 +23,8 @@ const StorageUsageCard = () => {
       const usageData = await getStorageUsage();
       if (usageData) {
         setUsage(usageData);
+        // Update global storage status
+        await checkStorageStatus();
       }
     } catch (error: any) {
       console.error('Error loading storage usage:', error);
