@@ -79,93 +79,91 @@ const StartTrialPage = () => {
         return;
       }
 
-      console.log('Creating admin and team_members records for new user...');
-      
-      // Get user metadata for company information
-      const companyName = user.user_metadata?.company_name;
-      if (!companyName) {
-        throw new Error('Company name not found in user metadata');
-      }
+      let currentAdminId: string;
+      let currentCustomerId: string | null = null;
 
-      console.log('User metadata:', {
-        companyName,
-        fullName: user.user_metadata?.full_name,
-        registrationType: user.user_metadata?.registration_type
-      });
-
-      // Determine initial subscription state based on user's choice
-      let initialSubscriptionStatus: string;
-      let initialTrialStartedAt: string | null;
-      let initialTrialEndsAt: string | null;
-
-      if (skipTrial) {
-        // User chose "Create Account (No Trial)"
-        initialSubscriptionStatus = 'not_started';
-        initialTrialStartedAt = null;
-        initialTrialEndsAt = null;
-        console.log('User chose no trial - setting status to not_started');
-      } else {
-        // User chose "Start 14-Day Free Trial"
-        initialSubscriptionStatus = 'trialing';
-        initialTrialStartedAt = new Date().toISOString();
-        initialTrialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-        console.log('User chose trial - setting status to trialing with trial dates:', {
-          trialStarted: initialTrialStartedAt,
-          trialEnds: initialTrialEndsAt
-        });
-      }
-
-      // Create admin record
-      console.log('Creating admin record with initial subscription state...');
-      const { data: newAdmin, error: adminError } = await supabase
+      // Check if an admin record already exists for this user
+      const { data: existingAdmin, error: existingAdminError } = await supabase
         .from('admin')
-        .insert({
-          owner_id: user.id,
-          billing_manager_id: user.id,
-          company_name: companyName,
-          subscription_tier: selectedTier,
-          subscription_status: initialSubscriptionStatus,
-          trial_started_at: initialTrialStartedAt,
-          trial_ends_at: initialTrialEndsAt,
-        })
-        .select()
-        .single();
+        .select('id, customer_id')
+        .eq('owner_id', user.id)
+        .maybeSingle(); // Use maybeSingle as it might not exist yet
 
-      if (adminError) {
-        console.error('Error creating admin record:', adminError);
-        throw new Error(`Failed to create company record: ${adminError.message}`);
+      if (existingAdminError) {
+        console.error('Error checking for existing admin record:', existingAdminError);
+        throw new Error(`Failed to check existing company record: ${existingAdminError.message}`);
       }
 
-      console.log('Admin record created successfully:', {
-        adminId: newAdmin.id,
-        companyName: newAdmin.company_name,
-        subscriptionStatus: newAdmin.subscription_status,
-        subscriptionTier: newAdmin.subscription_tier,
-        trialEndsAt: newAdmin.trial_ends_at
-      });
+      if (existingAdmin) {
+        console.log('Existing admin record found, using it:', existingAdmin.id);
+        currentAdminId = existingAdmin.id;
+        currentCustomerId = existingAdmin.customer_id;
+      } else {
+        console.log('No existing admin record found, creating a new one...');
+        const companyName = user.user_metadata?.company_name;
+        if (!companyName) {
+          throw new Error('Company name not found in user metadata');
+        }
 
-      // Create team_members record to link user as owner
-      console.log('Creating team_members record...');
-      const { error: teamMemberError } = await supabase
-        .from('team_members')
-        .insert({
-          admin_id: newAdmin.id,
-          profile_id: user.id,
-          role: 'owner',
-        });
+        let initialSubscriptionStatus: string;
+        let initialTrialStartedAt: string | null;
+        let initialTrialEndsAt: string | null;
 
-      if (teamMemberError) {
-        console.error('Error creating team member record:', teamMemberError);
-        // Try to clean up the admin record if team member creation fails
-        await supabase.from('admin').delete().eq('id', newAdmin.id);
-        throw new Error(`Failed to create team member record: ${teamMemberError.message}`);
+        if (skipTrial) {
+          initialSubscriptionStatus = 'not_started';
+          initialTrialStartedAt = null;
+          initialTrialEndsAt = null;
+        } else {
+          initialSubscriptionStatus = 'trialing';
+          initialTrialStartedAt = new Date().toISOString();
+          initialTrialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+        }
+
+        const { data: newAdmin, error: adminInsertError } = await supabase
+          .from('admin')
+          .insert({
+            owner_id: user.id,
+            billing_manager_id: user.id,
+            company_name: companyName,
+            subscription_tier: selectedTier,
+            subscription_status: initialSubscriptionStatus,
+            trial_started_at: initialTrialStartedAt,
+            trial_ends_at: initialTrialEndsAt,
+          })
+          .select()
+          .single();
+
+        if (adminInsertError) {
+          console.error('Error creating admin record:', adminInsertError);
+          throw new Error(`Failed to create company record: ${adminInsertError.message}`);
+        }
+        console.log('Admin record created successfully:', newAdmin.id);
+        currentAdminId = newAdmin.id;
+
+        // Also create team_members record only if a new admin record was created
+        console.log('Creating team_members record...');
+        const { error: teamMemberError } = await supabase
+          .from('team_members')
+          .insert({
+            admin_id: currentAdminId,
+            profile_id: user.id,
+            role: 'owner',
+          });
+
+        if (teamMemberError) {
+          console.error('Error creating team member record:', teamMemberError);
+          // Try to clean up the admin record if team member creation fails
+          await supabase.from('admin').delete().eq('id', currentAdminId);
+          throw new Error(`Failed to create team member record: ${teamMemberError.message}`);
+        }
+        console.log('Team member record created successfully - user is now owner of admin record');
       }
-
-      console.log('Team member record created successfully - user is now owner of admin record');
 
       console.log('Starting trial with selected tier:', selectedTier);
       console.log('StartTrialPage: About to call createCheckoutSession');
-      
+
+      // The createCheckoutSession function already fetches admin data,
+      // so we don't need to pass currentAdminId or currentCustomerId here.
       const checkoutUrl = await createCheckoutSession(selectedTier as any, skipTrial);
       
       console.log('StartTrialPage: Received checkout URL:', checkoutUrl);
