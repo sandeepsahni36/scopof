@@ -216,13 +216,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
             )}
           </div>
         </div>
-                  <Camera size={14} className="mr-1" />
-                  Inspect
-                </button>
-              </Link>
-            )}
-          </div>
-        </div>
         
         {/* Inspection Frequency Sparkline */}
         <div className="mt-4 pt-4 border-t border-gray-100">
