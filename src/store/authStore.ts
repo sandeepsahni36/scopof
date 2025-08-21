@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { User, Company } from '../types';
 import { supabase, getCurrentUser } from '../lib/supabase';
 import { devModeEnabled } from '../lib/supabase';
+import { getStorageUsage, getStorageStatus } from '../lib/storage';
 import { STRIPE_PRODUCTS } from '../stripe-config';
 
 type AuthState = {
@@ -15,7 +16,15 @@ type AuthState = {
   isTrialExpired: boolean;
   requiresPayment: boolean;
   needsPaymentSetup: boolean;
+  storageStatus: {
+    status: 'normal' | 'warning' | 'critical';
+    percentage: number;
+    canUpload: boolean;
+    message: string;
+  };
+  canStartInspections: boolean;
   initialize: () => Promise<void>;
+  checkStorageStatus: () => Promise<void>;
   setUser: (user: User | null) => void;
   setCompany: (company: Company | null) => void;
   logout: () => Promise<void>;
@@ -32,6 +41,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isTrialExpired: false,
   requiresPayment: false,
   needsPaymentSetup: false,
+  storageStatus: {
+    status: 'normal',
+    percentage: 0,
+    canUpload: true,
+    message: 'Storage usage is within normal limits.',
+  },
+  canStartInspections: true,
 
   initialize: async () => {
     try {
@@ -430,6 +446,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         requiresPayment,
         needsPaymentSetup
       });
+      
+      // Check storage status after authentication
+      await get().checkStorageStatus();
+      
       console.log("=== AUTH STORE INITIALIZATION DEBUG END (SUCCESS) ===");
     } catch (error) {
       console.error('Error initializing auth state:', error);
@@ -446,6 +466,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isTrialExpired: false,
         requiresPayment: false,
         needsPaymentSetup: false
+      });
+    }
+  },
+  
+  checkStorageStatus: async () => {
+    try {
+      const { isAuthenticated, isDevMode } = get();
+      
+      if (!isAuthenticated && !isDevMode) {
+        return;
+      }
+      
+      const storageUsage = await getStorageUsage();
+      
+      if (storageUsage) {
+        const status = getStorageStatus(storageUsage.currentUsage, storageUsage.quota);
+        const canStartInspections = status.canUpload && get().hasActiveSubscription && !get().requiresPayment;
+        
+        set({
+          storageStatus: status,
+          canStartInspections,
+        });
+        
+        console.log('Storage status updated:', {
+          status: status.status,
+          percentage: status.percentage,
+          canUpload: status.canUpload,
+          canStartInspections,
+        });
+      }
+    } catch (error) {
+      console.error('Error checking storage status:', error);
+      // Set safe defaults on error
+      set({
+        storageStatus: {
+          status: 'normal',
+          percentage: 0,
+          canUpload: true,
+          message: 'Unable to check storage status.',
+        },
+        canStartInspections: get().hasActiveSubscription && !get().requiresPayment,
       });
     }
   },

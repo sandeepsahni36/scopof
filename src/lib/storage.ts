@@ -366,3 +366,45 @@ export function getUsagePercentage(used: number, total: number): number {
   if (total === 0) return 0;
   return Math.round((used / total) * 100);
 }
+
+export function isStorageNearLimit(used: number, total: number): boolean {
+  const percentage = getUsagePercentage(used, total);
+  return percentage >= 85; // Warning threshold at 85%
+}
+
+export function isStorageAtLimit(used: number, total: number): boolean {
+  const percentage = getUsagePercentage(used, total);
+  return percentage >= 95; // Hard limit at 95%
+}
+
+export function getStorageStatus(used: number, total: number): {
+  status: 'normal' | 'warning' | 'critical';
+  percentage: number;
+  canUpload: boolean;
+  message: string;
+} {
+  const percentage = getUsagePercentage(used, total);
+  
+  if (percentage >= 95) {
+    return {
+      status: 'critical',
+      percentage,
+      canUpload: false,
+      message: 'Storage limit reached. Upgrade your plan or delete files to continue.',
+    };
+  } else if (percentage >= 85) {
+    return {
+      status: 'warning',
+      percentage,
+      canUpload: true,
+      message: 'Storage nearly full. Consider upgrading your plan.',
+    };
+  } else {
+    return {
+      status: 'normal',
+      percentage,
+      canUpload: true,
+      message: 'Storage usage is within normal limits.',
+    };
+  }
+}
