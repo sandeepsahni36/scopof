@@ -3,15 +3,15 @@ import { Outlet } from 'react-router-dom';
 
 const AuthLayout = () => {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-4 sm:py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex-shrink-0 pb-4 sm:pb-6 text-center">
-          <img src="/Scopostay long full logo blue.png" alt="scopoStay Logo" className="h-8 sm:h-10 w-auto mx-auto" />
+        <div className="flex-shrink-0 pb-2 sm:pb-4 text-center">
+          <img src="/Scopostay long full logo blue.png" alt="scopoStay Logo" className="h-6 sm:h-8 w-auto mx-auto" />
         </div>
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="bg-white py-6 px-4 shadow sm:rounded-lg sm:px-10">
           <Outlet />
         </div>
       </div>
