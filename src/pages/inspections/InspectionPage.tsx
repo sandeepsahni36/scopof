@@ -484,6 +484,14 @@ const InspectionPage = () => {
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>
+            {/* Template Name Display */}
+            {currentDisplayStep && (
+              <div className="mt-3 text-center">
+                <p className="text-sm font-medium text-primary-700 bg-primary-50 px-3 py-1 rounded-full inline-block">
+                  {currentDisplayStep.name}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
