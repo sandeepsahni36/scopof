@@ -103,19 +103,19 @@ const RegisterPage = () => {
   };
   
   return (
-    <div className="space-y-3 sm:space-y-4">
-      <h2 className="text-center text-xl sm:text-2xl font-bold leading-tight tracking-tight text-gray-900">
+    <div className="space-y-3">
+      <h2 className="text-center text-lg font-bold leading-tight tracking-tight text-gray-900">
         Create your account
       </h2>
       
-      <form className="space-y-3 sm:space-y-4" onSubmit={handleSubmit(onSubmit)}>
+      <form className="space-y-3" onSubmit={handleSubmit(onSubmit)}>
         {/* Registration Type Selection */}
         <div>
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Choose your account type
           </label>
-          <div className="space-y-2 sm:space-y-3">
-            <label className={`relative flex cursor-pointer rounded-lg border p-3 sm:p-4 focus:outline-none ${
+          <div className="space-y-2">
+            <label className={`relative flex cursor-pointer rounded-lg border p-3 focus:outline-none ${
               registrationType === 'trial'
                 ? 'border-primary-500 bg-primary-50'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
@@ -138,15 +138,15 @@ const RegisterPage = () => {
                 </div>
                 <div className="ml-3">
                   <div className="flex items-center">
-                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 mr-2" />
-                    <span className="text-sm sm:text-base font-medium text-gray-900">Start 14-Day Free Trial</span>
+                    <Clock className="h-4 w-4 text-gray-400 mr-2" />
+                    <span className="text-sm font-medium text-gray-900">Start 14-Day Free Trial</span>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-500">Try all features free for 14 days, then choose your plan</p>
+                  <p className="text-xs text-gray-500">Try all features free for 14 days, then choose your plan</p>
                 </div>
               </div>
             </label>
 
-            <label className={`relative flex cursor-pointer rounded-lg border p-3 sm:p-4 focus:outline-none ${
+            <label className={`relative flex cursor-pointer rounded-lg border p-3 focus:outline-none ${
               registrationType === 'no_trial'
                 ? 'border-primary-500 bg-primary-50'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
@@ -169,10 +169,10 @@ const RegisterPage = () => {
                 </div>
                 <div className="ml-3">
                   <div className="flex items-center">
-                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 mr-2" />
-                    <span className="text-sm sm:text-base font-medium text-gray-900">Create Account (No Trial)</span>
+                    <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
+                    <span className="text-sm font-medium text-gray-900">Create Account (No Trial)</span>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-500">Choose your plan and start immediately</p>
+                  <p className="text-xs text-gray-500">Choose your plan and start immediately</p>
                 </div>
               </div>
             </label>
@@ -210,7 +210,7 @@ const RegisterPage = () => {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-9 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-9 text-gray-400 hover:text-gray-600 p-2 -m-2"
             tabIndex={-1}
           >
             {showPassword ? (
@@ -235,7 +235,7 @@ const RegisterPage = () => {
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-9 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-9 text-gray-400 hover:text-gray-600 p-2 -m-2"
             tabIndex={-1}
           >
             {showConfirmPassword ? (
@@ -275,8 +275,8 @@ const RegisterPage = () => {
         </Button>
       </form>
       
-      <div className="mt-3 sm:mt-4 text-center">
-        <p className="text-xs sm:text-sm text-gray-600">
+      <div className="mt-3 text-center">
+        <p className="text-xs text-gray-600">
           Already have an account?{' '}
           <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
             Sign in

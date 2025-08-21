@@ -12,11 +12,11 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputId = id || props.name;
     
     return (
-      <div className="space-y-1 sm:space-y-2">
+      <div className="space-y-1">
         {label && (
           <label 
             htmlFor={inputId} 
-            className="block text-xs sm:text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-gray-700"
           >
             {label}
           </label>
@@ -24,7 +24,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           id={inputId}
           className={cn(
-            "h-10 sm:h-11 w-full rounded-md border px-3 py-2 text-sm transition-colors",
+            "h-11 w-full rounded-md border px-3 py-2 text-base transition-colors",
             "focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent",
             "disabled:cursor-not-allowed disabled:opacity-50",
             error 
@@ -36,10 +36,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {error && (
-          <p className="text-xs sm:text-sm text-error-500">{error}</p>
+          <p className="text-xs text-error-500">{error}</p>
         )}
         {helperText && !error && (
-          <p className="text-xs sm:text-sm text-gray-500">{helperText}</p>
+          <p className="text-xs text-gray-500">{helperText}</p>
         )}
       </div>
     );
