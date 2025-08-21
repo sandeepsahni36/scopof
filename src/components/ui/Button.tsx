@@ -18,10 +18,10 @@ const buttonVariants = cva(
         success: 'bg-success-500 text-white hover:bg-success-700 focus-visible:ring-success-500',
       },
       size: {
-        default: 'h-11 py-2 px-4 text-base',
-        sm: 'h-9 px-3 text-sm',
-        lg: 'h-12 px-5 text-base',
-        icon: 'h-11 w-11',
+        default: 'h-10 sm:h-11 py-2 px-4 text-sm sm:text-base',
+        sm: 'h-8 sm:h-9 px-3 text-xs sm:text-sm',
+        lg: 'h-11 sm:h-12 px-5 text-base',
+        icon: 'h-10 sm:h-11 w-10 sm:w-11',
       },
       fullWidth: {
         true: 'w-full',

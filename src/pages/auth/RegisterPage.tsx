@@ -103,18 +103,18 @@ const RegisterPage = () => {
   };
   
   return (
-    <div className="space-y-3">
-      <h2 className="text-center text-lg font-bold leading-tight tracking-tight text-gray-900">
+    <div className="space-y-2">
+      <h2 className="text-center text-base sm:text-xl font-bold leading-tight tracking-tight text-gray-900 mb-2">
         Create your account
       </h2>
       
-      <form className="space-y-3" onSubmit={handleSubmit(onSubmit)}>
+      <form className="space-y-2" onSubmit={handleSubmit(onSubmit)}>
         {/* Registration Type Selection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
             Choose your account type
           </label>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <label className={`relative flex cursor-pointer rounded-lg border p-3 focus:outline-none ${
               registrationType === 'trial'
                 ? 'border-primary-500 bg-primary-50'
@@ -139,7 +139,7 @@ const RegisterPage = () => {
                 <div className="ml-3">
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 text-gray-400 mr-2" />
-                    <span className="text-sm font-medium text-gray-900">Start 14-Day Free Trial</span>
+                    <span className="text-xs sm:text-sm font-medium text-gray-900">Start 14-Day Free Trial</span>
                   </div>
                   <p className="text-xs text-gray-500">Try all features free for 14 days, then choose your plan</p>
                 </div>
@@ -170,7 +170,7 @@ const RegisterPage = () => {
                 <div className="ml-3">
                   <div className="flex items-center">
                     <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
-                    <span className="text-sm font-medium text-gray-900">Create Account (No Trial)</span>
+                    <span className="text-xs sm:text-sm font-medium text-gray-900">Create Account (No Trial)</span>
                   </div>
                   <p className="text-xs text-gray-500">Choose your plan and start immediately</p>
                 </div>
@@ -275,7 +275,7 @@ const RegisterPage = () => {
         </Button>
       </form>
       
-      <div className="mt-3 text-center">
+      <div className="mt-2 text-center">
         <p className="text-xs text-gray-600">
           Already have an account?{' '}
           <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
