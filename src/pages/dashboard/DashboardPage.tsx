@@ -33,7 +33,7 @@ ChartJS.register(
 );
 
 const DashboardPage = () => {
-  const { company, hasActiveSubscription, isTrialExpired, requiresPayment } = useAuthStore();
+  const { company, hasActiveSubscription, isTrialExpired, requiresPayment, canStartInspections, storageStatus } = useAuthStore();
   const navigate = useNavigate();
   
   // Dashboard data state
