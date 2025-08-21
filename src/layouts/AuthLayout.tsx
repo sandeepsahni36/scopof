@@ -7,7 +7,7 @@ const AuthLayout = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex-shrink-0 pb-1 sm:pb-4 text-center">
           <a href="https://scopostay.com" target="_blank" rel="noopener noreferrer">
-            <img src="/Scopostay long full logo blue.png" alt="scopoStay Logo" className="h-5 sm:h-10 w-auto mx-auto" />
+            <img src="/Scopostay long full logo blue.png" alt="scopoStay Logo" className="h-8 sm:h-10 w-auto mx-auto" />
           </a>
         </div>
       </div>
