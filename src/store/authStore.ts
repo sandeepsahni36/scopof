@@ -59,6 +59,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Check if dev mode is enabled
       if (devModeEnabled()) {
         console.log('Dev mode enabled - setting mock user and company');
+        console.log('=== DEV MODE INITIALIZATION START ===');
         
         const mockUser: User = {
           id: 'dev-user-id',
@@ -79,7 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           updatedAt: new Date().toISOString(),
         };
 
-        set({
+        const devModeState = {
           user: mockUser,
           company: mockCompany,
           loading: false,
@@ -89,7 +90,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isTrialExpired: false,
           requiresPayment: false,
           needsPaymentSetup: false,
-        });
+          canStartInspections: true,
+          storageStatus: {
+            status: 'normal' as const,
+            percentage: 50,
+            canUpload: true,
+            message: 'Dev mode - storage checks bypassed',
+          },
+        };
+        
+        console.log('Setting dev mode state:', devModeState);
+        set(devModeState);
+        console.log('=== DEV MODE INITIALIZATION COMPLETE ===');
         return;
       }
 

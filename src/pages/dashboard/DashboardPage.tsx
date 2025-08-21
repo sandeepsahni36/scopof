@@ -33,8 +33,17 @@ ChartJS.register(
 );
 
 const DashboardPage = () => {
-  const { company, hasActiveSubscription, isTrialExpired, requiresPayment, canStartInspections, storageStatus } = useAuthStore();
+  const { company, hasActiveSubscription, isTrialExpired, requiresPayment, canStartInspections, storageStatus, isDevMode } = useAuthStore();
   const navigate = useNavigate();
+  
+  // Add dev mode logging
+  console.log('=== DASHBOARD PAGE DEBUG ===');
+  console.log('Dev mode enabled:', isDevMode);
+  console.log('Can start inspections:', canStartInspections);
+  console.log('Storage status:', storageStatus);
+  console.log('Has active subscription:', hasActiveSubscription);
+  console.log('Requires payment:', requiresPayment);
+  console.log('=== END DASHBOARD DEBUG ===');
   
   // Dashboard data state
   const [stats, setStats] = useState({

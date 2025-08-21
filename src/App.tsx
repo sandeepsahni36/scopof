@@ -36,7 +36,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading, isDevMode, requiresPayment, isTrialExpired, isAdmin, needsPaymentSetup } = useAuthStore();
   
   // Add comprehensive debugging
-  console.log('=== PROTECTED ROUTE DEBUG ===', {
+  console.log('=== PROTECTED ROUTE DEBUG ===');
+  console.log('Current path:', window.location.pathname);
+  console.log('Auth state:', {
     isAuthenticated,
     loading,
     isDevMode,
@@ -44,8 +46,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     isTrialExpired,
     isAdmin,
     needsPaymentSetup,
-    currentPath: window.location.pathname
   });
+  console.log('=== END PROTECTED ROUTE DEBUG ===');
   
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
