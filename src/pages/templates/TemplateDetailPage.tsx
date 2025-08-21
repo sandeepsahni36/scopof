@@ -6,14 +6,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { Plus, Trash2, GripVertical, ArrowLeft, Type, CheckSquare, Square, Camera, Hash, Minus } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { TemplateItemType, RatingOption, RATING_COLORS, RatingColorKey } from '../../types';
-import { getTemplate, createTemplate, updateTemplate } from '../../lib/templates';
+import { TemplateItemType, RatingOption, RATING_COLORS, RatingColorKey, TemplateCategory } from '../../types';
+import { getTemplate, createTemplate, updateTemplate, getTemplateCategories } from '../../lib/templates';
 import { getReportServiceTeams, ReportServiceTeam } from '../../lib/reportServiceTeams';
 import { toast } from 'sonner';
 
 type FormValues = {
   name: string;
   description: string;
+  categoryId: string;
   items: {
     id: string;
     type: TemplateItemType;
@@ -31,6 +32,7 @@ const TemplateDetailPage = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [reportServiceTeams, setReportServiceTeams] = useState<ReportServiceTeam[]>([]);
+  const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
   const isNew = id === 'new';
 
@@ -45,6 +47,7 @@ const TemplateDetailPage = () => {
     defaultValues: {
       name: '',
       description: '',
+      categoryId: '',
       items: [],
     },
   });
@@ -68,12 +71,19 @@ const TemplateDetailPage = () => {
         setReportServiceTeams(teamsData);
       }
 
+      // Load template categories
+      const categoriesData = await getTemplateCategories();
+      if (categoriesData) {
+        setCategories(categoriesData);
+      }
+
       // Load template if editing
       if (!isNew && id) {
         const templateData = await getTemplate(id);
         if (templateData) {
           setValue('name', templateData.template.name);
           setValue('description', templateData.template.description || '');
+          setValue('categoryId', templateData.template.category_id || '');
           
           // Convert template items to form format
           const formItems = templateData.items.map(item => ({
@@ -108,6 +118,7 @@ const TemplateDetailPage = () => {
       const templateData = {
         name: data.name,
         description: data.description || undefined,
+        categoryId: data.categoryId || undefined,
       };
 
       // Convert form items to API format
