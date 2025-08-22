@@ -53,6 +53,7 @@ const InspectionPage = () => {
   const [completing, setCompleting] = useState(false);
   const [showSignatures, setShowSignatures] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [clientPresent, setClientPresent] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [elapsedTime, setElapsedTime] = useState('0:00');
   const itemRefs = useRef<{ [key: string]: any }>({});
