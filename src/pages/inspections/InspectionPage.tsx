@@ -56,6 +56,7 @@ const InspectionPage = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [elapsedTime, setElapsedTime] = useState('0:00');
   const [cancelling, setCancelling] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const itemRefs = useRef<{ [key: string]: any }>({});
   
   // Scroll to top when step changes or when switching to/from signatures
@@ -119,6 +120,23 @@ const InspectionPage = () => {
     };
   }, [hasUnsavedChanges]);
 
+  // Effect to handle browser refresh/close warning
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        event.preventDefault();
+        event.returnValue = ''; // Required for Chrome to show the prompt
+        return ''; // Required for Firefox to show the prompt
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
 
   const handleCancelInspection = async () => {
     if (!window.confirm('Are you sure you want to cancel this inspection? All progress will be lost and no data will be saved.')) {
@@ -127,6 +145,9 @@ const InspectionPage = () => {
 
     try {
       setCancelling(true);
+      
+      // Clear unsaved changes flag before navigation
+      setHasUnsavedChanges(false);
       
       // Delete the inspection and all associated data
       const { deleteInspection } = await import('../../lib/inspections');
@@ -251,6 +272,7 @@ const InspectionPage = () => {
 
   const handleItemUpdate = (itemId: string, updates: Partial<MutableInspectionItem>) => {
     console.log('Updating item in parent state:', itemId, updates);
+    setHasUnsavedChanges(true); // Mark that there are unsaved changes
     setMutableItems(prev => ({
       ...prev,
       [itemId]: {
@@ -295,6 +317,7 @@ const InspectionPage = () => {
       });
       
       await Promise.all(savePromises);
+      setHasUnsavedChanges(false); // Clear unsaved changes flag after successful save
       toast.success('Progress saved');
     } catch (error: any) {
       console.error('Error saving progress:', error);
@@ -355,6 +378,9 @@ const InspectionPage = () => {
   const handleCompleteInspection = async () => {
     try {
       setCompleting(true);
+      
+      // Clear unsaved changes flag before completion
+      setHasUnsavedChanges(false);
 
       // Get signatures
       const inspectorSignature = inspectorSignatureRef.current?.toDataURL();
