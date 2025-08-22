@@ -29,12 +29,15 @@
             background-color: #f1f5f9;
             color: var(--text-color);
             line-height: 1.6;
+            position: relative;
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+            position: relative;
+            z-index: 1;
         }
         
         .report-header {
@@ -377,7 +380,7 @@
             font-size: 40px;
             font-weight: bold;
             pointer-events: none;
-            z-index: 1000;
+            z-index: -1; /* Changed to -1 to place behind content */
             white-space: nowrap;
             text-align: center;
         }
