@@ -52,8 +52,8 @@ const InspectionPage = () => {
   const [saving, setSaving] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [showSignatures, setShowSignatures] = useState(false);
-  const [clientPresent, setClientPresent] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [elapsedTime, setElapsedTime] = useState('0:00');
   const [cancelling, setCancelling] = useState(false);
   const itemRefs = useRef<{ [key: string]: any }>({});
@@ -525,11 +525,13 @@ const InspectionPage = () => {
               <Button
                 variant="ghost"
                 size="sm"
+                isLoading={cancelling}
+                disabled={cancelling}
                 leftIcon={<ArrowLeft size={16} />}
                 onClick={handleCancelInspection}
                 className="mr-4"
               >
-                Cancel
+                {cancelling ? 'Cancelling Inspection...Please Wait' : 'Cancel'}
               </Button>
               <div className="flex items-center">
                 <Building2 className="h-6 w-6 text-primary-600 mr-2" />
