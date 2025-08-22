@@ -1,8 +1,8 @@
-import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
-import { uploadFile } from './storage';
-import { getSignedUrlForFile } from './storage';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { supabase, validateUserSession, handleAuthError, devModeEnabled } from "./supabase";
+import { uploadFile } from "./storage";
+import { getSignedUrlForFile } from "./storage";
+import jsPDF from "jspdf"; // Changed to default import
+import "jspdf-autotable"; // Ensure this is imported after jsPDF
 
 // Mock data for dev mode
 const MOCK_REPORTS = [
