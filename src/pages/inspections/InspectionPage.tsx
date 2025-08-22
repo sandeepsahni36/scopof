@@ -29,12 +29,24 @@ interface InspectionDetails {
   }>;
 }
 
+// Interface for mutable inspection item state
+interface MutableInspectionItem {
+  id: string;
+  value: any;
+  notes: string;
+  photoUrls: string[];
+  markedForReport: boolean;
+  reportRecipientId: string;
+  templateItem: any;
+  order: number;
+}
 const InspectionPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [inspection, setInspection] = useState<any>(null);
   const [property, setProperty] = useState<any>(null);
   const [displaySteps, setDisplaySteps] = useState<DisplayStep[]>([]);
+  const [mutableItems, setMutableItems] = useState<{ [key: string]: MutableInspectionItem }>({});
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -135,6 +147,21 @@ const InspectionPage = () => {
         setProperty(propertyData);
       }
 
+      // Initialize mutable items state from database data
+      const itemsState: { [key: string]: MutableInspectionItem } = {};
+      data.items.forEach(item => {
+        itemsState[item.id] = {
+          id: item.id,
+          value: item.value,
+          notes: item.notes || '',
+          photoUrls: item.photo_urls || [],
+          markedForReport: item.marked_for_report || false,
+          reportRecipientId: item.report_recipient_id || '',
+          templateItem: item.template_items || item.templateItem,
+          order: item.order_index || 0,
+        };
+      });
+      setMutableItems(itemsState);
       // Build display steps from inspection items
       // Filter out items with invalid UUIDs (should not happen with proper creation)
       const validItems = data.items.filter(item => {
@@ -203,9 +230,15 @@ const InspectionPage = () => {
     return steps;
   };
 
-  const handleItemUpdate = (itemId: string, updates: any) => {
-    // Update local state if needed
-    console.log('Item updated:', itemId, updates);
+  const handleItemUpdate = (itemId: string, updates: Partial<MutableInspectionItem>) => {
+    console.log('Updating item in parent state:', itemId, updates);
+    setMutableItems(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        ...updates,
+      }
+    }));
   };
 
   const handleNext = () => {
@@ -254,33 +287,44 @@ const InspectionPage = () => {
   const getUpdatedDisplaySteps = async () => {
     try {
       console.log('Fetching updated inspection data for PDF generation...');
-      const updatedData = await getInspectionDetails(inspection.id);
       
-      if (updatedData) {
-        console.log('Updated inspection data fetched successfully');
-        const updatedSteps = buildDisplaySteps(updatedData.items);
-        
-        // Log photo data for debugging
-        updatedSteps.forEach(step => {
-          step.items.forEach(item => {
-            const templateItem = item.template_items || item.templateItem;
-            if (templateItem?.type === 'photo') {
-              console.log('Updated photo item for PDF:', {
-                itemId: item.id,
-                templateLabel: templateItem.label,
-                hasPhotos: !!(item.photo_urls && item.photo_urls.length > 0),
-                photoCount: item.photo_urls?.length || 0,
-                photoUrls: item.photo_urls
-              });
-            }
-          });
+      // Use the current mutable state instead of fetching from database
+      // This ensures all unsaved changes are included in the report
+      const updatedSteps = displaySteps.map(step => ({
+        ...step,
+        items: step.items.map(item => {
+          const mutableItem = mutableItems[item.id];
+          if (mutableItem) {
+            return {
+              ...item,
+              value: mutableItem.value,
+              notes: mutableItem.notes,
+              photo_urls: mutableItem.photoUrls,
+              marked_for_report: mutableItem.markedForReport,
+              report_recipient_id: mutableItem.reportRecipientId,
+            };
+          }
+          return item;
+        })
+      }));
+      
+      // Log photo data for debugging
+      updatedSteps.forEach(step => {
+        step.items.forEach(item => {
+          const templateItem = item.template_items || item.templateItem;
+          if (templateItem?.type === 'photo') {
+            console.log('Updated photo item for PDF:', {
+              itemId: item.id,
+              templateLabel: templateItem.label,
+              hasPhotos: !!(item.photo_urls && item.photo_urls.length > 0),
+              photoCount: item.photo_urls?.length || 0,
+              photoUrls: item.photo_urls
+            });
+          }
         });
-        
-        return updatedSteps;
-      } else {
-        console.warn('Failed to fetch updated inspection data, using existing data');
-        return displaySteps;
-      }
+      });
+      
+      return updatedSteps;
     } catch (error) {
       console.error('Error fetching updated inspection data:', error);
       return displaySteps;
@@ -660,13 +704,25 @@ const InspectionPage = () => {
                 {/* Render all items for this step */}
                 <div className="space-y-8">
                   {currentDisplayStep.items.map((item, index) => (
+                    // Get the current mutable state for this item
+                    const currentItemState = mutableItems[item.id] || {
+                      id: item.id,
+                      value: item.value,
+                      notes: item.notes || '',
+                      photoUrls: item.photo_urls || [],
+                      markedForReport: item.marked_for_report || false,
+                      reportRecipientId: item.report_recipient_id || '',
+                      templateItem: item.template_items || item.templateItem,
+                      order: item.order_index || 0,
+                    };
+
                     <div key={item.id} className="border-b border-gray-100 pb-8 last:border-b-0 last:pb-0">
                       <InspectionItemRenderer
                         ref={(ref) => {
                           if (ref) {
                             itemRefs.current[item.id] = ref;
                           }
-                        }}
+                          item={currentItemState}
                         item={item}
                         inspectionId={inspection.id}
                         onUpdate={handleItemUpdate}
