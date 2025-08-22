@@ -422,4 +422,7 @@ export function getStorageStatus(used: number, total: number): {
       message: 'Storage usage is within normal limits.',
     };
   }
+  if (import.meta.env.VITE_DEV_MODE === 'true') {
+  (window as any).setMockStorageUsage = setMockStorageUsage;
+  console.log('✅ Dev Mode: setMockStorageUsage() exposed to window for browser console testing');
 }
