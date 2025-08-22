@@ -17,11 +17,14 @@ interface InspectionItemRendererProps {
   onUpdate: (itemId: string, updates: any) => void;
 }
 
-const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
+const InspectionItemRenderer = React.forwardRef<
+  { saveChanges: () => Promise<void> },
+  InspectionItemRendererProps
+>(({
   item,
   inspectionId,
   onUpdate,
-}) => {
+}, ref) => {
   const { canStartInspections, storageStatus, checkStorageStatus } = useAuthStore();
   const [value, setValue] = useState(item.value);
   const [notes, setNotes] = useState(item.notes || '');
@@ -211,7 +214,7 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
   };
 
   // Expose saveChanges method to parent component
-  React.useImperativeHandle(React.forwardRef(() => null), () => ({
+  React.useImperativeHandle(ref, () => ({
     saveChanges
   }));
 
@@ -547,6 +550,8 @@ const InspectionItemRenderer: React.FC<InspectionItemRendererProps> = ({
       )}
     </div>
   );
-};
+});
+
+InspectionItemRenderer.displayName = 'InspectionItemRenderer';
 
 export default InspectionItemRenderer;

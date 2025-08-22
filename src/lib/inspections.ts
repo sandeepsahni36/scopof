@@ -1,6 +1,6 @@
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { Inspection, InspectionItem, InspectionType, InspectionStatus } from '../types';
-import { uploadFile } from './storage';
+import { uploadFile, getStorageUsage, isStorageAtLimit } from './storage';
 
 // Mock data for dev mode
 const MOCK_INSPECTIONS: Inspection[] = [
