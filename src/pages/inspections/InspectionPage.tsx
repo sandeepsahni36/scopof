@@ -703,7 +703,7 @@ const InspectionPage = () => {
 
                 {/* Render all items for this step */}
                 <div className="space-y-8">
-                  {currentDisplayStep.items.map((item, index) => (
+                  {currentDisplayStep.items.map((item, index) => {
                     // Get the current mutable state for this item
                     const currentItemState = mutableItems[item.id] || {
                       id: item.id,
@@ -716,19 +716,21 @@ const InspectionPage = () => {
                       order: item.order_index || 0,
                     };
 
-                    <div key={item.id} className="border-b border-gray-100 pb-8 last:border-b-0 last:pb-0">
-                      <InspectionItemRenderer
-                        ref={(ref) => {
-                          if (ref) {
-                            itemRefs.current[item.id] = ref;
-                          }
+                    return (
+                      <div key={item.id} className="border-b border-gray-100 pb-8 last:border-b-0 last:pb-0">
+                        <InspectionItemRenderer
+                          ref={(ref) => {
+                            if (ref) {
+                              itemRefs.current[item.id] = ref;
+                            }
+                          }}
                           item={currentItemState}
-                        item={item}
-                        inspectionId={inspection.id}
-                        onUpdate={handleItemUpdate}
-                      />
-                    </div>
-                  ))}
+                          inspectionId={inspection.id}
+                          onUpdate={handleItemUpdate}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
