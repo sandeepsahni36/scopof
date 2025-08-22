@@ -55,7 +55,6 @@ const InspectionPage = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [elapsedTime, setElapsedTime] = useState('0:00');
-  const [cancelling, setCancelling] = useState(false);
   const itemRefs = useRef<{ [key: string]: any }>({});
   
   // Scroll to top when step changes or when switching to/from signatures
