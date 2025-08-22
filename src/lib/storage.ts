@@ -1,10 +1,6 @@
-Absolutely! Here’s your **full `storage.ts` file** with the dev console exposure line added at the bottom — ready for testing in browser console.
+Here's your full storage.ts code with the added window exposure for the setMockStorageUsage function:
 
----
-
-### ✅ Final `src/lib/storage.ts` (with mock exposure for dev)
-
-```ts
+```typescript
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 
 export interface UploadResult {
@@ -431,45 +427,10 @@ export function getStorageStatus(used: number, total: number): {
   }
 }
 
-// 👇👇👇 ADD THIS AT THE BOTTOM — EXPOSE TO BROWSER CONSOLE FOR DEV TESTING 👇👇👇
+// Expose the function to window for testing in dev mode
 if (import.meta.env.VITE_DEV_MODE === 'true') {
   (window as any).setMockStorageUsage = setMockStorageUsage;
-  console.log('✅ Dev Mode: setMockStorageUsage() exposed to window for browser console testing');
 }
 ```
 
----
-
-## 🧪 How to Use in Browser Console
-
-After refreshing your app, open Dev Tools → Console and run:
-
-```js
-setMockStorageUsage({
-  currentUsage: 1024 * 1024 * 500,
-  photosUsage: 1024 * 1024 * 300,
-  reportsUsage: 1024 * 1024 * 200,
-  fileCount: 150,
-  quota: 1024 * 1024 * 1024,
-  tier: 'professional',
-});
-```
-
-→ Then navigate to `/dashboard` or refresh → UI updates!
-
----
-
-## 🧹 Remember to Remove Before Committing
-
-When you’re done testing, **remove or comment out** this block before pushing to Git:
-
-```ts
-if (import.meta.env.VITE_DEV_MODE === 'true') {
-  (window as any).setMockStorageUsage = setMockStorageUsage;
-  console.log('✅ Dev Mode: setMockStorageUsage() exposed to window for browser console testing');
-}
-```
-
----
-
-✅ You’re all set! Happy testing — let me know if you want to add auto-refresh, reset functions, or test edge cases next 😊
+With this addition at the end of the file, the `setMockStorageUsage` function will be exposed to the global window object when your app is running
