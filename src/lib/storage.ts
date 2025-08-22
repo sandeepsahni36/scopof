@@ -427,10 +427,4 @@ export function getStorageStatus(used: number, total: number): {
   }
 }
 
-// Expose the function to window for testing in dev mode
-if (import.meta.env.VITE_DEV_MODE === 'true') {
-  (window as any).setMockStorageUsage = setMockStorageUsage;
-}
-```
 
-With this addition at the end of the file, the `setMockStorageUsage` function will be exposed to the global window object when your app is running
