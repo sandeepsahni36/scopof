@@ -53,6 +53,7 @@ const InspectionPage = () => {
   const [completing, setCompleting] = useState(false);
   const [showSignatures, setShowSignatures] = useState(false);
   const [clientPresent, setClientPresent] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [elapsedTime, setElapsedTime] = useState('0:00');
   const [cancelling, setCancelling] = useState(false);
   const itemRefs = useRef<{ [key: string]: any }>({});
@@ -101,6 +102,24 @@ const InspectionPage = () => {
     return () => clearInterval(interval);
   }, [inspection?.start_time]);
 
+  // Effect to handle browser refresh/close warning
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        event.preventDefault();
+        event.returnValue = ''; // Required for Chrome to show the prompt
+        return ''; // Required for Firefox to show the prompt
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
+
   const handleCancelInspection = async () => {
     if (!window.confirm('Are you sure you want to cancel this inspection? All progress will be lost and no data will be saved.')) {
       return;
@@ -111,7 +130,7 @@ const InspectionPage = () => {
       
       // Delete the inspection and all associated data
       const { deleteInspection } = await import('../../lib/inspections');
-      const success = await deleteInspection(inspection.id);
+      const success = await deleteInspection(inspection.id); // This will also delete associated files
       
       if (success) {
         toast.success('Inspection cancelled successfully');
@@ -264,6 +283,7 @@ const InspectionPage = () => {
       
       // Save all inspection items
       const savePromises = Object.values(itemRefs.current).map(async (itemRef) => {
+        // Ensure itemRef and saveChanges method exist
         if (itemRef && itemRef.saveChanges) {
           try {
             await itemRef.saveChanges();
@@ -307,6 +327,7 @@ const InspectionPage = () => {
           return item;
         })
       }));
+    setHasUnsavedChanges(true); // Mark that there are unsaved changes
       
       // Log photo data for debugging
       updatedSteps.forEach(step => {
