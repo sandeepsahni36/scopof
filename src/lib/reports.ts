@@ -11,6 +11,7 @@ declare module "jspdf" {
 import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
 import { uploadFile, getSignedUrlForFile } from './storage';
 import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import "jspdf-autotable"; // Ensure this is imported after jsPDF
 
 // Mock data for dev mode
@@ -198,9 +199,6 @@ export async function generateInspectionReport(reportData: any): Promise<string 
 
 async function createPDFReport(reportData: any): Promise<Blob> {
   const pdf = new jsPDF();
-
-  // Import autotable plugin dynamically
-  await import("jspdf-autotable");
   
   // Load company logo
   let logoDataUrl: string | null = null;
@@ -373,7 +371,7 @@ async function createPDFReport(reportData: any): Promise<Blob> {
     }
 
     // Add table to PDF
-    pdf.autoTable({
+    autoTable(pdf, {
       startY: yPosition,
       head: [tableHeaders],
       body: tableData,
@@ -398,7 +396,7 @@ async function createPDFReport(reportData: any): Promise<Blob> {
     });
     
     // Update yPosition after table
-    yPosition = pdf.lastAutoTable.finalY + 15;
+    yPosition = (pdf as any).lastAutoTable?.finalY + 15;
 
     // Add photos section for this step if there are any photos
     const sectionPhotos: Array<{
