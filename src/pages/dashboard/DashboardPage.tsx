@@ -1,4 +1,4 @@
-// src/pages/DashboardLayout.tsx  (use your existing path/name)
+// src/pages/DashboardLayout.tsx
 import React, { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,7 +14,13 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
 import BottomNavigation from '../components/layout/BottomNavigation';
-import { NavItem } from '../types';
+
+// Inline the NavItem type so you don't depend on ../types
+type NavItem = {
+  title: string;
+  href: string;
+  icon: 'Home' | 'Building2' | 'LayoutTemplate' | 'FileText' | 'Settings';
+};
 
 const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: 'Home' },
@@ -27,7 +33,7 @@ const adminNavItems: NavItem[] = [
   { title: 'Company Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
 ];
 
-const IconMap: Record<string, React.ReactNode> = {
+const IconMap: Record<NavItem['icon'], React.ReactNode> = {
   Home: <Home size={20} />,
   Building2: <Building2 size={20} />,
   LayoutTemplate: <LayoutTemplate size={20} />,
@@ -37,13 +43,7 @@ const IconMap: Record<string, React.ReactNode> = {
 
 const DashboardLayout: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const {
-    user,
-    company,
-    isAdmin,
-    requiresPayment,
-    needsPaymentSetup,
-  } = useAuthStore();
+  const { user, company, isAdmin, requiresPayment, needsPaymentSetup } = useAuthStore();
   const navigate = useNavigate();
 
   // Trial days remaining (used for sidebar notice)
@@ -243,7 +243,7 @@ const DashboardLayout: React.FC = () => {
               )}
             </nav>
 
-            {/* Trial warning in sidebar (optional) */}
+            {/* Trial warning in sidebar */}
             {showTrialWarning && (
               <div className="p-2">
                 <AnimatePresence>
@@ -275,7 +275,7 @@ const DashboardLayout: React.FC = () => {
               </div>
             )}
 
-            {/* User info (no logout button here anymore) */}
+            {/* User info (logout removed here) */}
             <div className="flex-shrink-0 border-t border-gray-200 p-4">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -339,7 +339,7 @@ const DashboardLayout: React.FC = () => {
                       Upgrade
                     </Button>
                   )}
-                  {/* Settings on the top-right (help removed, logout removed) */}
+                  {/* Settings top-right on mobile (Help removed, Logout removed) */}
                   <button
                     onClick={() => navigate('/dashboard/admin/settings')}
                     className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
@@ -364,7 +364,7 @@ const DashboardLayout: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation + FAB (unchanged for now) */}
+      {/* Mobile Bottom Navigation + FAB */}
       <BottomNavigation />
     </div>
   );
