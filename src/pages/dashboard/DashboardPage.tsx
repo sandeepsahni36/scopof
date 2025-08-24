@@ -1,103 +1,298 @@
 // src/pages/dashboardpage.tsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { Pie } from 'react-chartjs-2';
+import React, { useEffect, useMemo, useState } from "react";
+import { Bar, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
   ArcElement,
+  Title,
   Tooltip,
   Legend,
-} from 'chart.js';
-import { motion } from 'framer-motion';
+  ChartOptions,
+  Plugin,
+  Chart,
+} from "chart.js";
+import { motion } from "framer-motion";
 import {
   Building2,
   CheckCircle2,
   AlertTriangle,
-  Search as SearchIcon,
+  Calendar,
+  BarChart3,
+  Timer,
   PieChart as PieChartIcon,
-  HardDrive
-} from 'lucide-react';
-import { useAuthStore } from '../../store/authStore';
-import { TIER_LIMITS } from '../../types';
-import { supabase, devModeEnabled } from '../../lib/supabase';
+  Search as SearchIcon,
+} from "lucide-react";
+import { useAuthStore } from "../../store/authStore";
+import { TIER_LIMITS } from "../../types";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "../../components/ui/Button";
+import { checkPropertyLimit } from "../../lib/properties";
+import { supabase, devModeEnabled } from "../../lib/supabase";
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+// ---------- ChartJS setup ----------
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+// Subtle drop shadow under arcs (for that “polished” look)
+const arcShadowPlugin: Plugin<"pie"> = {
+  id: "arcShadow",
+  beforeDatasetDraw: (chart, args, pluginOptions) => {
+    const { ctx } = chart;
+    // Only apply to arc elements (pie/doughnut)
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.12)";
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 6;
+  },
+  afterDatasetDraw: (chart) => {
+    chart.ctx.restore();
+  },
+};
+ChartJS.register(arcShadowPlugin);
 
 const DashboardPage = () => {
   const {
     company,
+    hasActiveSubscription,
+    isTrialExpired,
+    requiresPayment,
+    canStartInspections,
     storageStatus,
     isDevMode,
   } = useAuthStore();
 
+  const navigate = useNavigate();
+
   // Debug (kept from your original)
-  console.log('=== DASHBOARD PAGE DEBUG ===');
-  console.log('Dev mode enabled:', isDevMode);
-  console.log('Storage status:', storageStatus);
-  console.log('=== END DASHBOARD DEBUG ===');
+  console.log("=== DASHBOARD PAGE DEBUG ===");
+  console.log("Dev mode enabled:", isDevMode);
+  console.log("Can start inspections:", canStartInspections);
+  console.log("Storage status:", storageStatus);
+  console.log("Has active subscription:", hasActiveSubscription);
+  console.log("Requires payment:", requiresPayment);
+  console.log("=== END DASHBOARD DEBUG ===");
 
   // Search
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
 
-  // KPI state (trimmed to what we actually show)
+  // Dashboard data state (trimmed to what we show)
   const [stats, setStats] = useState({
     properties: 0,
     completedInspections: 0,
-    issuesDetected: 0, // flagged items
+    pendingInspections: 0, // we use this to compute Total Inspections
+    issuesDetected: 0,
+    averageInspectionDuration: 0, // not displayed in KPIs anymore but left intact
   });
 
-  // Chart state we still need
-  const [propertiesByType, setPropertiesByType] = useState<Record<string, number>>({});
+  // Chart data state (kept: propertiesByType for portfolio)
+  const [chartData, setChartData] = useState({
+    inspectionsByType: {
+      check_in: 0,
+      check_out: 0,
+      move_in: 0,
+      move_out: 0,
+    },
+    issuesByValue: {
+      "Needs Repair": 0,
+      Poor: 0,
+      Damaged: 0,
+      Missing: 0,
+    },
+    propertiesByType: {} as Record<string, number>,
+    topPropertiesByInspections: [] as Array<{ name: string; count: number }>,
+  });
+
   const [loading, setLoading] = useState(true);
 
-  // ---------- Load data ----------
+  // ---------- Load dashboard data (unchanged source logic) ----------
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
         setLoading(true);
 
-        // Properties count
-        const { count: propsCount } = await supabase
-          .from('properties')
-          .select('id', { count: 'exact', head: true });
+        // Get property count and limits
+        const propertyLimits = await checkPropertyLimit();
+        const propertyCount = propertyLimits?.currentCount || 0;
 
-        // Completed inspections
-        const { count: completedCount } = await supabase
-          .from('inspections')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'completed');
+        let completedInspections = 0;
+        let pendingInspections = 0;
+        let issuesDetected = 0;
+        let inspectionsByType = {
+          check_in: 0,
+          check_out: 0,
+          move_in: 0,
+          move_out: 0,
+        };
+        let issuesByValue = {
+          "Needs Repair": 0,
+          Poor: 0,
+          Damaged: 0,
+          Missing: 0,
+        };
+        let propertiesByType = {} as Record<string, number>;
+        let topPropertiesByInspections = [] as Array<{ name: string; count: number }>;
+        let averageInspectionDuration = 0;
 
-        // Flagged items (inspection_items.marked_for_report = true)
-        const { count: flaggedCount } = await supabase
-          .from('inspection_items')
-          .select('id', { count: 'exact', head: true })
-          .eq('marked_for_report', true);
+        if (!devModeEnabled()) {
+          const [completedResponse, pendingResponse, issuesResponse, inspectionTypesResponse] =
+            await Promise.all([
+              supabase
+                .from("inspections")
+                .select("id", { count: "exact" })
+                .eq("status", "completed"),
+              supabase
+                .from("inspections")
+                .select("id", { count: "exact" })
+                .eq("status", "in_progress"),
+              supabase
+                .from("inspection_items")
+                .select("id", { count: "exact" })
+                .eq("marked_for_report", true),
+              supabase.from("inspections").select("inspection_type").eq("status", "completed"),
+            ]);
 
-        // Properties by type for the portfolio pie
-        const { data: properties } = await supabase
-          .from('properties')
-          .select('type');
+          completedInspections = completedResponse.count || 0;
+          pendingInspections = pendingResponse.count || 0;
+          issuesDetected = issuesResponse.count || 0;
 
-        const byType: Record<string, number> = {};
-        (properties || []).forEach((p: any) => {
-          const t = (p?.type || 'Unknown').toString();
-          byType[t] = (byType[t] || 0) + 1;
-        });
+          if (inspectionTypesResponse.data) {
+            inspectionTypesResponse.data.forEach((inspection: any) => {
+              const type = inspection.inspection_type;
+              if (type && (inspectionsByType as any)[type] !== undefined) {
+                (inspectionsByType as any)[type]++;
+              }
+            });
+          }
+
+          const { data: issueItems } = await supabase
+            .from("inspection_items")
+            .select("value")
+            .eq("marked_for_report", true)
+            .not("value", "is", null);
+
+          (issueItems || []).forEach((item: any) => {
+            const value = item.value;
+            const bump = (k: keyof typeof issuesByValue) => (issuesByValue[k] = issuesByValue[k] + 1);
+            const check = (s: string) => s && typeof s === "string" && s.toLowerCase();
+            if (typeof value === "string") {
+              const v = check(value);
+              if (!v) return;
+              if (v.includes("repair")) bump("Needs Repair");
+              else if (v.includes("poor") || v.includes("bad")) bump("Poor");
+              else if (v.includes("damage")) bump("Damaged");
+              else if (v.includes("missing") || v.includes("absent")) bump("Missing");
+            } else if (Array.isArray(value)) {
+              value.forEach((v: string) => {
+                const s = check(v);
+                if (!s) return;
+                if (s.includes("repair")) bump("Needs Repair");
+                else if (s.includes("poor") || s.includes("bad")) bump("Poor");
+                else if (s.includes("damage")) bump("Damaged");
+                else if (s.includes("missing") || s.includes("absent")) bump("Missing");
+              });
+            }
+          });
+
+          const { data: propertiesResponse } = await supabase.from("properties").select("type");
+          (propertiesResponse || []).forEach((property: any) => {
+            const type = property.type || "Unknown";
+            propertiesByType[type] = (propertiesByType[type] || 0) + 1;
+          });
+
+          const { data: durationData } = await supabase
+            .from("inspections")
+            .select("duration_seconds")
+            .eq("status", "completed")
+            .not("duration_seconds", "is", null);
+
+          if (durationData && durationData.length > 0) {
+            const totalDuration = durationData.reduce(
+              (sum, inspection) => sum + (inspection.duration_seconds || 0),
+              0
+            );
+            averageInspectionDuration = Math.round(totalDuration / durationData.length / 60);
+          }
+
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const { data: topPropertiesData } = await supabase
+            .from("inspections")
+            .select(
+              `
+              property_id,
+              properties ( name )
+            `
+            )
+            .eq("status", "completed")
+            .gte("created_at", thirtyDaysAgo);
+
+          if (topPropertiesData) {
+            const propertyInspectionCounts: Record<string, number> = {};
+            topPropertiesData.forEach((inspection: any) => {
+              const propertyName = inspection.properties?.name || "Unknown Property";
+              propertyInspectionCounts[propertyName] =
+                (propertyInspectionCounts[propertyName] || 0) + 1;
+            });
+            topPropertiesByInspections = Object.entries(propertyInspectionCounts)
+              .map(([name, count]) => ({ name, count: count as number }))
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 5);
+          }
+        } else {
+          // dev mode quick stub
+          completedInspections = 8;
+          pendingInspections = 3;
+          issuesDetected = 5;
+          averageInspectionDuration = 42;
+          inspectionsByType = { check_in: 4, check_out: 4, move_in: 0, move_out: 0 };
+          issuesByValue = { "Needs Repair": 2, Poor: 1, Damaged: 1, Missing: 1 };
+          propertiesByType = { apartment: 2, villa: 1, condo: 0 };
+          topPropertiesByInspections = [
+            { name: "Oceanview Apartment 2B", count: 3 },
+            { name: "Downtown Loft 5A", count: 2 },
+            { name: "Mountain View Villa", count: 1 },
+          ];
+        }
 
         setStats({
-          properties: propsCount || 0,
-          completedInspections: completedCount || 0,
-          issuesDetected: flaggedCount || 0,
+          properties: propertyCount,
+          completedInspections,
+          pendingInspections,
+          issuesDetected,
+          averageInspectionDuration,
         });
-        setPropertiesByType(byType);
-      } catch (err) {
-        console.error('Error loading dashboard data:', err);
-        // Safe fallbacks
+
+        setChartData({
+          inspectionsByType,
+          issuesByValue,
+          propertiesByType,
+          topPropertiesByInspections,
+        });
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
         setStats({
           properties: 0,
           completedInspections: 0,
+          pendingInspections: 0,
           issuesDetected: 0,
+          averageInspectionDuration: 0,
         });
-        setPropertiesByType({});
+        setChartData({
+          inspectionsByType: { check_in: 0, check_out: 0, move_in: 0, move_out: 0 },
+          issuesByValue: { "Needs Repair": 0, Poor: 0, Damaged: 0, Missing: 0 },
+          propertiesByType: {},
+          topPropertiesByInspections: [],
+        });
       } finally {
         setLoading(false);
       }
@@ -106,39 +301,71 @@ const DashboardPage = () => {
     loadDashboardData();
   }, []);
 
-  // ---------- Tier limits ----------
-  const tierLimits = TIER_LIMITS[company?.tier || 'starter'];
+  // ---------- Helpers ----------
+  const tierLimits = TIER_LIMITS[company?.tier || "starter"];
+  const trialDaysRemaining = company?.trialEndsAt
+    ? Math.max(
+        0,
+        Math.ceil(
+          (new Date(company.trialEndsAt).getTime() - new Date().getTime()) /
+            (1000 * 60 * 60 * 24)
+        )
+      )
+    : 0;
 
-  // ---------- Storage (read ONLY from store; no fake defaults) ----------
-  // Try a few common shapes so we don’t drift from your StorageUsageCard
-  const rawUsedBytes =
-    (storageStatus as any)?.usedBytes ??
-    (storageStatus as any)?.usage?.usedBytes ??
-    (storageStatus as any)?.usage?.bytes ??
-    (storageStatus as any)?.bytesUsed ??
-    null;
+  const handleUpgradeClick = () => {
+    if (requiresPayment) navigate("/subscription-required");
+    else navigate("/dashboard/admin/subscription");
+  };
 
-  const rawLimitBytes =
-    (storageStatus as any)?.limitBytes ??
-    (storageStatus as any)?.quota?.limitBytes ??
-    (storageStatus as any)?.quota?.bytes ??
-    (storageStatus as any)?.bytesLimit ??
-    null;
+  // Format average inspection duration (kept from original)
+  const formatDuration = (minutes: number) => {
+    if (minutes === 0) return "N/A";
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+  };
 
-  const usedMB = rawUsedBytes != null ? rawUsedBytes / (1024 * 1024) : 0;
-  const limitMB = rawLimitBytes != null ? rawLimitBytes / (1024 * 1024) : 0;
+  // ---------- Storage: read from your store robustly (no 0MB unless truly 0) ----------
+  // Try common shapes your StorageUsageCard might use.
+  const pick = (...vals: any[]) => vals.find((v) => Number.isFinite(v) && v >= 0);
+
+  const usedBytes =
+    pick(
+      (storageStatus as any)?.usedBytes,
+      (storageStatus as any)?.usage?.usedBytes,
+      (storageStatus as any)?.usage?.bytes,
+      (storageStatus as any)?.bytesUsed,
+      (storageStatus as any)?.used
+    ) ?? 0;
+
+  const limitBytes =
+    pick(
+      (storageStatus as any)?.limitBytes,
+      (storageStatus as any)?.quota?.limitBytes,
+      (storageStatus as any)?.quota?.bytes,
+      (storageStatus as any)?.bytesLimit,
+      (storageStatus as any)?.limit
+    ) ?? 0;
+
+  const usedMB = usedBytes / (1024 * 1024);
+  const limitMB = limitBytes / (1024 * 1024);
   const freeMB = limitMB > 0 ? Math.max(limitMB - usedMB, 0) : 0;
 
   // ---------- Charts ----------
+  const hasPropertiesData = Object.keys(chartData.propertiesByType).length > 0;
+
   const storagePieData = useMemo(
     () => ({
-      labels: ['Used', 'Free'],
+      labels: ["Used", "Free"],
       datasets: [
         {
           data: limitMB > 0 ? [usedMB, freeMB] : [usedMB, 0],
-          backgroundColor: ['#2f66ff', '#dfe7ff'],
-          borderColor: ['#2f66ff', '#dfe7ff'],
+          backgroundColor: ["#2f66ff", "#E7ECFF"], // brand + soft tint
+          borderColor: ["#2f66ff", "#E7ECFF"],
           borderWidth: 1,
+          hoverOffset: 10,
         },
       ],
     }),
@@ -146,26 +373,20 @@ const DashboardPage = () => {
   );
 
   const portfolioPieData = useMemo(() => {
-    const labels = Object.keys(propertiesByType).map((t) =>
-      t.charAt(0).toUpperCase() + t.slice(1).replace('_', ' ')
+    const labels = Object.keys(chartData.propertiesByType).map((t) =>
+      t.charAt(0).toUpperCase() + t.slice(1).replace("_", " ")
     );
-    const values = Object.values(propertiesByType);
+    const values = Object.values(chartData.propertiesByType);
     const palette = [
-      'rgba(37, 99, 235, 0.7)',   // blue
-      'rgba(5, 150, 105, 0.7)',   // emerald
-      'rgba(220, 38, 38, 0.7)',   // red
-      'rgba(217, 119, 6, 0.7)',   // amber
-      'rgba(124, 58, 237, 0.7)',  // violet
-      'rgba(219, 39, 119, 0.7)',  // pink
+      "rgba(47,102,255,0.75)", // brand 500
+      "rgba(95,134,255,0.75)", // brand 400
+      "rgba(5,150,105,0.75)", // emerald
+      "rgba(220,38,38,0.75)", // red
+      "rgba(217,119,6,0.75)", // amber
+      "rgba(124,58,237,0.75)", // violet
+      "rgba(219,39,119,0.75)", // pink
     ];
-    const borders = [
-      'rgba(37, 99, 235, 1)',
-      'rgba(5, 150, 105, 1)',
-      'rgba(220, 38, 38, 1)',
-      'rgba(217, 119, 6, 1)',
-      'rgba(124, 58, 237, 1)',
-      'rgba(219, 39, 119, 1)',
-    ];
+    const borders = palette.map((c) => c.replace("0.75", "1"));
     return {
       labels,
       datasets: [
@@ -174,10 +395,30 @@ const DashboardPage = () => {
           backgroundColor: values.map((_, i) => palette[i % palette.length]),
           borderColor: values.map((_, i) => borders[i % borders.length]),
           borderWidth: 1,
+          hoverOffset: 8,
         },
       ],
     };
-  }, [propertiesByType]);
+  }, [chartData.propertiesByType]);
+
+  const pieOptions: ChartOptions<"pie"> = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { position: "bottom" },
+      tooltip: {
+        enabled: true,
+      },
+    },
+    animation: {
+      duration: 1200,
+      easing: "easeOutQuart",
+      animateRotate: true,
+      animateScale: true,
+    },
+  };
+
+  const totalInspections = stats.completedInspections + stats.pendingInspections;
 
   if (loading) {
     return (
@@ -192,16 +433,14 @@ const DashboardPage = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header with Search + Storage quick stat */}
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex-1">
+      {/* Header + Search (buttons removed per spec) */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+        <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-1 text-gray-500">
-            Overview of your property inspections and activities
-          </p>
+          <p className="mt-1 text-gray-500">Overview of your property inspections and activities</p>
         </div>
 
-        {/* Search */}
+        {/* Search bar */}
         <div className="w-full md:w-[380px]">
           <div className="relative">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -214,28 +453,35 @@ const DashboardPage = () => {
             />
           </div>
         </div>
-
-        {/* Storage quick stat */}
-        <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm">
-          <HardDrive className="h-5 w-5 text-primary-600" />
-          <div className="text-sm">
-            <div className="font-semibold text-gray-900">
-              {Math.round(usedMB)} MB
-              {limitMB > 0 && (
-                <span className="text-gray-500 font-normal"> / {Math.round(limitMB)} MB</span>
-              )}
-            </div>
-            <div className="text-gray-500">
-              Storage used
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Usage statistics (3 cards as requested) */}
+      {/* Trial card (unchanged) */}
+      {!isTrialExpired && company?.subscription_status === "trialing" && (
+        <div className="mb-8 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg p-6 border border-primary-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-medium text-primary-900">Free Trial Active</h3>
+                <p className="text-primary-700">
+                  {trialDaysRemaining} days remaining • Ends{" "}
+                  {company?.trialEndsAt ? new Date(company.trialEndsAt).toLocaleDateString() : "soon"}
+                </p>
+              </div>
+            </div>
+            <Button onClick={handleUpgradeClick} className="bg-primary-600 hover:bg-primary-700">
+              Upgrade Now
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Usage statistics (ONLY 4 cards) */}
       <div className="border-b border-gray-200 pb-8 mb-10">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Usage Statistics</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Properties */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -250,12 +496,10 @@ const DashboardPage = () => {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Properties
-                    </dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Properties</dt>
                     <dd>
                       <div className="text-lg font-semibold text-gray-900">
-                        {stats.properties} / {tierLimits.properties === Infinity ? '∞' : tierLimits.properties}
+                        {stats.properties} / {tierLimits.properties === Infinity ? "∞" : tierLimits.properties}
                       </div>
                     </dd>
                   </dl>
@@ -278,13 +522,9 @@ const DashboardPage = () => {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Completed Inspections
-                    </dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Completed Inspections</dt>
                     <dd>
-                      <div className="text-lg font-semibold text-gray-900">
-                        {stats.completedInspections}
-                      </div>
+                      <div className="text-lg font-semibold text-gray-900">{stats.completedInspections}</div>
                     </dd>
                   </dl>
                 </div>
@@ -306,13 +546,33 @@ const DashboardPage = () => {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Flagged Items
-                    </dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Flagged Items</dt>
                     <dd>
-                      <div className="text-lg font-semibold text-gray-900">
-                        {stats.issuesDetected}
-                      </div>
+                      <div className="text-lg font-semibold text-gray-900">{stats.issuesDetected}</div>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Inspections (Total = Completed + Pending) */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white overflow-hidden shadow rounded-lg"
+          >
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-blue-100 rounded-md p-3">
+                  <Timer className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Inspections</dt>
+                    <dd>
+                      <div className="text-lg font-semibold text-gray-900">{totalInspections}</div>
                     </dd>
                   </dl>
                 </div>
@@ -322,7 +582,7 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Analytics (2 pie charts) */}
+      {/* Analytics (ONLY 2 pies) */}
       <div className="mb-8">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Analytics</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -332,34 +592,42 @@ const DashboardPage = () => {
               <PieChartIcon className="h-5 w-5 text-primary-600" />
               Storage
             </h3>
-            <div className="w-full max-w-[360px] mx-auto">
-              <Pie
-                data={storagePieData}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: true,
-                  plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: {
-                      callbacks: {
-                        label: (ctx) => {
-                          const v = Array.isArray(ctx?.raw) ? 0 : (ctx?.raw as number) || 0;
-                          return `${ctx.label}: ${Math.round(v)} MB`;
+            {usedBytes > 0 || limitBytes > 0 ? (
+              <div className="w-full max-w-[360px] mx-auto">
+                <Pie
+                  data={storagePieData}
+                  options={{
+                    ...pieOptions,
+                    plugins: {
+                      ...pieOptions.plugins,
+                      tooltip: {
+                        callbacks: {
+                          label: (ctx) => {
+                            const v = Array.isArray(ctx?.raw) ? 0 : (ctx?.raw as number) || 0;
+                            return `${ctx.label}: ${Math.round(v)} MB`;
+                          },
                         },
                       },
                     },
-                  },
-                }}
-              />
-              <p className="mt-3 text-xs text-gray-500 text-center">
-                Used: {Math.round(usedMB)} MB
-                {limitMB > 0 ? (
-                  <>
-                    {' '}• Free: {Math.round(freeMB)} MB • Total: {Math.round(limitMB)} MB
-                  </>
-                ) : null}
-              </p>
-            </div>
+                  }}
+                />
+                <p className="mt-3 text-xs text-gray-500 text-center">
+                  Used: {Math.round(usedMB)} MB
+                  {limitMB > 0 ? (
+                    <>
+                      {" "}
+                      • Free: {Math.round(freeMB)} MB • Total: {Math.round(limitMB)} MB
+                    </>
+                  ) : null}
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                <PieChartIcon className="h-12 w-12 mb-3" />
+                <p className="text-sm">No storage data available</p>
+                <p className="text-xs">Once storage is used, it will appear here</p>
+              </div>
+            )}
           </div>
 
           {/* Property Portfolio */}
@@ -368,22 +636,24 @@ const DashboardPage = () => {
               <PieChartIcon className="h-5 w-5 text-primary-600" />
               Property Portfolio ({stats.properties} total)
             </h3>
-            {Object.keys(propertiesByType).length > 0 ? (
+            {hasPropertiesData ? (
               <div className="w-full max-w-[360px] mx-auto">
                 <Pie
                   data={portfolioPieData}
                   options={{
-                    responsive: true,
-                    maintainAspectRatio: true,
+                    ...pieOptions,
                     plugins: {
-                      legend: { position: 'bottom' },
+                      ...pieOptions.plugins,
                       tooltip: {
                         callbacks: {
                           label: function (context) {
-                            const label = context.label || '';
+                            const label = context.label || "";
                             const value = context.parsed as number;
-                            const total = (context.dataset.data as number[]).reduce((a, b) => a + b, 0);
-                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                            const total = (context.dataset.data as number[]).reduce(
+                              (a, b) => a + b,
+                              0
+                            );
+                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0.0";
                             return `${label}: ${value} (${pct}%)`;
                           },
                         },
