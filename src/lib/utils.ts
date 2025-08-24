@@ -15,28 +15,17 @@ export function getPropertyTypeIcon(type?: string): string {
   return "🏢";
 }
 
-/**
- * Validate an image File or URL/DataURL.
- */
 export function isImageValid(
   input: File | string,
-  opts?: {
-    maxSizeKB?: number;
-    allowedTypes?: string[];
-    allowedExts?: string[];
-  }
+  opts?: { maxSizeKB?: number; allowedTypes?: string[]; allowedExts?: string[] }
 ): { valid: boolean; error?: string } {
   const maxSizeKB = opts?.maxSizeKB ?? 300;
   const allowedTypes = opts?.allowedTypes ?? [
     "image/png",
     "image/jpeg",
     "image/jpg",
-    "image/webp",
-    "image/gif",
-    "image/svg+xml",
-    "image/bmp",
   ];
-  const allowedExts = (opts?.allowedExts ?? ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp"]).map((e) =>
+  const allowedExts = (opts?.allowedExts ?? ["png", "jpg", "jpeg"]).map((e) =>
     e.toLowerCase()
   );
 
@@ -46,7 +35,7 @@ export function isImageValid(
       return { valid: false, error: `Image is too large. Max ${maxSizeKB}KB.` };
     }
     if (input.type && !allowedTypes.includes(input.type)) {
-      return { valid: false, error: "Unsupported image type. Use PNG or JPG." };
+      return { valid: false, error: "Unsupported image type. Use PNG/JPG." };
     }
     const name = input.name?.toLowerCase() || "";
     const ext = name.split(".").pop() || "";
@@ -56,30 +45,20 @@ export function isImageValid(
     return { valid: true };
   }
 
-  // String (URL/DataURL) case
+  // String (URL/DataURL)
   const str = String(input || "").trim();
   if (!str) return { valid: false, error: "No image provided." };
   if (str.startsWith("data:image/")) return { valid: true };
-
-  // Check URL extension if present
   const extMatch = str.toLowerCase().match(/\.([a-z0-9]+)(?:\?|#|$)/);
-  if (extMatch) {
-    const ext = extMatch[1];
-    if (!allowedExts.includes(ext)) {
-      return { valid: false, error: "Unsupported image URL extension." };
-    }
-    return { valid: true };
+  if (extMatch && !allowedExts.includes(extMatch[1])) {
+    return { valid: false, error: "Unsupported image URL extension." };
   }
-
-  // Allow generic http(s) URLs
   if (/^https?:\/\//i.test(str)) return { valid: true };
-
   return { valid: false, error: "Invalid image input." };
 }
 
 /**
- * Resize & optimize an image in the browser using a canvas.
- * Falls back to returning the original file in non-browser environments.
+ * Resize & optimize an image (browser only). Falls back to original file elsewhere.
  */
 export async function resizeAndOptimizeImage(
   file: File,
@@ -87,7 +66,6 @@ export async function resizeAndOptimizeImage(
   maxHeight = 100,
   quality = 0.8
 ): Promise<File> {
-  // Only run in the browser
   if (typeof window === "undefined" || typeof document === "undefined") {
     return file;
   }
@@ -108,29 +86,19 @@ export async function resizeAndOptimizeImage(
   ctx.clearRect(0, 0, targetW, targetH);
   ctx.drawImage(img, 0, 0, targetW, targetH);
 
-  const lower = (file.type || "").toLowerCase();
-  const isJpeg = lower.includes("jpeg") || lower.includes("jpg");
+  const isJpeg = (file.type || "").toLowerCase().includes("jpg") || (file.type || "").toLowerCase().includes("jpeg");
   const outType = isJpeg ? "image/jpeg" : "image/png";
+  const q = Math.min(1, Math.max(0.1, Number.isFinite(quality) ? Number(quality) : 0.8));
 
   const blob: Blob = await new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error("Canvas export failed"))),
-      outType,
-      isJpeg ? clampQuality(quality) : undefined
-    );
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Canvas export failed"))), outType, isJpeg ? q : undefined);
   });
 
   const newName = file.name.replace(/\.(\w+)$/, isJpeg ? ".jpg" : ".png");
   return new File([blob], newName, { type: outType, lastModified: Date.now() });
 }
 
-// ---------- internal helpers ----------
-
-function clampQuality(q: number) {
-  if (Number.isFinite(q)) return Math.min(1, Math.max(0.1, Number(q)));
-  return 0.8;
-}
-
+// ---- helpers ----
 function readFileAsDataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
@@ -144,4 +112,7 @@ function loadHTMLImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerro
+    img.onerror = () => reject(new Error("Image load failed"));
+    img.src = src;
+  });
+}
