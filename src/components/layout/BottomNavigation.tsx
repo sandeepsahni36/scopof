@@ -1,214 +1,164 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+// src/components/layout/BottomNavigation.tsx
+import React, { useEffect, useRef, useState } from "react";
+import { NavLink } from "react-router-dom";
 import {
   Home,
-  Building2,
   LayoutTemplate,
+  Building2,
   FileText,
   Plus,
-  ClipboardList,
-  Flag,
-} from 'lucide-react';
-import { useAuthStore } from '../../store/authStore';
-import type { NavItem } from '../../types';
+  FilePlus2,
+  ClipboardCheck,
+  FolderPlus
+} from "lucide-react";
+import { useAuthStore } from "../../store/authStore";
 
-const navItems: NavItem[] = [
-  { title: 'Dashboard', href: '/dashboard', icon: 'Home' },
-  { title: 'Templates', href: '/dashboard/templates', icon: 'LayoutTemplate' },
-  // FAB is in the middle (not part of navItems)
-  { title: 'Properties', href: '/dashboard/properties', icon: 'Building2' },
-  { title: 'Reports', href: '/dashboard/reports', icon: 'FileText' },
+type NavItem = { title: string; href: string; icon: React.ReactNode };
+
+const NAV_ITEMS: NavItem[] = [
+  { title: "Home",       href: "/dashboard",            icon: <Home size={22} /> },
+  { title: "Templates",  href: "/dashboard/templates",  icon: <LayoutTemplate size={22} /> },
+  { title: "Properties", href: "/dashboard/properties", icon: <Building2 size={22} /> },
+  { title: "Reports",    href: "/dashboard/reports",    icon: <FileText size={22} /> },
 ];
 
-const IconMap: Record<string, React.ReactNode> = {
-  Home: <Home size={24} />,
-  Building2: <Building2 size={24} />,
-  LayoutTemplate: <LayoutTemplate size={24} />,
-  FileText: <FileText size={24} />,
-};
-
-const BottomNavigation: React.FC = () => {
+export default function BottomNavigation() {
   const { requiresPayment, needsPaymentSetup } = useAuthStore();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const popRef = useRef<HTMLDivElement>(null);
 
-  const handleBlockedNav = (e: React.MouseEvent, href: string) => {
-    const blocked = (requiresPayment || needsPaymentSetup) && !href.includes('/admin/settings');
-    if (blocked) {
+  // close popover on outside click / escape
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (!popRef.current) return;
+      if (!popRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    if (open) {
+      document.addEventListener("click", onClick);
+      document.addEventListener("keydown", onEsc);
+    }
+    return () => {
+      document.removeEventListener("click", onClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [open]);
+
+  const gate = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (requiresPayment || needsPaymentSetup) {
       e.preventDefault();
-      window.location.href = '/subscription-required';
+      window.location.href = "/subscription-required";
     }
   };
 
-  // Emit lightweight events instead of navigating
-  const fireFabAction = (action: 'add-property' | 'start-inspection' | 'flag-item') => {
-    window.dispatchEvent(new CustomEvent('fab:action', { detail: action }));
-    setMenuOpen(false);
-  };
-
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
-      {/* Blur/Surface */}
-      <nav
+    <div className="md:hidden fixed inset-x-0 bottom-0 z-50 pointer-events-none">
+      <div
         className="
-          grid grid-cols-[1fr_1fr_auto_1fr_1fr] items-center gap-2
-          px-4 pt-2 pb-[max(10px,env(safe-area-inset-bottom))]
-          bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70
-          shadow-[0_-8px_30px_rgba(18,20,23,0.08)]
-          rounded-t-2xl
+          relative mx-auto max-w-full pointer-events-auto
+          bg-white/95 backdrop-blur border-t border-gray-200
+          rounded-t-2xl shadow-[0_-6px_24px_rgba(18,20,23,.06)]
+          px-3 pt-2 pb-[calc(10px+env(safe-area-inset-bottom))]
         "
-        role="navigation"
-        aria-label="Primary"
       >
-        {/* 1 — Dashboard */}
-        <NavLink
-          to="/dashboard"
-          onClick={(e) => handleBlockedNav(e, '/dashboard')}
-          className={({ isActive }) =>
-            `
-            h-14 min-w-[68px] px-2 rounded-xl
-            grid place-items-center gap-1
-            text-[11px] font-medium
-            ${isActive ? 'text-brand-500' : 'text-gray-500'}
-            active:translate-y-[1px]
-          `
-          }
-          end
-          aria-label="Dashboard"
-        >
-          <span className="grid place-items-center">{IconMap['Home']}</span>
-          <span>Home</span>
-        </NavLink>
-
-        {/* 2 — Templates */}
-        <NavLink
-          to="/dashboard/templates"
-          onClick={(e) => handleBlockedNav(e, '/dashboard/templates')}
-          className={({ isActive }) =>
-            `
-            h-14 min-w-[68px] px-2 rounded-xl
-            grid place-items-center gap-1
-            text-[11px] font-medium
-            ${isActive ? 'text-brand-500' : 'text-gray-500'}
-            active:translate-y-[1px]
-          `
-          }
-          aria-label="Templates"
-        >
-          <span className="grid place-items-center">{IconMap['LayoutTemplate']}</span>
-          <span>Templates</span>
-        </NavLink>
-
-        {/* Center FAB */}
-        <div className="relative grid place-items-center">
-          <button
-            type="button"
-            aria-label="Add"
-            onClick={() => setMenuOpen((v) => !v)}
-            className="
-              -translate-y-6 w-14 h-14 rounded-full
-              bg-gradient-to-b from-brand-500 to-brand-400 text-white
-              shadow-[0_10px_24px_rgba(47,102,255,.35),0_4px_10px_rgba(47,102,255,.25)]
-              grid place-items-center
-              active:translate-y-[-22px]
-            "
-          >
-            <Plus size={26} />
-          </button>
-
-          {/* Floating Action Menu (no navigation) */}
-          {menuOpen && (
-            <>
-              {/* Backdrop click to close */}
-              <button
-                aria-label="Close action menu"
-                onClick={() => setMenuOpen(false)}
-                className="fixed inset-0 -z-10 bg-black/0"
-              />
-              <div
-                className="
-                  absolute bottom-[4.25rem] left-1/2 -translate-x-1/2
-                  w-[92vw] max-w-[360px]
-                  bg-white rounded-2xl shadow-2xl border border-gray-100
-                  p-3
-                "
-              >
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => fireFabAction('add-property')}
-                    className="
-                      group rounded-xl p-3 grid place-items-center gap-1.5
-                      bg-gray-50 hover:bg-gray-100 active:scale-[0.98]
-                    "
-                  >
-                    <Building2 className="text-gray-700" size={22} />
-                    <span className="text-[11px] text-gray-700 font-medium">Add Property</span>
-                  </button>
-                  <button
-                    onClick={() => fireFabAction('start-inspection')}
-                    className="
-                      group rounded-xl p-3 grid place-items-center gap-1.5
-                      bg-gray-50 hover:bg-gray-100 active:scale-[0.98]
-                    "
-                  >
-                    <ClipboardList className="text-gray-700" size={22} />
-                    <span className="text-[11px] text-gray-700 font-medium">Start Inspection</span>
-                  </button>
-                  <button
-                    onClick={() => fireFabAction('flag-item')}
-                    className="
-                      group rounded-xl p-3 grid place-items-center gap-1.5
-                      bg-gray-50 hover:bg-gray-100 active:scale-[0.98]
-                    "
-                  >
-                    <Flag className="text-gray-700" size={22} />
-                    <span className="text-[11px] text-gray-700 font-medium">Flag Item</span>
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
+        {/* nav row */}
+        <div className="grid grid-cols-4 text-[11px] font-medium text-gray-600">
+          {NAV_ITEMS.map((item, idx) => (
+            <NavLink
+              key={item.href}
+              to={item.href}
+              onClick={(e) => gate(e, item.href)}
+              end={item.href === "/dashboard"}
+              className={({ isActive }) =>
+                [
+                  "flex flex-col items-center justify-center gap-1 py-2",
+                  // push the two right items a bit to make visual room for the FAB
+                  idx > 1 ? "translate-x-2" : "-translate-x-2",
+                  isActive ? "text-[#2f66ff]" : "text-gray-600 hover:text-gray-800",
+                ].join(" ")
+              }
+            >
+              <div className="w-7 h-7 grid place-items-center">{item.icon}</div>
+              <span className="leading-none">{item.title}</span>
+            </NavLink>
+          ))}
         </div>
 
-        {/* 3 — Properties */}
-        <NavLink
-          to="/dashboard/properties"
-          onClick={(e) => handleBlockedNav(e, '/dashboard/properties')}
-          className={({ isActive }) =>
-            `
-            h-14 min-w-[68px] px-2 rounded-xl
-            grid place-items-center gap-1
-            text-[11px] font-medium
-            ${isActive ? 'text-brand-500' : 'text-gray-500'}
-            active:translate-y-[1px]
-          `
-          }
-          aria-label="Properties"
+        {/* Center FAB */}
+        <button
+          aria-label="Add"
+          onClick={() => setOpen((v) => !v)}
+          className="
+            absolute left-1/2 -translate-x-1/2 -translate-y-7
+            w-16 h-16 rounded-full
+            bg-gradient-to-b from-[#2f66ff] to-[#5f86ff]
+            shadow-[0_10px_24px_rgba(47,102,255,.35),0_4px_10px_rgba(47,102,255,.25)]
+            grid place-items-center
+          "
         >
-          <span className="grid place-items-center">{IconMap['Building2']}</span>
-          <span>Properties</span>
-        </NavLink>
+          <Plus size={28} className="text-white" />
+        </button>
 
-        {/* 4 — Reports */}
-        <NavLink
-          to="/dashboard/reports"
-          onClick={(e) => handleBlockedNav(e, '/dashboard/reports')}
-          className={({ isActive }) =>
-            `
-            h-14 min-w-[68px] px-2 rounded-xl
-            grid place-items-center gap-1
-            text-[11px] font-medium
-            ${isActive ? 'text-brand-500' : 'text-gray-500'}
-            active:translate-y-[1px]
-          `
-          }
-          aria-label="Reports"
-        >
-          <span className="grid place-items-center">{IconMap['FileText']}</span>
-          <span>Reports</span>
-        </NavLink>
-      </nav>
+        {/* Popover menu */}
+        {open && (
+          <div
+            ref={popRef}
+            className="
+              absolute left-1/2 -translate-x-1/2 bottom-20
+              w-[min(88vw,360px)] rounded-2xl border border-gray-200 bg-white shadow-xl
+              p-2
+            "
+          >
+            <MenuItem
+              icon={<FolderPlus size={18} />}
+              title="Add Property"
+              desc="Create a new property"
+              onClick={() => setOpen(false)}
+            />
+            <MenuItem
+              icon={<ClipboardCheck size={18} />}
+              title="Start Inspection"
+              desc="Begin a new inspection"
+              onClick={() => setOpen(false)}
+            />
+            <MenuItem
+              icon={<FilePlus2 size={18} />}
+              title="Create Template"
+              desc="New reusable template"
+              onClick={() => setOpen(false)}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
-};
+}
 
-export default BottomNavigation;
+function MenuItem({
+  icon,
+  title,
+  desc,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="
+        w-full text-left rounded-xl p-3
+        hover:bg-gray-50 active:bg-gray-100 transition
+        flex items-center gap-3
+      "
+    >
+      <div className="w-9 h-9 rounded-lg bg-gray-100 grid place-items-center">{icon}</div>
+      <div className="min-w-0">
+        <div className="text-[13px] font-semibold text-gray-900">{title}</div>
+        <div className="text-[11px] text-gray-500 truncate">{desc}</div>
+      </div>
+    </button>
+  );
+}
