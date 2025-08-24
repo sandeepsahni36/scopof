@@ -1,4 +1,3 @@
-Dashboardpage.tsx ORINGAL CODE FROM BOLD
 import React, { useState, useEffect } from 'react';
 import { Bar, Pie, Doughnut } from 'react-chartjs-2';
 import {
