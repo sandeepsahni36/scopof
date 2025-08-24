@@ -1,18 +1,14 @@
 // src/pages/dashboardpage.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Bar, Pie } from "react-chartjs-2";
+import { Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
   ArcElement,
   Title,
   Tooltip,
   Legend,
-  ChartOptions,
   Plugin,
-  Chart,
+  ChartOptions,
 } from "chart.js";
 import { motion } from "framer-motion";
 import {
@@ -20,35 +16,28 @@ import {
   CheckCircle2,
   AlertTriangle,
   Calendar,
-  BarChart3,
   Timer,
   PieChart as PieChartIcon,
   Search as SearchIcon,
 } from "lucide-react";
+
+// ✅ paths you specified
 import { useAuthStore } from "../../store/authStore";
 import { TIER_LIMITS } from "../../types";
-import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { checkPropertyLimit } from "../../lib/properties";
 import { supabase, devModeEnabled } from "../../lib/supabase";
+import StorageUsageCard from "../../components/dashboard/StorageUsageCard";
+import { useNavigate } from "react-router-dom";
 
 // ---------- ChartJS setup ----------
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(ArcElement, Title, Tooltip, Legend);
 
-// Subtle drop shadow under arcs (for that “polished” look)
+// Subtle drop shadow under arcs (for polish)
 const arcShadowPlugin: Plugin<"pie"> = {
   id: "arcShadow",
-  beforeDatasetDraw: (chart, args, pluginOptions) => {
+  beforeDatasetDraw: (chart) => {
     const { ctx } = chart;
-    // Only apply to arc elements (pie/doughnut)
     ctx.save();
     ctx.shadowColor = "rgba(0,0,0,.12)";
     ctx.shadowBlur = 12;
@@ -74,142 +63,60 @@ const DashboardPage = () => {
 
   const navigate = useNavigate();
 
-  // Debug (kept from your original)
-  console.log("=== DASHBOARD PAGE DEBUG ===");
-  console.log("Dev mode enabled:", isDevMode);
-  console.log("Can start inspections:", canStartInspections);
-  console.log("Storage status:", storageStatus);
-  console.log("Has active subscription:", hasActiveSubscription);
-  console.log("Requires payment:", requiresPayment);
-  console.log("=== END DASHBOARD DEBUG ===");
-
   // Search
   const [query, setQuery] = useState("");
 
-  // Dashboard data state (trimmed to what we show)
+  // Dashboard data state
   const [stats, setStats] = useState({
     properties: 0,
     completedInspections: 0,
-    pendingInspections: 0, // we use this to compute Total Inspections
+    pendingInspections: 0,
     issuesDetected: 0,
-    averageInspectionDuration: 0, // not displayed in KPIs anymore but left intact
+    averageInspectionDuration: 0,
   });
 
-  // Chart data state (kept: propertiesByType for portfolio)
+  // Chart data state (portfolio pie needs propertiesByType)
   const [chartData, setChartData] = useState({
-    inspectionsByType: {
-      check_in: 0,
-      check_out: 0,
-      move_in: 0,
-      move_out: 0,
-    },
-    issuesByValue: {
-      "Needs Repair": 0,
-      Poor: 0,
-      Damaged: 0,
-      Missing: 0,
-    },
     propertiesByType: {} as Record<string, number>,
-    topPropertiesByInspections: [] as Array<{ name: string; count: number }>,
   });
 
   const [loading, setLoading] = useState(true);
 
-  // ---------- Load dashboard data (unchanged source logic) ----------
+  // ---------- Load dashboard data (same sources, trimmed to what we render) ----------
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
         setLoading(true);
 
-        // Get property count and limits
+        // Properties count
         const propertyLimits = await checkPropertyLimit();
         const propertyCount = propertyLimits?.currentCount || 0;
 
         let completedInspections = 0;
         let pendingInspections = 0;
         let issuesDetected = 0;
-        let inspectionsByType = {
-          check_in: 0,
-          check_out: 0,
-          move_in: 0,
-          move_out: 0,
-        };
-        let issuesByValue = {
-          "Needs Repair": 0,
-          Poor: 0,
-          Damaged: 0,
-          Missing: 0,
-        };
-        let propertiesByType = {} as Record<string, number>;
-        let topPropertiesByInspections = [] as Array<{ name: string; count: number }>;
+        let propertiesByType: Record<string, number> = {};
         let averageInspectionDuration = 0;
 
         if (!devModeEnabled()) {
-          const [completedResponse, pendingResponse, issuesResponse, inspectionTypesResponse] =
-            await Promise.all([
-              supabase
-                .from("inspections")
-                .select("id", { count: "exact" })
-                .eq("status", "completed"),
-              supabase
-                .from("inspections")
-                .select("id", { count: "exact" })
-                .eq("status", "in_progress"),
-              supabase
-                .from("inspection_items")
-                .select("id", { count: "exact" })
-                .eq("marked_for_report", true),
-              supabase.from("inspections").select("inspection_type").eq("status", "completed"),
-            ]);
+          const [completedResponse, pendingResponse, issuesResponse] = await Promise.all([
+            supabase.from("inspections").select("id", { count: "exact" }).eq("status", "completed"),
+            supabase.from("inspections").select("id", { count: "exact" }).eq("status", "in_progress"),
+            supabase.from("inspection_items").select("id", { count: "exact" }).eq("marked_for_report", true),
+          ]);
 
           completedInspections = completedResponse.count || 0;
           pendingInspections = pendingResponse.count || 0;
           issuesDetected = issuesResponse.count || 0;
 
-          if (inspectionTypesResponse.data) {
-            inspectionTypesResponse.data.forEach((inspection: any) => {
-              const type = inspection.inspection_type;
-              if (type && (inspectionsByType as any)[type] !== undefined) {
-                (inspectionsByType as any)[type]++;
-              }
-            });
-          }
-
-          const { data: issueItems } = await supabase
-            .from("inspection_items")
-            .select("value")
-            .eq("marked_for_report", true)
-            .not("value", "is", null);
-
-          (issueItems || []).forEach((item: any) => {
-            const value = item.value;
-            const bump = (k: keyof typeof issuesByValue) => (issuesByValue[k] = issuesByValue[k] + 1);
-            const check = (s: string) => s && typeof s === "string" && s.toLowerCase();
-            if (typeof value === "string") {
-              const v = check(value);
-              if (!v) return;
-              if (v.includes("repair")) bump("Needs Repair");
-              else if (v.includes("poor") || v.includes("bad")) bump("Poor");
-              else if (v.includes("damage")) bump("Damaged");
-              else if (v.includes("missing") || v.includes("absent")) bump("Missing");
-            } else if (Array.isArray(value)) {
-              value.forEach((v: string) => {
-                const s = check(v);
-                if (!s) return;
-                if (s.includes("repair")) bump("Needs Repair");
-                else if (s.includes("poor") || s.includes("bad")) bump("Poor");
-                else if (s.includes("damage")) bump("Damaged");
-                else if (s.includes("missing") || s.includes("absent")) bump("Missing");
-              });
-            }
-          });
-
+          // Properties by type for portfolio
           const { data: propertiesResponse } = await supabase.from("properties").select("type");
-          (propertiesResponse || []).forEach((property: any) => {
-            const type = property.type || "Unknown";
-            propertiesByType[type] = (propertiesByType[type] || 0) + 1;
+          (propertiesResponse || []).forEach((p: any) => {
+            const t = p.type || "Unknown";
+            propertiesByType[t] = (propertiesByType[t] || 0) + 1;
           });
 
+          // Avg inspection duration (not displayed in KPI anymore but keep logic)
           const { data: durationData } = await supabase
             .from("inspections")
             .select("duration_seconds")
@@ -217,36 +124,8 @@ const DashboardPage = () => {
             .not("duration_seconds", "is", null);
 
           if (durationData && durationData.length > 0) {
-            const totalDuration = durationData.reduce(
-              (sum, inspection) => sum + (inspection.duration_seconds || 0),
-              0
-            );
-            averageInspectionDuration = Math.round(totalDuration / durationData.length / 60);
-          }
-
-          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-          const { data: topPropertiesData } = await supabase
-            .from("inspections")
-            .select(
-              `
-              property_id,
-              properties ( name )
-            `
-            )
-            .eq("status", "completed")
-            .gte("created_at", thirtyDaysAgo);
-
-          if (topPropertiesData) {
-            const propertyInspectionCounts: Record<string, number> = {};
-            topPropertiesData.forEach((inspection: any) => {
-              const propertyName = inspection.properties?.name || "Unknown Property";
-              propertyInspectionCounts[propertyName] =
-                (propertyInspectionCounts[propertyName] || 0) + 1;
-            });
-            topPropertiesByInspections = Object.entries(propertyInspectionCounts)
-              .map(([name, count]) => ({ name, count: count as number }))
-              .sort((a, b) => b.count - a.count)
-              .slice(0, 5);
+            const total = durationData.reduce((sum, i) => sum + (i.duration_seconds || 0), 0);
+            averageInspectionDuration = Math.round(total / durationData.length / 60);
           }
         } else {
           // dev mode quick stub
@@ -254,14 +133,7 @@ const DashboardPage = () => {
           pendingInspections = 3;
           issuesDetected = 5;
           averageInspectionDuration = 42;
-          inspectionsByType = { check_in: 4, check_out: 4, move_in: 0, move_out: 0 };
-          issuesByValue = { "Needs Repair": 2, Poor: 1, Damaged: 1, Missing: 1 };
           propertiesByType = { apartment: 2, villa: 1, condo: 0 };
-          topPropertiesByInspections = [
-            { name: "Oceanview Apartment 2B", count: 3 },
-            { name: "Downtown Loft 5A", count: 2 },
-            { name: "Mountain View Villa", count: 1 },
-          ];
         }
 
         setStats({
@@ -272,12 +144,7 @@ const DashboardPage = () => {
           averageInspectionDuration,
         });
 
-        setChartData({
-          inspectionsByType,
-          issuesByValue,
-          propertiesByType,
-          topPropertiesByInspections,
-        });
+        setChartData({ propertiesByType });
       } catch (error) {
         console.error("Error loading dashboard data:", error);
         setStats({
@@ -287,12 +154,7 @@ const DashboardPage = () => {
           issuesDetected: 0,
           averageInspectionDuration: 0,
         });
-        setChartData({
-          inspectionsByType: { check_in: 0, check_out: 0, move_in: 0, move_out: 0 },
-          issuesByValue: { "Needs Repair": 0, Poor: 0, Damaged: 0, Missing: 0 },
-          propertiesByType: {},
-          topPropertiesByInspections: [],
-        });
+        setChartData({ propertiesByType: {} });
       } finally {
         setLoading(false);
       }
@@ -318,19 +180,17 @@ const DashboardPage = () => {
     else navigate("/dashboard/admin/subscription");
   };
 
-  // Format average inspection duration (kept from original)
+  // Format average inspection duration (if you re-add it visibly)
   const formatDuration = (minutes: number) => {
     if (minutes === 0) return "N/A";
     if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
   };
 
-  // ---------- Storage: read from your store robustly (no 0MB unless truly 0) ----------
-  // Try common shapes your StorageUsageCard might use.
+  // ---------- Storage (read robustly from store to avoid 0 MB) ----------
   const pick = (...vals: any[]) => vals.find((v) => Number.isFinite(v) && v >= 0);
-
   const usedBytes =
     pick(
       (storageStatus as any)?.usedBytes,
@@ -354,8 +214,6 @@ const DashboardPage = () => {
   const freeMB = limitMB > 0 ? Math.max(limitMB - usedMB, 0) : 0;
 
   // ---------- Charts ----------
-  const hasPropertiesData = Object.keys(chartData.propertiesByType).length > 0;
-
   const storagePieData = useMemo(
     () => ({
       labels: ["Used", "Free"],
@@ -378,13 +236,13 @@ const DashboardPage = () => {
     );
     const values = Object.values(chartData.propertiesByType);
     const palette = [
-      "rgba(47,102,255,0.75)", // brand 500
-      "rgba(95,134,255,0.75)", // brand 400
-      "rgba(5,150,105,0.75)", // emerald
-      "rgba(220,38,38,0.75)", // red
-      "rgba(217,119,6,0.75)", // amber
-      "rgba(124,58,237,0.75)", // violet
-      "rgba(219,39,119,0.75)", // pink
+      "rgba(47,102,255,0.75)",
+      "rgba(95,134,255,0.75)",
+      "rgba(5,150,105,0.75)",
+      "rgba(220,38,38,0.75)",
+      "rgba(217,119,6,0.75)",
+      "rgba(124,58,237,0.75)",
+      "rgba(219,39,119,0.75)",
     ];
     const borders = palette.map((c) => c.replace("0.75", "1"));
     return {
@@ -406,9 +264,7 @@ const DashboardPage = () => {
     maintainAspectRatio: true,
     plugins: {
       legend: { position: "bottom" },
-      tooltip: {
-        enabled: true,
-      },
+      tooltip: { enabled: true },
     },
     animation: {
       duration: 1200,
@@ -419,6 +275,7 @@ const DashboardPage = () => {
   };
 
   const totalInspections = stats.completedInspections + stats.pendingInspections;
+  const hasPropertiesData = Object.keys(chartData.propertiesByType).length > 0;
 
   if (loading) {
     return (
@@ -433,11 +290,13 @@ const DashboardPage = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header + Search (buttons removed per spec) */}
+      {/* Header + Search (top-right buttons removed) */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-1 text-gray-500">Overview of your property inspections and activities</p>
+          <p className="mt-1 text-gray-500">
+            Overview of your property inspections and activities
+          </p>
         </div>
 
         {/* Search bar */}
@@ -455,7 +314,7 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Trial card (unchanged) */}
+      {/* Trial Status Card */}
       {!isTrialExpired && company?.subscription_status === "trialing" && (
         <div className="mb-8 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg p-6 border border-primary-200">
           <div className="flex items-center justify-between">
@@ -478,7 +337,7 @@ const DashboardPage = () => {
         </div>
       )}
 
-      {/* Usage statistics (ONLY 4 cards) */}
+      {/* Usage statistics — 4 cards */}
       <div className="border-b border-gray-200 pb-8 mb-10">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Usage Statistics</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -496,10 +355,13 @@ const DashboardPage = () => {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Properties</dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Properties
+                    </dt>
                     <dd>
                       <div className="text-lg font-semibold text-gray-900">
-                        {stats.properties} / {tierLimits.properties === Infinity ? "∞" : tierLimits.properties}
+                        {stats.properties} /{" "}
+                        {tierLimits.properties === Infinity ? "∞" : tierLimits.properties}
                       </div>
                     </dd>
                   </dl>
@@ -522,9 +384,13 @@ const DashboardPage = () => {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Completed Inspections</dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Completed Inspections
+                    </dt>
                     <dd>
-                      <div className="text-lg font-semibold text-gray-900">{stats.completedInspections}</div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        {stats.completedInspections}
+                      </div>
                     </dd>
                   </dl>
                 </div>
@@ -546,9 +412,13 @@ const DashboardPage = () => {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Flagged Items</dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Flagged Items
+                    </dt>
                     <dd>
-                      <div className="text-lg font-semibold text-gray-900">{stats.issuesDetected}</div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        {stats.issuesDetected}
+                      </div>
                     </dd>
                   </dl>
                 </div>
@@ -556,7 +426,7 @@ const DashboardPage = () => {
             </div>
           </motion.div>
 
-          {/* Inspections (Total = Completed + Pending) */}
+          {/* Inspections (Total) */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -570,9 +440,13 @@ const DashboardPage = () => {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Inspections</dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Inspections
+                    </dt>
                     <dd>
-                      <div className="text-lg font-semibold text-gray-900">{totalInspections}</div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        {stats.completedInspections + stats.pendingInspections}
+                      </div>
                     </dd>
                   </dl>
                 </div>
@@ -582,7 +456,7 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Analytics (ONLY 2 pies) */}
+      {/* Analytics — 2 pie charts */}
       <div className="mb-8">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Analytics</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -614,10 +488,7 @@ const DashboardPage = () => {
                 <p className="mt-3 text-xs text-gray-500 text-center">
                   Used: {Math.round(usedMB)} MB
                   {limitMB > 0 ? (
-                    <>
-                      {" "}
-                      • Free: {Math.round(freeMB)} MB • Total: {Math.round(limitMB)} MB
-                    </>
+                    <> • Free: {Math.round(freeMB)} MB • Total: {Math.round(limitMB)} MB</>
                   ) : null}
                 </p>
               </div>
@@ -649,10 +520,7 @@ const DashboardPage = () => {
                           label: function (context) {
                             const label = context.label || "";
                             const value = context.parsed as number;
-                            const total = (context.dataset.data as number[]).reduce(
-                              (a, b) => a + b,
-                              0
-                            );
+                            const total = (context.dataset.data as number[]).reduce((a, b) => a + b, 0);
                             const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0.0";
                             return `${label}: ${value} (${pct}%)`;
                           },
@@ -672,6 +540,8 @@ const DashboardPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Note: Quick Actions removed by request */}
     </div>
   );
 };
