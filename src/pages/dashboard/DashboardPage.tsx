@@ -1,108 +1,118 @@
-import React from 'react';
-import { Pie } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { Home, CheckSquare, Flag, Database } from "lucide-react";
+import BottomNavigation from "@/components/BottomNavigation"; // import bottom nav
 
-// Register minimal ChartJS pie dependencies
-ChartJS.register(ArcElement, Tooltip, Legend);
-
-// ——— Example numbers (replace with your real values later) ———
-const STATS = {
-  properties: 120,
-  completed: 85,
-  flagged: 12,
-  storageUsedPct: 65,
-};
-
-// Pie: Storage (Used vs Free)
-const storageData = {
-  labels: ['Used', 'Free'],
-  datasets: [
-    {
-      data: [STATS.storageUsedPct, 100 - STATS.storageUsedPct],
-      backgroundColor: ['#2563eb', '#93c5fd'],
-      borderColor: ['#2563eb', '#93c5fd'],
-      borderWidth: 1,
-    },
-  ],
-};
-
-// Pie: Property Portfolio
-const portfolioData = {
-  labels: ['Apartments', 'Villas', 'Townhouses'],
-  datasets: [
-    {
-      data: [60, 25, 15],
-      backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
-      borderColor: ['#22c55e', '#f59e0b', '#ef4444'],
-      borderWidth: 1,
-    },
-  ],
-};
-
-const pieOpts = {
-  responsive: true,
-  maintainAspectRatio: false as const,
-  plugins: {
-    legend: { position: 'bottom' as const },
-  },
-};
+// Pie chart data
+const storageData = [
+  { name: "Used", value: 70 },
+  { name: "Free", value: 30 },
+];
+const portfolioData = [
+  { name: "Villas", value: 40 },
+  { name: "Apartments", value: 60 },
+];
+const COLORS = ["#4F46E5", "#E5E7EB"];
 
 export default function DashboardPage() {
   return (
-    <div className="p-6 space-y-6">
-      {/* Search */}
-      <div className="flex justify-between items-center">
-        <input
-          type="text"
-          placeholder="Search properties, inspections..."
-          className="w-full max-w-md rounded-xl border border-gray-200 bg-white px-4 py-2 outline-none focus:ring-2 focus:ring-primary-500"
-        />
-      </div>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="p-4 bg-white shadow-sm">
+        <Input placeholder="Search..." className="w-full" />
+      </header>
 
-      {/* 4 Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="rounded-xl bg-white shadow-sm border border-gray-100 p-4">
-          <div className="text-sm text-gray-500">Properties</div>
-          <div className="mt-1 text-2xl font-bold">{STATS.properties}</div>
+      {/* Content */}
+      <main className="flex-1 overflow-y-auto p-4 space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 gap-4">
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center p-4">
+              <Home className="h-6 w-6 text-indigo-600 mb-2" />
+              <p className="text-sm font-medium">Properties</p>
+              <p className="text-lg font-bold">120</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center p-4">
+              <CheckSquare className="h-6 w-6 text-green-600 mb-2" />
+              <p className="text-sm font-medium">Completed</p>
+              <p className="text-lg font-bold">85</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center p-4">
+              <Flag className="h-6 w-6 text-red-600 mb-2" />
+              <p className="text-sm font-medium">Flagged</p>
+              <p className="text-lg font-bold">15</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center p-4">
+              <Database className="h-6 w-6 text-yellow-600 mb-2" />
+              <p className="text-sm font-medium">Storage</p>
+              <p className="text-lg font-bold">75%</p>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="rounded-xl bg-white shadow-sm border border-gray-100 p-4">
-          <div className="text-sm text-gray-500">Completed Inspections</div>
-          <div className="mt-1 text-2xl font-bold">{STATS.completed}</div>
-        </div>
+        {/* Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardContent className="p-4">
+              <h2 className="text-sm font-medium mb-2">Storage</h2>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={storageData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {storageData.map((_, index) => (
+                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-        <div className="rounded-xl bg-white shadow-sm border border-gray-100 p-4">
-          <div className="text-sm text-gray-500">Flagged Items</div>
-          <div className="mt-1 text-2xl font-bold">{STATS.flagged}</div>
+          <Card>
+            <CardContent className="p-4">
+              <h2 className="text-sm font-medium mb-2">Property Portfolio</h2>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={portfolioData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {portfolioData.map((_, index) => (
+                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </div>
+      </main>
 
-        <div className="rounded-xl bg-white shadow-sm border border-gray-100 p-4">
-          <div className="text-sm text-gray-500">Storage</div>
-          <div className="mt-1 text-2xl font-bold">{STATS.storageUsedPct}% Used</div>
-        </div>
-      </div>
-
-      {/* Two Pie Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-xl bg-white shadow-sm border border-gray-100 p-4">
-          <div className="text-sm font-medium text-gray-900 mb-3">Storage Usage</div>
-          <div className="h-64">
-            <Pie data={storageData} options={pieOpts} />
-          </div>
-        </div>
-
-        <div className="rounded-xl bg-white shadow-sm border border-gray-100 p-4">
-          <div className="text-sm font-medium text-gray-900 mb-3">Property Portfolio</div>
-          <div className="h-64">
-            <Pie data={portfolioData} options={pieOpts} />
-          </div>
-        </div>
-      </div>
+      {/* Bottom Navigation */}
+      <BottomNavigation />
     </div>
   );
 }
