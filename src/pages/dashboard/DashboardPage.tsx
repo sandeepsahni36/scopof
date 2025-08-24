@@ -37,15 +37,14 @@ import {
 // ---- Chart setup ------------------------------------------------------------
 ChartJS.register(ArcElement, Title, Tooltip, Legend);
 
-/** Soft drop-shadow on donut ring */
 const donutShadowPlugin: Plugin<'doughnut'> = {
   id: 'donutShadow',
   beforeDatasetDraw(chart) {
     const { ctx } = chart;
     ctx.save();
-    ctx.shadowColor = 'rgba(18,20,23,.12)';
-    ctx.shadowBlur = 18;
-    ctx.shadowOffsetY = 6;
+    ctx.shadowColor = 'rgba(18,20,23,.10)';
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 5;
   },
   afterDatasetDraw(chart) {
     chart.ctx.restore();
@@ -133,7 +132,7 @@ const DashboardPage = () => {
             if (t) propertiesByType[t] = (propertiesByType[t] || 0) + 1;
           });
 
-          // Avg duration (kept for future use even if not shown as a tile)
+          // Avg duration (kept for future use)
           const { data: durs } = await supabase
             .from('inspections')
             .select('duration_seconds')
@@ -247,26 +246,8 @@ const DashboardPage = () => {
   const donutOptions: ChartOptions<'doughnut'> = {
     responsive: true,
     maintainAspectRatio: false,
-    cutout: '72%',
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (ctx) => {
-            const label = ctx.label || '';
-            const value = ctx.parsed;
-            const total = (ctx.dataset.data as number[]).reduce((a, b) => a + b, 0);
-            const pct = total ? ((value / total) * 100).toFixed(1) : '0.0';
-            if (ctx.dataset.label === 'Storage' && usage) {
-              const pctStorage = ((value / usage.quota) * 100).toFixed(1);
-              return `${label}: ${formatBytes(value)} (${pctStorage}%)`;
-            }
-            return `${label}: ${value} (${pct}%)`;
-          },
-        },
-      },
-    },
-    layout: { padding: 0 },
+    cutout: '78%',
+    plugins: { legend: { display: false } },
   };
 
   const usagePct = usage ? getUsagePercentage(usage.currentUsage, usage.quota) : 0;
@@ -276,7 +257,7 @@ const DashboardPage = () => {
   // ===== Loading =============================================================
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="py-8 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading dashboard...</p>
@@ -287,13 +268,12 @@ const DashboardPage = () => {
 
   // ===== UI ==================================================================
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Title + Search (search at top, full width on mobile) */}
-      <div className="mb-5 space-y-3">
+    <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Title + Search (top, full width) */}
+      <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500">Overview of your property inspections and activities</p>
-
-        <div className="relative">
+        <p className="mt-1 text-gray-500">Overview of your property inspections and activities</p>
+        <div className="relative mt-3">
           <input
             type="text"
             placeholder="Search..."
@@ -303,228 +283,172 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Trial block */}
+      {/* Compact Trial block */}
       {!isTrialExpired && company?.subscription_status === 'trialing' && (
-        <div className="mb-6 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg p-6 border border-primary-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-white" />
+        <div className="mb-4 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg p-3 border border-primary-200">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 bg-primary-500 rounded-full flex items-center justify-center">
+                <Calendar className="h-4 w-4 text-white" />
               </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-primary-900">Free Trial Active</h3>
-                <p className="text-primary-700">
-                  {trialDaysRemaining} days remaining • Ends{' '}
+              <div className="text-sm">
+                <div className="font-medium text-primary-900">Free Trial</div>
+                <div className="text-primary-700">
+                  {trialDaysRemaining} days left •{' '}
                   {company?.trialEndsAt ? new Date(company.trialEndsAt).toLocaleDateString() : 'soon'}
-                </p>
+                </div>
               </div>
             </div>
-            <Button onClick={handleUpgradeClick} className="bg-primary-600 hover:bg-primary-700">
-              Upgrade Now
+            <Button size="sm" onClick={handleUpgradeClick} className="bg-primary-600 hover:bg-primary-700">
+              Upgrade
             </Button>
           </div>
         </div>
       )}
 
-      {/* Storage warning */}
+      {/* Storage warning (compact) */}
       {usage && (nearLimit || overLimit) && (
-        <div className={`mb-6 rounded-lg border p-4 ${overLimit ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
-          <div className="flex items-start gap-3">
-            <AlertTriangle className={`h-5 w-5 ${overLimit ? 'text-red-500' : 'text-amber-500'}`} />
-            <div className="flex-1">
-              <p className={`text-sm font-medium ${overLimit ? 'text-red-800' : 'text-amber-800'}`}>
+        <div className={`mb-4 rounded-lg border p-3 ${overLimit ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+          <div className="flex items-center gap-3">
+            <AlertTriangle className={`h-4 w-4 ${overLimit ? 'text-red-500' : 'text-amber-500'}`} />
+            <div className="text-sm flex-1">
+              <span className={`font-medium ${overLimit ? 'text-red-800' : 'text-amber-800'}`}>
                 {overLimit ? 'Storage Limit Exceeded' : 'Storage Nearly Full'}
-              </p>
-              <p className={`mt-1 text-sm ${overLimit ? 'text-red-700' : 'text-amber-700'}`}>
-                {overLimit ? 'Upgrade your plan to continue uploading files.' : 'Consider upgrading to avoid interruptions.'}
-              </p>
+              </span>
+              <span className={`ml-2 ${overLimit ? 'text-red-700' : 'text-amber-700'}`}>
+                {overLimit ? 'Upgrade to continue uploading.' : 'Consider upgrading to avoid interruptions.'}
+              </span>
             </div>
-            <Button size="sm" onClick={handleUpgradeClick}>Upgrade Plan</Button>
+            <Button size="sm" onClick={handleUpgradeClick}>Upgrade</Button>
           </div>
         </div>
       )}
 
-      {/* Usage Statistics — 4 medium SQUARES */}
-      <div className="mb-8">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Usage Statistics</h2>
+      {/* Usage Statistics — 4 medium SQUARES (fixed size) */}
+      <div className="mb-6">
+        <h2 className="text-lg font-medium text-gray-900 mb-3">Usage Statistics</h2>
 
-        {/* Always 4 across on desktop, 2 across on mobile; aspect-square keeps them perfect squares.
-           Tightened container width (max-w-6xl) + gap-5 to avoid oversized tiles. */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          {/* Properties */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-            className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 aspect-square flex flex-col justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-primary-50">
-                <Building2 className="h-6 w-6 text-primary-600" />
-              </div>
-              <div className="text-sm text-gray-600">Properties</div>
-            </div>
-            <div>
-              <div className="text-[26px] leading-none font-semibold text-gray-900">
-                {stats.properties} / {TIER_LIMITS[company?.tier || 'starter'].properties === Infinity ? '∞' : TIER_LIMITS[company?.tier || 'starter'].properties}
-              </div>
-              <Link to="/dashboard/properties" className="text-sm text-primary-600 hover:text-primary-500">
+        {/* Desktop: fixed squares so they never get huge.
+            Mobile: 2 columns of smaller squares. */}
+        <div className="hidden md:flex md:items-stretch md:justify-between md:gap-4">
+          {/* each square 200x200 */}
+          <StatSquare
+            title="Properties"
+            iconBg="bg-primary-50"
+            icon={<Building2 className="h-5 w-5 text-primary-600" />}
+            number={`${stats.properties} / ${tierLimits.properties === Infinity ? '∞' : tierLimits.properties}`}
+            sub={
+              <Link to="/dashboard/properties" className="text-xs text-primary-600 hover:text-primary-500">
                 {stats.properties === 0 ? 'Add your first property' : 'View all properties'}
               </Link>
-            </div>
-          </motion.div>
-
-          {/* Completed */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 aspect-square flex flex-col justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-green-50">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="text-sm text-gray-600">Completed</div>
-            </div>
-            <div>
-              <div className="text-[26px] leading-none font-semibold text-gray-900">{stats.completedInspections}</div>
-              <Link to="/dashboard/reports" className="text-sm text-primary-600 hover:text-primary-500">
+            }
+          />
+          <StatSquare
+            title="Completed"
+            iconBg="bg-green-50"
+            icon={<CheckCircle2 className="h-5 w-5 text-green-600" />}
+            number={`${stats.completedInspections}`}
+            sub={
+              <Link to="/dashboard/reports" className="text-xs text-primary-600 hover:text-primary-500">
                 {stats.completedInspections === 0 ? 'Start your first inspection' : 'View all reports'}
               </Link>
-            </div>
-          </motion.div>
+            }
+          />
+          <StatSquare
+            title="Flagged Items"
+            iconBg="bg-red-50"
+            icon={<AlertTriangle className="h-5 w-5 text-red-500" />}
+            number={`${stats.issuesDetected}`}
+            sub={<span className="text-xs text-gray-500">{stats.issuesDetected === 0 ? 'No issues detected' : 'Require attention'}</span>}
+          />
+          <StatSquare
+            title="Inspections"
+            iconBg="bg-indigo-50"
+            icon={<BarChart3 className="h-5 w-5 text-indigo-600" />}
+            number={`${totalInspections}`}
+            sub={<span className="text-xs text-gray-500">{stats.pendingInspections} in progress</span>}
+          />
+        </div>
 
-          {/* Flagged */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-            className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 aspect-square flex flex-col justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-red-50">
-                <AlertTriangle className="h-6 w-6 text-red-500" />
-              </div>
-              <div className="text-sm text-gray-600">Flagged Items</div>
-            </div>
-            <div>
-              <div className="text-[26px] leading-none font-semibold text-gray-900">{stats.issuesDetected}</div>
-              <div className="text-sm text-gray-500">{stats.issuesDetected === 0 ? 'No issues detected' : 'Require attention'}</div>
-            </div>
-          </motion.div>
-
-          {/* Inspections (total) */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 aspect-square flex flex-col justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-indigo-50">
-                <BarChart3 className="h-6 w-6 text-indigo-600" />
-              </div>
-              <div className="text-sm text-gray-600">Inspections</div>
-            </div>
-            <div>
-              <div className="text-[26px] leading-none font-semibold text-gray-900">{totalInspections}</div>
-              <div className="text-sm text-gray-500">{stats.pendingInspections} in progress</div>
-            </div>
-          </motion.div>
+        {/* Mobile: 2 cols, small squares, tiny labels, truncate */}
+        <div className="grid grid-cols-2 gap-3 md:hidden">
+          <StatSquareMobile
+            title="Properties"
+            iconBg="bg-primary-50"
+            icon={<Building2 className="h-4 w-4 text-primary-600" />}
+            number={`${stats.properties}/${tierLimits.properties === Infinity ? '∞' : tierLimits.properties}`}
+          />
+          <StatSquareMobile
+            title="Completed"
+            iconBg="bg-green-50"
+            icon={<CheckCircle2 className="h-4 w-4 text-green-600" />}
+            number={`${stats.completedInspections}`}
+          />
+          <StatSquareMobile
+            title="Flagged"
+            iconBg="bg-red-50"
+            icon={<AlertTriangle className="h-4 w-4 text-red-500" />}
+            number={`${stats.issuesDetected}`}
+          />
+          <StatSquareMobile
+            title="Inspections"
+            iconBg="bg-indigo-50"
+            icon={<BarChart3 className="h-4 w-4 text-indigo-600" />}
+            number={`${totalInspections}`}
+          />
         </div>
       </div>
 
-      {/* Empty-state CTAs (as requested) */}
-      {stats.properties === 0 && (
-        <div className="mb-8 rounded-lg border border-primary-100 bg-primary-50 p-4">
-          <p className="text-sm text-primary-800">
-            Get started by creating your first property and setting up inspection templates.
-          </p>
-          <div className="mt-3">
-            <Link to="/dashboard/properties">
-              <Button size="sm">Add Your First Property</Button>
-            </Link>
-          </div>
-        </div>
-      )}
-      {stats.completedInspections === 0 && stats.properties > 0 && (
-        <div className="mb-8 rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-sm text-gray-700">
-            Create a new property and set up its inspection templates.
-          </p>
-          <div className="mt-3 flex gap-3">
-            <Link to="/dashboard/templates">
-              <Button size="sm" variant="outline">Create Template</Button>
-            </Link>
-            <Link to="/dashboard/properties">
-              <Button size="sm">Add Property</Button>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Analytics — 2 BIGGER SQUARES */}
-      <div className="mb-10">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Analytics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Storage (big square) */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 aspect-square relative">
+      {/* Analytics — 2 BIGGER SQUARES (but smaller donuts; side-by-side even on mobile) */}
+      <div className="mb-4">
+        <h2 className="text-lg font-medium text-gray-900 mb-3">Analytics</h2>
+        <div className="grid grid-cols-2 gap-4">
+          {/* Storage */}
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 relative h-[240px]">
             <h3 className="text-sm font-medium text-gray-900">Storage</h3>
-            <div className="absolute inset-0 top-10 bottom-4">
+            <div className="absolute inset-0 top-9 bottom-3">
               {usage && storageDonutData ? (
                 <>
-                  <div className="absolute inset-4">
+                  <div className="absolute inset-x-10 inset-y-3">
                     <Doughnut data={storageDonutData} options={donutOptions} />
                   </div>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-3xl font-semibold text-gray-900">
+                    <span className="text-2xl font-semibold text-gray-900">
                       {getUsagePercentage(usage.currentUsage, usage.quota)}%
                     </span>
-                    <span className="text-xs text-gray-500 mt-1">
+                    <span className="text-[11px] text-gray-500 mt-0.5">
                       {formatBytes(usage.currentUsage)} / {formatBytes(usage.quota)}
                     </span>
                   </div>
                 </>
               ) : (
                 <div className="h-full flex items-center justify-center text-gray-500">
-                  <PieIcon className="h-10 w-10 mr-2" />
+                  <PieIcon className="h-6 w-6 mr-2" />
                   No storage data
                 </div>
               )}
             </div>
           </div>
 
-          {/* Property Portfolio (big square) */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 aspect-square relative">
+          {/* Property Portfolio */}
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 relative h-[240px]">
             <h3 className="text-sm font-medium text-gray-900">
               Property Portfolio ({stats.properties} total)
             </h3>
-            <div className="absolute inset-0 top-10 bottom-4">
+            <div className="absolute inset-0 top-9 bottom-3">
               {Object.keys(chartData.propertiesByType).length > 0 ? (
                 <>
-                  <div className="absolute inset-4">
+                  <div className="absolute inset-x-10 inset-y-3">
                     <Doughnut data={propertyPortfolioData} options={donutOptions} />
                   </div>
-                  {/* center label */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <div className="text-xs text-gray-500 -mb-1">Total</div>
-                    <div className="text-3xl font-semibold text-gray-900">{stats.properties}</div>
-                  </div>
-                  {/* small badge on ring (right side) */}
-                  <div className="absolute right-7 top-1/2 -translate-y-1/2">
-                    <div className="h-11 w-11 rounded-full bg-brand-500 text-white flex items-center justify-center shadow-lg">
-                      <span className="text-base font-semibold">{stats.properties}</span>
-                    </div>
-                  </div>
-                  {/* compact legend */}
-                  <div className="absolute left-5 right-5 bottom-2 flex flex-wrap items-center gap-4 text-xs text-gray-600">
-                    {propertyPortfolioData.labels.map((label, i) => (
-                      <div key={label} className="flex items-center gap-2">
-                        <span
-                          className="inline-block h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: palette[i % palette.length] }}
-                        />
-                        <span className="truncate">{label}</span>
-                      </div>
-                    ))}
+                    <div className="text-[11px] text-gray-500 -mb-0.5">Total</div>
+                    <div className="text-2xl font-semibold text-gray-900">{stats.properties}</div>
                   </div>
                 </>
               ) : (
                 <div className="h-full flex items-center justify-center text-gray-500">
-                  <PieIcon className="h-10 w-10 mr-2" />
+                  <PieIcon className="h-6 w-6 mr-2" />
                   No properties yet
                 </div>
               )}
@@ -532,8 +456,79 @@ const DashboardPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Compact empty-state CTAs (kept, but small so page doesn’t scroll) */}
+      {stats.properties === 0 && (
+        <div className="mb-4 rounded-lg border border-primary-100 bg-primary-50 p-3">
+          <p className="text-xs text-primary-800">
+            Get started by creating your first property and setting up inspection templates.
+          </p>
+          <div className="mt-2">
+            <Link to="/dashboard/properties">
+              <Button size="sm">Add Your First Property</Button>
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default DashboardPage;
+
+/* -------- Small helper components for clean markup -------- */
+
+function StatSquare({
+  title,
+  icon,
+  iconBg,
+  number,
+  sub,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  number: string;
+  sub?: React.ReactNode;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 w-[220px] h-[220px] flex flex-col"
+    >
+      <div className="flex items-center gap-2">
+        <div className={`p-2.5 rounded-xl ${iconBg}`}>{icon}</div>
+        <div className="text-[13px] text-gray-600 leading-tight">{title}</div>
+      </div>
+      <div className="mt-auto">
+        <div className="text-[28px] leading-none font-semibold text-gray-900">{number}</div>
+        {sub ? <div className="mt-1">{sub}</div> : null}
+      </div>
+    </motion.div>
+  );
+}
+
+function StatSquareMobile({
+  title,
+  icon,
+  iconBg,
+  number,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  number: string;
+}) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3 aspect-square flex flex-col">
+      <div className="flex items-center gap-2">
+        <div className={`p-2 rounded-lg ${iconBg}`}>{icon}</div>
+        <div className="text-[11px] text-gray-600 leading-tight truncate">{title}</div>
+      </div>
+      <div className="mt-auto">
+        <div className="text-2xl leading-none font-semibold text-gray-900">{number}</div>
+      </div>
+    </div>
+  );
+}
