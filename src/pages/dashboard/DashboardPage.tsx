@@ -1,118 +1,143 @@
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { Home, CheckSquare, Flag, Database } from "lucide-react";
-import BottomNavigation from "@/components/BottomNavigation"; // import bottom nav
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
-// Pie chart data
+// --- Example data (replace with real values as needed) ---
+const stats = {
+  properties: 120,
+  completedInspections: 85,
+  flaggedItems: 12,
+  storageUsedPct: 65,
+};
+
 const storageData = [
-  { name: "Used", value: 70 },
-  { name: "Free", value: 30 },
+  { name: "Used", value: stats.storageUsedPct },
+  { name: "Free", value: 100 - stats.storageUsedPct },
 ];
+
 const portfolioData = [
-  { name: "Villas", value: 40 },
   { name: "Apartments", value: 60 },
+  { name: "Villas", value: 25 },
+  { name: "Townhouses", value: 15 },
 ];
-const COLORS = ["#4F46E5", "#E5E7EB"];
+
+// Tailwind-friendly brand-ish colors
+const COLORS = ["#2563eb", "#93c5fd", "#22c55e", "#f59e0b", "#ef4444"];
 
 export default function DashboardPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="p-4 bg-white shadow-sm">
-        <Input placeholder="Search..." className="w-full" />
-      </header>
+    <div className="p-6 space-y-6">
+      {/* Search Bar */}
+      <div className="flex items-center justify-between">
+        <Input
+          type="text"
+          placeholder="Search properties, inspections..."
+          className="max-w-md rounded-xl"
+        />
+      </div>
 
-      {/* Content */}
-      <main className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center p-4">
-              <Home className="h-6 w-6 text-indigo-600 mb-2" />
-              <p className="text-sm font-medium">Properties</p>
-              <p className="text-lg font-bold">120</p>
-            </CardContent>
-          </Card>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-gray-500">Properties</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{stats.properties}</p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center p-4">
-              <CheckSquare className="h-6 w-6 text-green-600 mb-2" />
-              <p className="text-sm font-medium">Completed</p>
-              <p className="text-lg font-bold">85</p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-gray-500">Completed Inspections</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{stats.completedInspections}</p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center p-4">
-              <Flag className="h-6 w-6 text-red-600 mb-2" />
-              <p className="text-sm font-medium">Flagged</p>
-              <p className="text-lg font-bold">15</p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-gray-500">Flagged Items</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{stats.flaggedItems}</p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center p-4">
-              <Database className="h-6 w-6 text-yellow-600 mb-2" />
-              <p className="text-sm font-medium">Storage</p>
-              <p className="text-lg font-bold">75%</p>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-gray-500">Storage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{stats.storageUsedPct}% Used</p>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardContent className="p-4">
-              <h2 className="text-sm font-medium mb-2">Storage</h2>
-              <ResponsiveContainer width="100%" height={200}>
+      {/* Pie Charts */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {/* Storage Usage */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Storage Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer>
                 <PieChart>
                   <Pie
                     data={storageData}
+                    dataKey="value"
+                    nameKey="name"
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
+                    outerRadius={90}
+                    label
                   >
                     {storageData.map((_, index) => (
                       <Cell key={index} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={24} />
                 </PieChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <h2 className="text-sm font-medium mb-2">Property Portfolio</h2>
-              <ResponsiveContainer width="100%" height={200}>
+        {/* Property Portfolio */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Property Portfolio</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer>
                 <PieChart>
                   <Pie
                     data={portfolioData}
+                    dataKey="value"
+                    nameKey="name"
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
+                    outerRadius={90}
+                    label
                   >
                     {portfolioData.map((_, index) => (
                       <Cell key={index} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={24} />
                 </PieChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-
-      {/* Bottom Navigation */}
-      <BottomNavigation />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
