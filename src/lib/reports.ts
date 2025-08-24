@@ -149,7 +149,9 @@ export async function generateInspectionReport(reportData: any): Promise<string 
 
     // Prepare branding data for PDF generation
     const brandingData = {
-      logoUrl: adminData?.subscription_tier === 'starter' ? '/Scopostay long full logo blue.png' : (adminData?.logo_url || '/Scopostay long full logo blue.png'),
+      logoUrl: adminData?.subscription_tier === 'starter' 
+        ? '/Scopostay long full logo white.png' 
+        : (adminData?.logo_url || null),
       brandColor: adminData?.subscription_tier === 'starter' ? '#2563EB' : (adminData?.brand_color || '#2563EB'),
       reportBackground: adminData?.subscription_tier === 'starter' ? '#FFFFFF' : (adminData?.report_background || '#FFFFFF'),
       subscriptionTier: adminData?.subscription_tier || 'starter',
