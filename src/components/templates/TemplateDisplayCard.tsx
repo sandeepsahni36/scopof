@@ -49,25 +49,26 @@ const TemplateDisplayCard: React.FC<TemplateDisplayCardProps> = ({
           </p>
         )}
 
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <Link to={`/dashboard/templates/${template.id}`}>
+        {/* Actions: allow wrap + keep items from shrinking */}
+        <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100">
+          <Link to={`/dashboard/templates/${template.id}`} className="shrink-0">
             <Button
               variant="ghost"
               size="sm"
               leftIcon={<Pencil size={14} />}
-              className="text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+              className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 shrink-0 whitespace-nowrap"
             >
               Edit
             </Button>
           </Link>
-          
-          <div className="flex space-x-1">
+
+          <div className="flex flex-wrap items-center gap-1 ml-auto">
             <Button
               variant="ghost"
               size="sm"
               leftIcon={<Copy size={14} />}
               onClick={() => onDuplicate(template.id)}
-              className="text-gray-600 hover:text-gray-700 hover:bg-gray-100"
+              className="text-gray-600 hover:text-gray-700 hover:bg-gray-100 shrink-0 whitespace-nowrap"
             >
               Duplicate
             </Button>
@@ -76,7 +77,7 @@ const TemplateDisplayCard: React.FC<TemplateDisplayCardProps> = ({
               size="sm"
               leftIcon={<Trash2 size={14} />}
               onClick={() => onDelete(template.id)}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0 whitespace-nowrap"
             >
               Delete
             </Button>
