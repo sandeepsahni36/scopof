@@ -1,21 +1,16 @@
-// src/components/layout/BottomNavigation.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Home, Building2, LayoutTemplate, FileText, Plus } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import type { NavItem } from "../../types";
 
-// Tab items (5 columns layout with center reserved for FAB)
+// 4 tabs (center column reserved for the FAB)
 const mainNavItems: NavItem[] = [
   { title: "Home", href: "/dashboard", icon: "Home" },
   { title: "Templates", href: "/dashboard/templates", icon: "LayoutTemplate" },
   { title: "Properties", href: "/dashboard/properties", icon: "Building2" },
   { title: "Reports", href: "/dashboard/reports", icon: "FileText" },
 ];
-
-// 🔗 Adjust these to your actual creation routes if different
-const ADD_PROPERTY_ROUTE = "/dashboard/properties/new";
-const ADD_TEMPLATE_ROUTE = "/dashboard/templates/new";
 
 const IconMap: Record<string, React.ReactNode> = {
   Home: <Home size={26} />,
@@ -31,7 +26,7 @@ const BottomNavigation: React.FC = () => {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close the menu on outside click / Esc
+  // close menu on outside click / Esc
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (!menuRef.current) return;
@@ -49,11 +44,20 @@ const BottomNavigation: React.FC = () => {
   }, [open]);
 
   const gateOr = (path: string) => {
-    if (requiresPayment || needsPaymentSetup) {
-      navigate("/subscription-required");
-    } else {
-      navigate(path);
-    }
+    if (requiresPayment || needsPaymentSetup) navigate("/subscription-required");
+    else navigate(path);
+  };
+
+  // ---- Helpers to fire the page modal after navigation ----------------------
+  const triggerPageModal = (eventName: string, path: string) => {
+    setOpen(false);
+    // 1) Navigate to the page that owns the modal
+    gateOr(path);
+    // 2) After a tick, dispatch an event the page listens for
+    //    (works even if the page mounts just after navigation)
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(eventName));
+    }, 60);
   };
 
   const NavBtn = ({
@@ -87,7 +91,7 @@ const BottomNavigation: React.FC = () => {
 
   return (
     <div className="md:hidden fixed inset-x-0 bottom-0 z-[60] pointer-events-none">
-      {/* Scrim (above page, below menu) */}
+      {/* scrim */}
       {open && (
         <div
           className="pointer-events-auto fixed inset-0 z-[58] bg-black/20 backdrop-blur-[1px]"
@@ -95,7 +99,7 @@ const BottomNavigation: React.FC = () => {
         />
       )}
 
-      {/* Bar */}
+      {/* bar */}
       <div className="relative pointer-events-none z-[59]">
         <nav
           className="pointer-events-auto bg-white border-t border-gray-200
@@ -110,8 +114,7 @@ const BottomNavigation: React.FC = () => {
               <NavBtn to="/dashboard/templates" icon={IconMap.LayoutTemplate} title="Templates" />
             </div>
 
-            {/* center spacer for FAB */}
-            <div className="col-span-1" />
+            <div className="col-span-1" /> {/* center spacer for FAB */}
 
             <div className="col-span-1 flex justify-center">
               <NavBtn to="/dashboard/properties" icon={IconMap.Building2} title="Properties" />
@@ -136,7 +139,7 @@ const BottomNavigation: React.FC = () => {
           <Plus size={32} className="text-white" />
         </button>
 
-        {/* Menu (now ABOVE the FAB) */}
+        {/* Menu ABOVE the FAB */}
         <div
           id="fab-menu"
           ref={menuRef}
@@ -152,10 +155,7 @@ const BottomNavigation: React.FC = () => {
             <div className="divide-y divide-gray-100">
               <button
                 className="w-full text-left px-4 py-3 text-sm flex items-center gap-3 active:bg-gray-50"
-                onClick={() => {
-                  setOpen(false);
-                  gateOr(ADD_PROPERTY_ROUTE);
-                }}
+                onClick={() => triggerPageModal("open:add-property", "/dashboard/properties")}
                 role="menuitem"
               >
                 <Building2 size={18} className="text-primary-600" />
@@ -163,10 +163,7 @@ const BottomNavigation: React.FC = () => {
               </button>
               <button
                 className="w-full text-left px-4 py-3 text-sm flex items-center gap-3 active:bg-gray-50"
-                onClick={() => {
-                  setOpen(false);
-                  gateOr(ADD_TEMPLATE_ROUTE);
-                }}
+                onClick={() => triggerPageModal("open:add-template", "/dashboard/templates")}
                 role="menuitem"
               >
                 <LayoutTemplate size={18} className="text-primary-600" />
