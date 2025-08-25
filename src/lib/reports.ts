@@ -88,9 +88,7 @@ export async function getReports(filters: GetReportsFilters = {}): Promise<Repor
     // Apply search term filter
     if (searchTerm) {
       const searchPattern = `%${searchTerm}%`;
-      query = query.or(
-        `inspections.properties.name.ilike.${searchPattern},inspections.primary_contact_name.ilike.${searchPattern},inspections.inspector_name.ilike.${searchPattern}`
-      );
+      query = query.or(`inspections.properties.name.ilike.%${searchTerm}%,inspections.primary_contact_name.ilike.%${searchTerm}%,inspections.inspector_name.ilike.%${searchTerm}%`);
     }
 
     // Apply pagination
