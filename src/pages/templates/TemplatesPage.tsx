@@ -9,6 +9,7 @@ import { getTemplates, getTemplateCategories, createTemplateCategory, deleteTemp
 import TemplateCategoryCard from '../../components/templates/TemplateCategoryCard';
 import TemplateDisplayCard from '../../components/templates/TemplateDisplayCard';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom'; // <-- ADDED
 
 function TemplatesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,6 +61,14 @@ function TemplatesPage() {
     // Reload templates when search term or category changes
     loadTemplates();
   }, [searchTerm, selectedCategory]);
+
+  // Listen for FAB "Add Template" action from anywhere
+  const navigate = useNavigate(); // <-- ADDED
+  useEffect(() => {
+    const onFabCreateTemplate = () => navigate('/dashboard/templates/new');
+    window.addEventListener('open:add-template', onFabCreateTemplate);
+    return () => window.removeEventListener('open:add-template', onFabCreateTemplate);
+  }, [navigate]); // <-- ADDED
 
   const loadTemplatesAndCategories = async () => {
     try {
@@ -187,6 +196,7 @@ function TemplatesPage() {
       toast.error('Failed to delete category');
     }
   };
+
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
@@ -283,9 +293,7 @@ function TemplatesPage() {
             New Category
           </Button>
           <Link to="/dashboard/templates/new">
-            <Button
-              leftIcon={<Plus size={20} />}
-            >
+            <Button leftIcon={<Plus size={20} />}>
               Create Template
             </Button>
           </Link>
@@ -463,9 +471,7 @@ function TemplatesPage() {
               </p>
               <div className="mt-6">
                 <Link to="/dashboard/templates/new">
-                  <Button
-                    leftIcon={<Plus size={20} />}
-                  >
+                  <Button leftIcon={<Plus size={20} />}>
                     Create Template
                   </Button>
                 </Link>
