@@ -1,157 +1,162 @@
-import React, { useEffect, useRef, useState } from "react";
+// src/components/layout/BottomNavigation.tsx
+import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   Home,
-  LayoutTemplate,
   Building2,
+  LayoutTemplate,
   FileText,
   Plus,
-  FilePlus2,
-  ClipboardCheck,
+  ClipboardList,
+  Flag,
   FolderPlus,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
+import type { NavItem } from "../../types";
 
-type NavItem = { title: string; href: string; icon: React.ReactNode };
-
-const NAV_ITEMS: NavItem[] = [
-  { title: "Home",       href: "/dashboard",            icon: <Home size={22} /> },
-  { title: "Templates",  href: "/dashboard/templates",  icon: <LayoutTemplate size={22} /> },
-  { title: "Properties", href: "/dashboard/properties", icon: <Building2 size={22} /> },
-  { title: "Reports",    href: "/dashboard/reports",    icon: <FileText size={22} /> },
+const mainNavItems: NavItem[] = [
+  { title: "Home", href: "/dashboard", icon: "Home" },
+  { title: "Templates", href: "/dashboard/templates", icon: "LayoutTemplate" },
+  { title: "Properties", href: "/dashboard/properties", icon: "Building2" },
+  { title: "Reports", href: "/dashboard/reports", icon: "FileText" },
 ];
 
-export default function BottomNavigation() {
+// map for icons
+const IconMap: Record<string, React.ReactNode> = {
+  Home: <Home size={24} />,
+  Building2: <Building2 size={24} />,
+  LayoutTemplate: <LayoutTemplate size={24} />,
+  FileText: <FileText size={24} />,
+};
+
+const BottomNavigation: React.FC = () => {
   const { requiresPayment, needsPaymentSetup } = useAuthStore();
   const [open, setOpen] = useState(false);
-  const popRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click / ESC
-  useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (popRef.current && !popRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onEsc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    if (open) {
-      document.addEventListener("click", onClick);
-      document.addEventListener("keydown", onEsc);
-    }
-    return () => {
-      document.removeEventListener("click", onClick);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [open]);
-
-  const gate = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (requiresPayment || needsPaymentSetup) {
-      e.preventDefault();
-      window.location.href = "/subscription-required";
-    }
+  // ----- Action handlers for the FAB sheet (no navigation required) -----
+  const handleAddProperty = () => {
+    setOpen(false);
+    // TODO: open your “Add Property” flow/sheet
+    console.log("Add Property");
+  };
+  const handleStartInspection = () => {
+    setOpen(false);
+    // TODO: open your “Start Inspection” flow/sheet
+    console.log("Start Inspection");
+  };
+  const handleFlagItem = () => {
+    setOpen(false);
+    // TODO: open your “Flag Item” flow/sheet
+    console.log("Flag Item");
   };
 
   return (
-    <div className="md:hidden fixed inset-x-0 bottom-0 z-[100]">
-      {/* nav container; overflow must be visible so the FAB can float above */}
-      <div
-        className="
-          relative mx-auto max-w-full
-          bg-white/95 backdrop-blur border-t border-gray-200
-          rounded-t-2xl shadow-[0_-6px_24px_rgba(18,20,23,.06)]
-          px-3 pt-2 pb-[calc(10px+env(safe-area-inset-bottom))]
-          overflow-visible
-        "
-      >
-        {/* Center FAB (above the bar, 64x64) */}
-        <button
-          aria-label="Add"
-          onClick={() => setOpen((v) => !v)}
-          className="
-            absolute left-1/2 -translate-x-1/2 top-0 -translate-y-1/2
-            w-16 h-16 rounded-full z-[110]
-            bg-gradient-to-b from-[#2f66ff] to-[#5f86ff]
-            shadow-[0_10px_24px_rgba(47,102,255,.35),0_4px_10px_rgba(47,102,255,.25)]
-            grid place-items-center
-          "
+    <>
+      {/* Backdrop for FAB menu */}
+      {open && (
+        <div
+          className="fixed inset-0 z-[69] bg-black/30 backdrop-blur-[1px]"
+          onClick={() => setOpen(false)}
+          aria-hidden
+        />
+      )}
+
+      {/* FAB menu sheet */}
+      {open && (
+        <div
+          id="fab-menu"
+          className="fixed left-1/2 -translate-x-1/2 z-[70] w-[92%] max-w-sm
+                     bottom-[calc(104px+env(safe-area-inset-bottom))] rounded-2xl
+                     bg-white shadow-2xl border border-gray-100 p-2"
+          role="dialog"
+          aria-modal="true"
         >
-          <Plus size={28} className="text-white" />
-        </button>
-
-        {/* Links row */}
-        <div className="grid grid-cols-4 text-[11px] font-medium">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.href}
-              to={item.href}
-              onClick={(e) => gate(e, item.href)}
-              end={item.href === "/dashboard"}
-              className={({ isActive }) =>
-                [
-                  "flex flex-col items-center justify-center gap-1 py-3",
-                  isActive ? "text-[#2f66ff]" : "text-gray-600 hover:text-gray-800",
-                ].join(" ")
-              }
+          <div className="grid gap-1">
+            <button
+              onClick={handleAddProperty}
+              className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 active:scale-[.99] transition"
             >
-              <div className="w-7 h-7 grid place-items-center">{item.icon}</div>
-              <span className="leading-none">{item.title}</span>
-            </NavLink>
-          ))}
-        </div>
-
-        {/* Popover actions for the FAB */}
-        {open && (
-          <div
-            ref={popRef}
-            className="
-              absolute left-1/2 -translate-x-1/2 bottom-20 z-[110]
-              w-[min(88vw,360px)] rounded-2xl border border-gray-200 bg-white shadow-xl p-2
-            "
-          >
-            <MenuItem
-              icon={<FolderPlus size={18} />}
-              title="Add Property"
-              desc="Create a new property"
-              onClick={() => setOpen(false)}
-            />
-            <MenuItem
-              icon={<ClipboardCheck size={18} />}
-              title="Start Inspection"
-              desc="Begin a new inspection"
-              onClick={() => setOpen(false)}
-            />
-            <MenuItem
-              icon={<FilePlus2 size={18} />}
-              title="Create Template"
-              desc="New reusable template"
-              onClick={() => setOpen(false)}
-            />
+              <FolderPlus className="text-blue-600" size={18} />
+              <span className="text-sm font-medium text-gray-900">
+                Add Property
+              </span>
+            </button>
+            <button
+              onClick={handleStartInspection}
+              className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 active:scale-[.99] transition"
+            >
+              <ClipboardList className="text-blue-600" size={18} />
+              <span className="text-sm font-medium text-gray-900">
+                Start Inspection
+              </span>
+            </button>
+            <button
+              onClick={handleFlagItem}
+              className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 active:scale-[.99] transition"
+            >
+              <Flag className="text-blue-600" size={18} />
+              <span className="text-sm font-medium text-gray-900">
+                Flag Item
+              </span>
+            </button>
           </div>
-        )}
-      </div>
-    </div>
-  );
-}
+        </div>
+      )}
 
-function MenuItem({
-  icon,
-  title,
-  desc,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full text-left rounded-xl p-3 hover:bg-gray-50 active:bg-gray-100 transition flex items-center gap-3"
-    >
-      <div className="w-9 h-9 rounded-lg bg-gray-100 grid place-items-center">{icon}</div>
-      <div className="min-w-0">
-        <div className="text-[13px] font-semibold text-gray-900">{title}</div>
-        <div className="text-[11px] text-gray-500 truncate">{desc}</div>
+      {/* Bottom bar + FAB */}
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-[60] pointer-events-none">
+        <div className="relative mx-3">
+          {/* The bar */}
+          <nav
+            className="pointer-events-auto bg-white/95 backdrop-saturate-150 backdrop-blur
+                       border border-gray-200 rounded-t-2xl shadow-[0_-6px_24px_rgba(0,0,0,.06)]
+                       px-2 pt-2 pb-[calc(10px+env(safe-area-inset-bottom,0px))] grid grid-cols-4"
+            role="navigation"
+            aria-label="Primary"
+          >
+            {mainNavItems.map((item) => (
+              <NavLink
+                key={item.href}
+                to={item.href}
+                className={({ isActive }) => {
+                  const isDisabled =
+                    (requiresPayment || needsPaymentSetup) &&
+                    !item.href.includes("/admin/settings"); // not used here, but keep gating pattern
+                  return [
+                    "flex flex-col items-center gap-1 py-2 min-w-0",
+                    "text-[11px] font-medium",
+                    isDisabled
+                      ? "text-gray-400 opacity-60 pointer-events-none"
+                      : isActive
+                      ? "text-blue-600"
+                      : "text-gray-600",
+                  ].join(" ");
+                }}
+                end={item.href === "/dashboard"}
+              >
+                <div className="h-7 flex items-center">{IconMap[item.icon]}</div>
+                <span className="leading-none truncate">{item.title}</span>
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* FAB (raised, centered, blue) */}
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls="fab-menu"
+            className="pointer-events-auto absolute left-1/2 -translate-x-1/2
+                       -top-9 w-20 h-20 rounded-full
+                       bg-gradient-to-b from-[#2f66ff] to-[#5f86ff]
+                       shadow-[0_14px_28px_rgba(47,102,255,.35),0_6px_12px_rgba(47,102,255,.25)]
+                       flex items-center justify-center active:scale-[.98] transition"
+          >
+            <Plus size={36} className="text-white" />
+          </button>
+        </div>
       </div>
-    </button>
+    </>
   );
-}
+};
+
+export default BottomNavigation;
