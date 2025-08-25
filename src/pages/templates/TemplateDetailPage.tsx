@@ -301,7 +301,7 @@ const TemplateDetailPage = () => {
                 <button
                   type="button"
                   onClick={() => setValue('color', null)}
-                  className={`w-12 h-12 rounded-lg border-2 transition-all bg-gray-100 relative ${
+                  className={`w-12 h-12 border-2 transition-all bg-gray-100 relative ${
                     watch('color') === null ? 'border-gray-800 scale-110' : 'border-gray-300 hover:border-gray-400'
                   }`}
                 >
@@ -317,7 +317,7 @@ const TemplateDetailPage = () => {
                     key={color}
                     type="button"
                     onClick={() => setValue('color', color)}
-                    className={`w-12 h-12 rounded-lg border-2 transition-all ${
+                    className={`w-12 h-12 border-2 transition-all ${
                       watch('color') === color ? 'border-gray-800 scale-110' : 'border-gray-300 hover:border-gray-400'
                     }`}
                     style={{ backgroundColor: color }}
