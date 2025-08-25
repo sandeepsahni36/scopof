@@ -1,4 +1,3 @@
-// src/components/layout/BottomNavigation.tsx
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
@@ -14,14 +13,15 @@ import {
 import { useAuthStore } from "../../store/authStore";
 import type { NavItem } from "../../types";
 
-const mainNavItems: NavItem[] = [
+const mainNavItemsLeft: NavItem[] = [
   { title: "Home", href: "/dashboard", icon: "Home" },
   { title: "Templates", href: "/dashboard/templates", icon: "LayoutTemplate" },
+];
+const mainNavItemsRight: NavItem[] = [
   { title: "Properties", href: "/dashboard/properties", icon: "Building2" },
   { title: "Reports", href: "/dashboard/reports", icon: "FileText" },
 ];
 
-// map for icons
 const IconMap: Record<string, React.ReactNode> = {
   Home: <Home size={24} />,
   Building2: <Building2 size={24} />,
@@ -33,40 +33,35 @@ const BottomNavigation: React.FC = () => {
   const { requiresPayment, needsPaymentSetup } = useAuthStore();
   const [open, setOpen] = useState(false);
 
-  // ----- Action handlers for the FAB sheet (no navigation required) -----
   const handleAddProperty = () => {
     setOpen(false);
-    // TODO: open your “Add Property” flow/sheet
-    console.log("Add Property");
+    // TODO: open your Add Property flow
   };
   const handleStartInspection = () => {
     setOpen(false);
-    // TODO: open your “Start Inspection” flow/sheet
-    console.log("Start Inspection");
+    // TODO: open your Start Inspection flow
   };
   const handleFlagItem = () => {
     setOpen(false);
-    // TODO: open your “Flag Item” flow/sheet
-    console.log("Flag Item");
+    // TODO: open your Flag Item flow
   };
 
   return (
     <>
-      {/* Backdrop for FAB menu */}
+      {/* Backdrop */}
       {open && (
         <div
           className="fixed inset-0 z-[69] bg-black/30 backdrop-blur-[1px]"
           onClick={() => setOpen(false)}
-          aria-hidden
         />
       )}
 
-      {/* FAB menu sheet */}
+      {/* FAB action sheet */}
       {open && (
         <div
           id="fab-menu"
           className="fixed left-1/2 -translate-x-1/2 z-[70] w-[92%] max-w-sm
-                     bottom-[calc(104px+env(safe-area-inset-bottom))] rounded-2xl
+                     bottom-[calc(96px+env(safe-area-inset-bottom))] rounded-2xl
                      bg-white shadow-2xl border border-gray-100 p-2"
           role="dialog"
           aria-modal="true"
@@ -105,23 +100,26 @@ const BottomNavigation: React.FC = () => {
 
       {/* Bottom bar + FAB */}
       <div className="md:hidden fixed inset-x-0 bottom-0 z-[60] pointer-events-none">
-        <div className="relative mx-3">
-          {/* The bar */}
+        <div className="relative">
+          {/* Bar (edge to edge) */}
           <nav
-            className="pointer-events-auto bg-white/95 backdrop-saturate-150 backdrop-blur
-                       border border-gray-200 rounded-t-2xl shadow-[0_-6px_24px_rgba(0,0,0,.06)]
-                       px-2 pt-2 pb-[calc(10px+env(safe-area-inset-bottom,0px))] grid grid-cols-4"
             role="navigation"
             aria-label="Primary"
+            className="pointer-events-auto bg-white/95 backdrop-saturate-150 backdrop-blur
+                       border-t border-gray-200 rounded-t-2xl
+                       shadow-[0_-6px_24px_rgba(0,0,0,.06)]
+                       px-2 pt-2 pb-[calc(10px+env(safe-area-inset-bottom,0px))]
+                       grid grid-cols-5 items-end"
           >
-            {mainNavItems.map((item) => (
+            {/* Left 2 items */}
+            {mainNavItemsLeft.map((item) => (
               <NavLink
                 key={item.href}
                 to={item.href}
                 className={({ isActive }) => {
                   const isDisabled =
                     (requiresPayment || needsPaymentSetup) &&
-                    !item.href.includes("/admin/settings"); // not used here, but keep gating pattern
+                    !item.href.includes("/admin/settings");
                   return [
                     "flex flex-col items-center gap-1 py-2 min-w-0",
                     "text-[11px] font-medium",
@@ -138,20 +136,48 @@ const BottomNavigation: React.FC = () => {
                 <span className="leading-none truncate">{item.title}</span>
               </NavLink>
             ))}
+
+            {/* Spacer column for the FAB so it doesn't cover icons */}
+            <div className="col-span-1" />
+
+            {/* Right 2 items */}
+            {mainNavItemsRight.map((item) => (
+              <NavLink
+                key={item.href}
+                to={item.href}
+                className={({ isActive }) => {
+                  const isDisabled =
+                    (requiresPayment || needsPaymentSetup) &&
+                    !item.href.includes("/admin/settings");
+                  return [
+                    "flex flex-col items-center gap-1 py-2 min-w-0",
+                    "text-[11px] font-medium",
+                    isDisabled
+                      ? "text-gray-400 opacity-60 pointer-events-none"
+                      : isActive
+                      ? "text-blue-600"
+                      : "text-gray-600",
+                  ].join(" ");
+                }}
+              >
+                <div className="h-7 flex items-center">{IconMap[item.icon]}</div>
+                <span className="leading-none truncate">{item.title}</span>
+              </NavLink>
+            ))}
           </nav>
 
-          {/* FAB (raised, centered, blue) */}
+          {/* Center FAB (now smaller and aligned between Templates & Properties) */}
           <button
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-controls="fab-menu"
             className="pointer-events-auto absolute left-1/2 -translate-x-1/2
-                       -top-9 w-20 h-20 rounded-full
+                       -top-8 w-16 h-16 rounded-full
                        bg-gradient-to-b from-[#2f66ff] to-[#5f86ff]
-                       shadow-[0_14px_28px_rgba(47,102,255,.35),0_6px_12px_rgba(47,102,255,.25)]
+                       shadow-[0_12px_24px_rgba(47,102,255,.32),0_5px_12px_rgba(47,102,255,.22)]
                        flex items-center justify-center active:scale-[.98] transition"
           >
-            <Plus size={36} className="text-white" />
+            <Plus size={30} className="text-white" />
           </button>
         </div>
       </div>
