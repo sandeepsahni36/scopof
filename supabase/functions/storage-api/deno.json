@@ -3,7 +3,7 @@
     "start": "deno run --allow-net --allow-env --allow-read index.ts"
   },
   "imports": {
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.44.0?target=deno",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.44.4?target=deno",
     "minio": "npm:minio@8.0.0",
     "uuid": "https://esm.sh/uuid@9.0.1",
     "stream": "node:stream"

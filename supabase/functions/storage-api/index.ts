@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.39.6";
+import { createClient } from "@supabase/supabase-js";
 import { Client as MinioClient } from "npm:minio@8.0.0";
 import { Readable } from "node:stream";
 import { parse } from "https://deno.land/std@0.168.0/path/mod.ts";
