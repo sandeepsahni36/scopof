@@ -16,7 +16,9 @@ import {
   Building2,
   CheckCircle2,
   AlertTriangle,
-  Search
+  Search,
+  LayoutTemplate,
+  FileText
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { TIER_LIMITS } from '../../types';
