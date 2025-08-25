@@ -24,7 +24,7 @@ const TemplateDisplayCard: React.FC<TemplateDisplayCardProps> = ({
         transition-all duration-200 group
         ${isDragging ? 'opacity-50 rotate-2 scale-105 shadow-lg' : ''}
       `}
-      style={template.color ? { backgroundColor: `${template.color}20` } : {}}
+      style={template.color ? { backgroundColor: `${template.color}20` } : undefined}
     >
       <div className="p-6">
         <div className="flex items-start justify-between mb-4">
