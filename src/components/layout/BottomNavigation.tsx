@@ -172,7 +172,7 @@ const BottomNavigation: React.FC = () => {
             aria-expanded={open}
             aria-controls="fab-menu"
             className="pointer-events-auto absolute left-1/2 -translate-x-1/2
-                       -top-8 w-20 h-20 rounded-full
+                       -top-8 w-17 h-17 rounded-full
                        bg-gradient-to-b from-[#2f66ff] to-[#5f86ff]
                        shadow-[0_12px_24px_rgba(47,102,255,.32),0_5px_12px_rgba(47,102,255,.22)]
                        flex items-center justify-center active:scale-[.98] transition"
