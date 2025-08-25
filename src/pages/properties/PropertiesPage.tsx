@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Building2, Plus, Search, Filter, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Property } from '../../types';
@@ -7,7 +8,6 @@ import { getProperties, createProperty, updateProperty, deleteProperty, checkPro
 import PropertyCard from '../../components/properties/PropertyCard';
 import PropertyForm, { PropertyFormData } from '../../components/properties/PropertyForm';
 import { toast } from 'sonner';
-import { useSearchParams } from 'react-router-dom'; // <-- ADDED
 
 interface Filters {
   type: string;
@@ -17,6 +17,9 @@ interface Filters {
 
 function PropertiesPage() {
   const { isAdmin } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,28 +34,12 @@ function PropertiesPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [propertyLimits, setPropertyLimits] = useState<any>(null);
 
-  const [params, setParams] = useSearchParams(); // <-- ADDED
-
   useEffect(() => {
     loadProperties();
     if (isAdmin) {
       loadPropertyLimits();
     }
-  }, [searchTerm, filters]);
-
-  // Auto-open modal if ?new=1 is present
-  useEffect(() => {
-    if (isAdmin && params.get('new') === '1') {
-      setEditingProperty(null);
-      setShowPropertyForm(true);
-    }
-  }, [isAdmin, params]);
-
-  const clearNewParam = () => {
-    const p = new URLSearchParams(params);
-    p.delete('new');
-    setParams(p, { replace: true });
-  };
+  }, [searchTerm, filters, isAdmin]);
 
   const loadProperties = async () => {
     try {
@@ -78,27 +65,25 @@ function PropertiesPage() {
     }
   };
 
-  const handleAddProperty = () => {
+  // IMPORTANT: useCallback so we can safely attach/remove as an event handler
+  const handleAddProperty = useCallback(() => {
     if (!isAdmin) {
       toast.error('Only admins can add properties');
       return;
     }
-
     if (propertyLimits && !propertyLimits.canCreate) {
       toast.error(`Property limit reached (${propertyLimits.limit}). Please upgrade your plan to add more properties.`);
       return;
     }
-
     setEditingProperty(null);
     setShowPropertyForm(true);
-  };
+  }, [isAdmin, propertyLimits]);
 
   const handleEditProperty = (property: Property) => {
     if (!isAdmin) {
       toast.error('Only admins can edit properties');
       return;
     }
-
     setEditingProperty(property);
     setShowPropertyForm(true);
   };
@@ -145,7 +130,6 @@ function PropertiesPage() {
 
       setShowPropertyForm(false);
       setEditingProperty(null);
-      clearNewParam(); // <-- ADDED
       loadProperties();
       loadPropertyLimits();
     } catch (error: any) {
@@ -159,18 +143,33 @@ function PropertiesPage() {
   const handleFormCancel = () => {
     setShowPropertyForm(false);
     setEditingProperty(null);
-    clearNewParam(); // <-- ADDED
   };
+
+  // --- NEW: Open modal if we navigated here with state { openAddProperty: true } ---
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.openAddProperty) {
+      handleAddProperty();
+      // clear the state so back/refresh won’t reopen
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, handleAddProperty]);
+
+  // --- NEW: Open modal when FAB dispatches the custom event while already on this page ---
+  useEffect(() => {
+    const onOpen = () => handleAddProperty();
+    window.addEventListener('open-add-property', onOpen as EventListener);
+    return () => window.removeEventListener('open-add-property', onOpen as EventListener);
+  }, [handleAddProperty]);
 
   const filteredProperties = properties.filter(property => {
     const matchesSearch = searchTerm === '' || 
       property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.address.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesType = filters.type === 'all' || property.type === filters.type;
     const matchesBedrooms = filters.bedrooms === 'all' || property.bedrooms === filters.bedrooms;
     const matchesBathrooms = filters.bathrooms === 'all' || property.bathrooms === filters.bathrooms;
-    
     return matchesSearch && matchesType && matchesBedrooms && matchesBathrooms;
   });
 
@@ -236,9 +235,7 @@ function PropertiesPage() {
           <div className="border-t border-gray-200 p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Property Type
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
                 <select
                   value={filters.type}
                   onChange={(e) => setFilters({ ...filters, type: e.target.value })}
@@ -253,9 +250,7 @@ function PropertiesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bedrooms
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bedrooms</label>
                 <select
                   value={filters.bedrooms}
                   onChange={(e) => setFilters({ ...filters, bedrooms: e.target.value })}
@@ -272,9 +267,7 @@ function PropertiesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bathrooms
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bathrooms</label>
                 <select
                   value={filters.bathrooms}
                   onChange={(e) => setFilters({ ...filters, bathrooms: e.target.value })}
