@@ -142,6 +142,20 @@ export type ReportServiceTeam = {
   updatedAt: string;
 };
 
+// Report type
+export type Report = {
+  id: string;
+  inspectionId: string;
+  reportUrl: string;
+  reportType: string;
+  generatedAt: string;
+  propertyName?: string;
+  inspectionType?: InspectionType;
+  primaryContactName?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 // Inspection types
 export type InspectionType = 'check_in' | 'check_out' | 'move_in' | 'move_out';
 export type InspectionStatus = 'in_progress' | 'completed' | 'canceled';
