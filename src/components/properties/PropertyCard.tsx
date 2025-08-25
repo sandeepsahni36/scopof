@@ -26,13 +26,20 @@ interface PropertyCardProps {
   isAdmin: boolean;
 }
 
-const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete, isAdmin }) => {
+const PropertyCard: React.FC<PropertyCardProps> = ({
+  property,
+  onEdit,
+  onDelete,
+  isAdmin,
+}) => {
   const { canStartInspections, storageStatus } = useAuthStore();
   const [showMenu, setShowMenu] = useState(false);
   const [hasChecklist, setHasChecklist] = useState(false);
   const [checklistLoading, setChecklistLoading] = useState(true);
   const [inspectionHistory, setInspectionHistory] = useState<number[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+
+  // For click-away on the popover
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -41,17 +48,22 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
   }, [property.id]);
 
   useEffect(() => {
-    const onClickAway = (e: MouseEvent) => {
-      if (showMenu && menuRef.current && !menuRef.current.contains(e.target as Node)) {
+    if (!showMenu) return;
+
+    const handleClickAway = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setShowMenu(false);
       }
     };
-    const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && setShowMenu(false);
-    document.addEventListener('mousedown', onClickAway);
-    document.addEventListener('keydown', onEsc);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowMenu(false);
+    };
+
+    document.addEventListener('mousedown', handleClickAway);
+    document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('mousedown', onClickAway);
-      document.removeEventListener('keydown', onEsc);
+      document.removeEventListener('mousedown', handleClickAway);
+      document.removeEventListener('keydown', onKey);
     };
   }, [showMenu]);
 
@@ -60,7 +72,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
       setChecklistLoading(true);
       const checklist = await getPropertyChecklist(property.id);
       setHasChecklist(!!checklist);
-    } catch {
+    } catch (error) {
+      console.error('Error loading checklist status:', error);
       setHasChecklist(false);
     } finally {
       setChecklistLoading(false);
@@ -72,7 +85,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
       setHistoryLoading(true);
 
       if (devModeEnabled()) {
-        setInspectionHistory([0, 1, 2, 1, 3, 2, 1, 4, 2, 1, 2, 3]);
+        const mockHistory = [0, 1, 2, 1, 3, 2, 1, 4, 2, 1, 2, 3];
+        setInspectionHistory(mockHistory);
         return;
       }
 
@@ -81,9 +95,16 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
 
       for (let i = 11; i >= 0; i--) {
         const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+        const monthEnd = new Date(
+          now.getFullYear(),
+          now.getMonth() - i + 1,
+          0,
+          23,
+          59,
+          59
+        );
 
-        const { count } = await supabase
+        const { count, error } = await supabase
           .from('inspections')
           .select('id', { count: 'exact' })
           .eq('property_id', property.id)
@@ -91,32 +112,39 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
           .gte('created_at', monthStart.toISOString())
           .lte('created_at', monthEnd.toISOString());
 
-        monthlyData.push(count || 0);
+        if (error) {
+          console.error('Error loading inspection history for month:', error);
+          monthlyData.push(0);
+        } else {
+          monthlyData.push(count || 0);
+        }
       }
 
       setInspectionHistory(monthlyData);
-    } catch {
+    } catch (error) {
+      console.error('Error loading inspection history:', error);
       setInspectionHistory(Array(12).fill(0));
     } finally {
       setHistoryLoading(false);
     }
   };
 
-  const formatBedrooms = (bedrooms: string) => (bedrooms === 'studio' ? 'Studio' : `${bedrooms} BR`);
+  const formatBedrooms = (bedrooms: string) =>
+    bedrooms === 'studio' ? 'Studio' : `${bedrooms} BR`;
   const formatBathrooms = (bathrooms: string) => `${bathrooms} BA`;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 group">
-      {/* Property Image / header */}
-      <div className="h-48 bg-gradient-to-br from-primary-100 to-primary-200 relative">
+    <div className="relative bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 group overflow-visible">
+      {/* Property Image / Header */}
+      <div className="h-48 bg-gradient-to-br from-primary-100 to-primary-200 relative overflow-visible">
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-4xl">{getPropertyTypeIcon(property.type)}</span>
         </div>
 
-        {/* Checklist badge */}
+        {/* Checklist Status Badge */}
         <div className="absolute top-3 left-3">
           {checklistLoading ? (
-            <div className="h-6 w-14 bg-white/80 rounded-full animate-pulse" />
+            <div className="h-6 w-6 bg-white/90 rounded-full animate-pulse" />
           ) : hasChecklist ? (
             <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
               <CheckCircle className="w-3 h-3 mr-1" />
@@ -129,43 +157,44 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
           )}
         </div>
 
-        {/* Admin menu */}
+        {/* Admin Menu (3-dot) */}
         {isAdmin && (
-          <div className="absolute top-3 right-3 z-[60]">
+          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-20">
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowMenu((v) => !v)}
                 className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors shadow-sm"
                 aria-haspopup="menu"
                 aria-expanded={showMenu}
-                aria-label="Open property actions"
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
 
               {showMenu && (
                 <div
+                  className="absolute right-0 mt-2 w-max min-w-[11rem] whitespace-nowrap
+                             bg-white rounded-xl border border-gray-200 shadow-xl p-1 z-30"
                   role="menu"
-                  className="absolute right-0 mt-2 w-44 sm:w-48 rounded-xl border border-gray-200 bg-white shadow-xl ring-1 ring-black/5 overflow-hidden z-[80]"
                 >
                   <button
                     onClick={() => {
                       onEdit(property);
                       setShowMenu(false);
                     }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2"
                     role="menuitem"
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap"
                   >
                     <Edit className="w-4 h-4" />
                     Edit Property
                   </button>
+
                   <button
                     onClick={() => {
                       onDelete(property);
                       setShowMenu(false);
                     }}
+                    className="w-full text-left px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 flex items-center gap-2"
                     role="menuitem"
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 whitespace-nowrap"
                   >
                     <Trash2 className="w-4 h-4" />
                     Delete Property
@@ -177,39 +206,47 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
         )}
       </div>
 
-      {/* Body */}
+      {/* Property Details */}
       <div className="p-6">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{property.name}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+            {property.name}
+          </h3>
           <div className="flex items-start text-gray-600 mb-3">
             <MapPin size={16} className="mr-2 mt-0.5 flex-shrink-0" />
             <span className="text-sm line-clamp-2">{property.address}</span>
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Property Stats */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
             <div className="flex items-center text-gray-600">
               <Bed size={16} className="mr-1" />
-              <span className="text-sm font-medium">{formatBedrooms(property.bedrooms)}</span>
+              <span className="text-sm font-medium">
+                {formatBedrooms(property.bedrooms)}
+              </span>
             </div>
             <div className="flex items-center text-gray-600">
               <Bath size={16} className="mr-1" />
-              <span className="text-sm font-medium">{formatBathrooms(property.bathrooms)}</span>
+              <span className="text-sm font-medium">
+                {formatBathrooms(property.bathrooms)}
+              </span>
             </div>
           </div>
-          <span className="text-xs text-gray-500 capitalize">{property.type}</span>
+          <span className="text-xs text-gray-500 capitalize">
+            {property.type}
+          </span>
         </div>
 
-        {/* Actions row */}
+        {/* Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <div className="flex items-center text-xs text-gray-500">
             <Calendar size={14} className="mr-1" />
             <span>Added {new Date(property.createdAt).toLocaleDateString()}</span>
           </div>
 
-          <div className="flex flex-wrap gap-2 justify-end">
+          <div className="flex space-x-2">
             <Link to={`/dashboard/properties/${property.id}`}>
               <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
                 View Details
@@ -242,10 +279,12 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
           </div>
         </div>
 
-        {/* Sparkline */}
+        {/* Inspection Frequency Sparkline */}
         <div className="mt-4 pt-4 border-t border-gray-100">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500">12-Month Activity</span>
+            <span className="text-xs font-medium text-gray-500">
+              12-Month Activity
+            </span>
             <BarChart3 size={12} className="text-gray-400" />
           </div>
 
@@ -255,16 +294,27 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
             <div className="flex items-end space-x-1 h-8">
               {inspectionHistory.map((count, index) => {
                 const maxCount = Math.max(...inspectionHistory, 1);
-                const height = Math.max((count / maxCount) * 100, count > 0 ? 10 : 2);
+                const height = Math.max(
+                  (count / maxCount) * 100,
+                  count > 0 ? 10 : 2
+                );
                 return (
                   <div
                     key={index}
                     className={`flex-1 rounded-sm transition-all duration-200 ${
-                      count > 0 ? 'bg-primary-500 hover:bg-primary-600' : 'bg-gray-200'
+                      count > 0
+                        ? 'bg-primary-500 hover:bg-primary-600'
+                        : 'bg-gray-200'
                     }`}
                     style={{ height: `${height}%` }}
-                    title={`${count} inspection${count !== 1 ? 's' : ''} ${
-                      index === 11 ? 'this month' : `${11 - index} month${11 - index !== 1 ? 's' : ''} ago`
+                    title={`${count} inspection${
+                      count !== 1 ? 's' : ''
+                    } ${
+                      index === 11
+                        ? 'this month'
+                        : `${11 - index} month${
+                            11 - index !== 1 ? 's' : ''
+                          } ago`
                     }`}
                   />
                 );
