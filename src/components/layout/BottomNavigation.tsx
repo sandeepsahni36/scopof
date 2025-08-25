@@ -1,181 +1,121 @@
 // src/components/layout/BottomNavigation.tsx
-import React from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import {
-  Home,
-  Building2,
-  LayoutTemplate,
-  FileText,
-  Settings,
-  Plus,
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Home, Building2, LayoutTemplate, FileText, Plus } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-import { NavItem } from '../../types';
 
-const mainNavItems: NavItem[] = [
-  { title: 'Dashboard', href: '/dashboard', icon: 'Home' },
-  { title: 'Templates', href: '/dashboard/templates', icon: 'LayoutTemplate' },
-  { title: 'Properties', href: '/dashboard/properties', icon: 'Building2' },
-  { title: 'Reports', href: '/dashboard/reports', icon: 'FileText' },
+type NavItem = { title: string; href: string; icon: React.ReactNode };
+
+const NAV_ITEMS: NavItem[] = [
+  { title: 'Home',       href: '/dashboard',            icon: <Home size={22} /> },
+  { title: 'Properties', href: '/dashboard/properties', icon: <Building2 size={22} /> },
+  { title: 'Templates',  href: '/dashboard/templates',  icon: <LayoutTemplate size={22} /> },
+  { title: 'Reports',    href: '/dashboard/reports',    icon: <FileText size={22} /> },
 ];
-
-const adminNavItems: NavItem[] = [
-  { title: 'Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
-];
-
-const IconMap: Record<string, React.ReactNode> = {
-  Home: <Home size={24} />,
-  Building2: <Building2 size={24} />,
-  LayoutTemplate: <LayoutTemplate size={24} />,
-  FileText: <FileText size={24} />,
-  Settings: <Settings size={24} />,
-};
 
 const BottomNavigation: React.FC = () => {
-  const { isAdmin, requiresPayment, needsPaymentSetup } = useAuthStore();
-  const navItems = isAdmin ? [...mainNavItems, ...adminNavItems] : mainNavItems;
-
-  const [fabOpen, setFabOpen] = React.useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
+  const { requiresPayment, needsPaymentSetup } = useAuthStore();
+  const [openFab, setOpenFab] = useState(false);
 
-  // Close on route change or ESC
-  React.useEffect(() => setFabOpen(false), [location.pathname]);
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setFabOpen(false);
-    if (fabOpen) window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [fabOpen]);
+  const guardNav = (href: string) =>
+    (requiresPayment || needsPaymentSetup) && !href.includes('/admin/settings');
 
-  const openAddProperty = () => {
-    setFabOpen(false);
-    if (location.pathname.startsWith('/dashboard/properties')) {
-      window.dispatchEvent(new CustomEvent('open-add-property'));
-    } else {
-      navigate('/dashboard/properties', { state: { openAddProperty: true } });
-    }
+  const openAddPropertyModal = () => {
+    // fire both names for compatibility with your current listener
+    window.dispatchEvent(new CustomEvent('openPropertyModal'));
+    window.dispatchEvent(new CustomEvent('open-property-create'));
+    window.dispatchEvent(new CustomEvent('openPropertyCreateModal'));
+    setOpenFab(false);
   };
 
-  const openAddTemplate = () => {
-    setFabOpen(false);
+  const goCreateTemplate = () => {
     navigate('/dashboard/templates/new');
+    setOpenFab(false);
   };
 
   return (
     <>
-      {/* Click-away scrim (invisible) */}
-      {fabOpen && (
-        <button
-          aria-label="Close quick actions"
-          className="fixed inset-0 z-[60] bg-black/0"
-          onClick={() => setFabOpen(false)}
-        />
+      {/* FAB quick menu (above bar) */}
+      {openFab && (
+        <div
+          className="md:hidden fixed inset-0 z-[60]"
+          onClick={() => setOpenFab(false)}
+        >
+          <div className="absolute inset-0 bg-black/20" />
+
+          <div
+            className="absolute left-1/2 -translate-x-1/2
+                       rounded-2xl shadow-xl bg-white
+                       w-[280px] overflow-hidden
+                       border border-gray-100"
+            style={{ bottom: 'calc(86px + env(safe-area-inset-bottom))' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={openAddPropertyModal}
+              className="w-full px-4 py-3 text-left text-[15px] font-medium hover:bg-gray-50"
+            >
+              Add Property
+            </button>
+            <div className="h-px bg-gray-100" />
+            <button
+              onClick={goCreateTemplate}
+              className="w-full px-4 py-3 text-left text-[15px] font-medium hover:bg-gray-50"
+            >
+              Add Template
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Bottom bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-[50]">
-        <div className="mx-3 mb-3 rounded-3xl bg-white border border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
-          <nav className="flex items-center justify-around px-2 py-3">
-            {navItems.slice(0, 2).map((item) => (
-              <NavLink
-                key={item.href}
-                to={item.href}
-                className={({ isActive }) =>
-                  `flex flex-col items-center min-w-0 text-[11px] font-medium transition-colors ${
-                    (requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings')
-                      ? 'text-gray-400 opacity-60 pointer-events-none'
-                      : isActive
-                      ? 'text-primary-600'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+        <nav className="relative flex w-full items-end justify-between px-2 pt-2 pb-[env(safe-area-inset-bottom)]">
+          {/* nav items */}
+          {NAV_ITEMS.map((item, idx) => (
+            <NavLink
+              key={item.href}
+              to={item.href}
+              className={({ isActive }) =>
+                [
+                  'flex flex-col items-center justify-center flex-1 py-2 min-w-0 text-xs font-medium transition-colors',
+                  guardNav(item.href)
+                    ? 'text-gray-400 opacity-60'
+                    : isActive
+                    ? 'text-primary-600'
+                    : 'text-gray-600 hover:text-gray-900',
+                ].join(' ')
+              }
+              onClick={(e) => {
+                if (guardNav(item.href)) {
+                  e.preventDefault();
+                  window.location.href = '/subscription-required';
                 }
-                end={item.href === '/dashboard'}
-              >
-                <div className="mb-1">{IconMap[item.icon]}</div>
-                <span className="truncate">{item.title}</span>
-              </NavLink>
-            ))}
+              }}
+              end={item.href === '/dashboard'}
+            >
+              <div className="mb-1 flex-shrink-0">{item.icon}</div>
+              <span className="leading-tight text-[11px]">{item.title}</span>
+            </NavLink>
+          ))}
 
-            {/* FAB spacer */}
-            <div className="w-[88px] pointer-events-none" />
-
-            {navItems.slice(2, 4).map((item) => (
-              <NavLink
-                key={item.href}
-                to={item.href}
-                className={({ isActive }) =>
-                  `flex flex-col items-center min-w-0 text-[11px] font-medium transition-colors ${
-                    (requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings')
-                      ? 'text-gray-400 opacity-60 pointer-events-none'
-                      : isActive
-                      ? 'text-primary-600'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`
-                }
-              >
-                <div className="mb-1">{IconMap[item.icon]}</div>
-                <span className="truncate">{item.title}</span>
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-
-        {/* FAB */}
-        <button
-          aria-label="Open quick actions"
-          onClick={() => setFabOpen((v) => !v)}
-          className="group absolute left-1/2 -translate-x-1/2 -top-7 z-[70]
-                     h-[66px] w-[66px] rounded-full bg-gradient-to-b from-[#4F8BFF] to-[#356BFF]
-                     text-white shadow-[0_10px_30px_rgba(53,107,255,0.45)]
-                     ring-4 ring-white active:scale-95 transition-transform"
-        >
-          <Plus size={34} className="mx-auto" />
-        </button>
+          {/* Center FAB */}
+          <button
+            aria-label="Quick actions"
+            onClick={() => setOpenFab((v) => !v)}
+            className="absolute left-1/2 -translate-x-1/2 -top-6
+                       rounded-full w-[84px] h-[84px]
+                       bg-gradient-to-b from-[#4F7CFF] to-[#3B6BFF]
+                       text-white shadow-[0_12px_30px_rgba(59,107,255,0.45)]
+                       active:scale-95 transition-transform z-[55]
+                       flex items-center justify-center"
+            style={{ border: '6px solid #fff', borderRadius: '9999px' }}
+          >
+            <Plus size={38} strokeWidth={3} />
+          </button>
+        </nav>
       </div>
-
-      {/* Premium-looking action menu */}
-      {fabOpen && (
-        <div
-          className="fixed left-1/2 -translate-x-1/2 bottom-[120px] z-[80]
-                     min-w-[220px] max-w-[90vw]
-                     rounded-2xl border border-gray-200 bg-white/95 backdrop-blur
-                     shadow-[0_20px_50px_rgba(0,0,0,0.12)]"
-          role="menu"
-          aria-label="Quick actions"
-        >
-          {/* Caret */}
-          <div
-            className="absolute left-1/2 -translate-x-1/2 -bottom-2 h-4 w-4 rotate-45
-                       bg-white border border-gray-200 border-t-0 border-l-0"
-          />
-
-          <button
-            onClick={openAddProperty}
-            role="menuitem"
-            className="w-full flex items-center gap-3 px-4 py-3 whitespace-nowrap
-                       hover:bg-gray-50 active:bg-gray-100 rounded-t-2xl"
-          >
-            <div className="h-8 w-8 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center">
-              <Building2 size={18} />
-            </div>
-            <div className="text-[15px] font-medium text-gray-900">Add Property</div>
-          </button>
-
-          <div className="h-px bg-gray-200" />
-
-          <button
-            onClick={openAddTemplate}
-            role="menuitem"
-            className="w-full flex items-center gap-3 px-4 py-3 whitespace-nowrap
-                       hover:bg-gray-50 active:bg-gray-100 rounded-b-2xl"
-          >
-            <div className="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <LayoutTemplate size={18} />
-            </div>
-            <div className="text-[15px] font-medium text-gray-900">Add Template</div>
-          </button>
-        </div>
-      )}
     </>
   );
 };
