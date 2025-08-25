@@ -8,14 +8,26 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500',
-        secondary: 'bg-white text-gray-900 border border-gray-300 hover:bg-gray-100 focus-visible:ring-gray-500',
-        accent: 'bg-accent-500 text-white hover:bg-accent-600 focus-visible:ring-accent-500',
-        outline: 'bg-transparent border border-primary-600 text-primary-600 hover:bg-primary-50 focus-visible:ring-primary-500',
-        ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 hover:text-gray-900 focus-visible:ring-gray-500',
-        link: 'bg-transparent underline-offset-4 hover:underline text-primary-600 hover:text-primary-700 p-0 focus-visible:ring-primary-500 h-auto',
-        danger: 'bg-error-500 text-white hover:bg-error-700 focus-visible:ring-error-500',
-        success: 'bg-success-500 text-white hover:bg-success-700 focus-visible:ring-success-500',
+        default:
+          'bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500',
+        secondary:
+          'bg-white text-gray-900 border border-gray-300 hover:bg-gray-100 focus-visible:ring-gray-500',
+        accent:
+          'bg-accent-500 text-white hover:bg-accent-600 focus-visible:ring-accent-500',
+        outline:
+          'bg-transparent border border-primary-600 text-primary-600 hover:bg-primary-50 focus-visible:ring-primary-500',
+        ghost:
+          'bg-transparent hover:bg-gray-100 text-gray-700 hover:text-gray-900 focus-visible:ring-gray-500',
+        link:
+          'bg-transparent underline-offset-4 hover:underline text-primary-600 hover:text-primary-700 p-0 focus-visible:ring-primary-500 h-auto',
+        danger:
+          'bg-error-500 text-white hover:bg-error-700 focus-visible:ring-error-500',
+        success:
+          'bg-success-500 text-white hover:bg-success-700 focus-visible:ring-success-500',
+
+        // Premium “boxed outline” used for Field Types in TemplateDetailPage
+        outlineBox:
+          'bg-white border-2 border-primary-300 text-primary-700 hover:bg-primary-50 focus-visible:ring-primary-500 shadow-sm hover:shadow',
       },
       size: {
         default: 'h-10 sm:h-11 py-2 px-4 text-sm sm:text-base',
@@ -35,7 +47,7 @@ const buttonVariants = cva(
   }
 );
 
-export interface ButtonProps 
+export interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   isLoading?: boolean;
@@ -44,18 +56,21 @@ export interface ButtonProps
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ 
-    className, 
-    variant, 
-    size, 
-    fullWidth, 
-    isLoading = false, 
-    leftIcon, 
-    rightIcon, 
-    children, 
-    disabled, 
-    ...props 
-  }, ref) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      fullWidth,
+      isLoading = false,
+      leftIcon,
+      rightIcon,
+      children,
+      disabled,
+      ...props
+    },
+    ref
+  ) => {
     return (
       <button
         className={cn(buttonVariants({ variant, size, fullWidth, className }))}
