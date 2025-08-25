@@ -16,7 +16,9 @@ import {
   Building2,
   CheckCircle2,
   AlertTriangle,
-  Search
+  Search,
+  LayoutTemplate,
+  FileText
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { TIER_LIMITS } from '../../types';
@@ -665,7 +667,7 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Empty-state CTA (kept, shows when there’s no data) */}
+      {/* Empty-state CTA (kept, shows when there's no data) */}
       {stats.properties === 0 && (
         <div className="mt-5 bg-white rounded-xl shadow p-6">
           <div className="text-center">
@@ -680,6 +682,8 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );
