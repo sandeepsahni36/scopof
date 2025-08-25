@@ -1,182 +1,179 @@
-import React, { useEffect, useRef, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { Home, Building2, LayoutTemplate, FileText, Plus } from "lucide-react";
-import { useAuthStore } from "../../store/authStore";
-import type { NavItem } from "../../types";
+import React, { useState } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import {
+  Home,
+  Building2,
+  LayoutTemplate,
+  FileText,
+  Settings,
+  Plus,
+} from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import { NavItem } from '../../types';
 
 const mainNavItems: NavItem[] = [
-  { title: "Home", href: "/dashboard", icon: "Home" },
-  { title: "Templates", href: "/dashboard/templates", icon: "LayoutTemplate" },
-  { title: "Properties", href: "/dashboard/properties", icon: "Building2" },
-  { title: "Reports", href: "/dashboard/reports", icon: "FileText" },
+  { title: 'Dashboard', href: '/dashboard', icon: 'Home' },
+  { title: 'Templates', href: '/dashboard/templates', icon: 'LayoutTemplate' },
+  { title: 'Properties', href: '/dashboard/properties', icon: 'Building2' },
+  { title: 'Reports', href: '/dashboard/reports', icon: 'FileText' },
+];
+
+const adminNavItems: NavItem[] = [
+  { title: 'Settings', href: '/dashboard/admin/settings', icon: 'Settings' },
 ];
 
 const IconMap: Record<string, React.ReactNode> = {
-  Home: <Home size={26} />,
-  Building2: <Building2 size={26} />,
-  LayoutTemplate: <LayoutTemplate size={26} />,
-  FileText: <FileText size={26} />,
+  Home: <Home size={20} />,
+  Building2: <Building2 size={20} />,
+  LayoutTemplate: <LayoutTemplate size={20} />,
+  FileText: <FileText size={20} />,
+  Settings: <Settings size={20} />,
 };
 
 const BottomNavigation: React.FC = () => {
   const navigate = useNavigate();
-  const { requiresPayment, needsPaymentSetup } = useAuthStore();
+  const location = useLocation();
+  const { isAdmin, requiresPayment, needsPaymentSetup } = useAuthStore();
+  const [fabOpen, setFabOpen] = useState(false);
 
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const navItems = isAdmin ? [...mainNavItems, ...adminNavItems] : mainNavItems;
 
-  useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      if (!menuRef.current) return;
-      if (!menuRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onEsc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    if (open) {
-      document.addEventListener("mousedown", onDocClick);
-      document.addEventListener("keydown", onEsc);
-    }
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [open]);
+  // We’ll render 4 tabs (Dashboard, Templates, Properties, Reports).
+  // FAB sits centered between Templates and Properties.
+  const tabs = navItems.slice(0, 4); // ensure Reports is present
 
-  const gateNavigate = (path: string, state?: any) => {
-    if (requiresPayment || needsPaymentSetup) navigate("/subscription-required");
-    else navigate(path, { state });
+  const goAddProperty = () => {
+    setFabOpen(false);
+    // Open properties page with modal via query param
+    navigate('/dashboard/properties?new=1');
   };
 
-  // Navigate + state + query + event (with a short retry to catch mount timing)
-  const triggerPageModal = (
-    eventName: "open:add-property" | "open:add-template",
-    basePath: string,
-    query: Record<string, string>
-  ) => {
-    setOpen(false);
-    const qs = new URLSearchParams(query).toString();
-    gateNavigate(`${basePath}?${qs}`, {
-      ...(eventName === "open:add-property" && { openCreateProperty: true }),
-      ...(eventName === "open:add-template" && { openCreateTemplate: true }),
-    });
-
-    let tries = 0;
-    const iv = setInterval(() => {
-      window.dispatchEvent(new CustomEvent(eventName));
-      if (++tries >= 8) clearInterval(iv); // ~800ms total
-    }, 100);
+  const goAddTemplate = () => {
+    setFabOpen(false);
+    // Navigate to template creator (your existing route)
+    navigate('/dashboard/templates/new');
   };
-
-  const NavBtn = ({
-    to,
-    icon,
-    title,
-  }: {
-    to: string;
-    icon: React.ReactNode;
-    title: string;
-  }) => (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `flex flex-col items-center justify-center gap-1 py-3 min-w-0 text-[11px] font-medium transition-colors ${
-          isActive ? "text-primary-600" : "text-gray-600"
-        }`
-      }
-      onClick={(e) => {
-        if ((requiresPayment || needsPaymentSetup) && !to.includes("/admin/settings")) {
-          e.preventDefault();
-          navigate("/subscription-required");
-        }
-      }}
-      end={to === "/dashboard"}
-    >
-      <div className="flex-shrink-0">{icon}</div>
-      <span className="leading-tight">{title}</span>
-    </NavLink>
-  );
 
   return (
-    <div className="md:hidden fixed inset-x-0 bottom-0 z-[60] pointer-events-none">
-      {open && (
-        <div
-          className="pointer-events-auto fixed inset-0 z-[58] bg-black/20 backdrop-blur-[1px]"
-          onClick={() => setOpen(false)}
-        />
-      )}
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 overflow-visible">
+      <div className="relative">
+        {/* Tabs row */}
+        <nav className="grid grid-cols-5 items-stretch">
+          {/* 0: Dashboard */}
+          <TabLink item={tabs[0]} locationPath={location.pathname} requiresPayment={requiresPayment} needsPaymentSetup={needsPaymentSetup} />
 
-      <div className="relative pointer-events-none z-[59]">
-        <nav
-          className="pointer-events-auto bg-white border-t border-gray-200 shadow-[0_-10px_28px_rgba(0,0,0,.06)]
-                     px-6 pt-2 pb-[max(14px,env(safe-area-inset-bottom))] w-full rounded-t-2xl"
-        >
-          <div className="grid grid-cols-5 items-center">
-            <div className="col-span-1 flex justify-center">
-              <NavBtn to="/dashboard" icon={IconMap.Home} title="Home" />
-            </div>
-            <div className="col-span-1 flex justify-center">
-              <NavBtn to="/dashboard/templates" icon={IconMap.LayoutTemplate} title="Templates" />
-            </div>
-            <div className="col-span-1" /> {/* spacer for FAB */}
-            <div className="col-span-1 flex justify-center">
-              <NavBtn to="/dashboard/properties" icon={IconMap.Building2} title="Properties" />
-            </div>
-            <div className="col-span-1 flex justify-center">
-              <NavBtn to="/dashboard/reports" icon={IconMap.FileText} title="Reports" />
-            </div>
-          </div>
+          {/* 1: Templates */}
+          <TabLink item={tabs[1]} locationPath={location.pathname} requiresPayment={requiresPayment} needsPaymentSetup={needsPaymentSetup} />
+
+          {/* Spacer for FAB */}
+          <div className="h-14" />
+
+          {/* 2: Properties */}
+          <TabLink item={tabs[2]} locationPath={location.pathname} requiresPayment={requiresPayment} needsPaymentSetup={needsPaymentSetup} />
+
+          {/* 3: Reports */}
+          <TabLink item={tabs[3]} locationPath={location.pathname} requiresPayment={requiresPayment} needsPaymentSetup={needsPaymentSetup} />
         </nav>
 
-        {/* FAB (72px) */}
+        {/* FAB */}
         <button
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls="fab-menu"
-          className="pointer-events-auto absolute left-1/2 -translate-x-1/2 -top-[36px] w-[72px] h-[72px]
-                     rounded-full bg-gradient-to-b from-[#2f66ff] to-[#5f86ff]
-                     shadow-[0_16px_36px_rgba(47,102,255,.30),0_6px_14px_rgba(47,102,255,.22)]
-                     flex items-center justify-center active:scale-[.98] transition"
+          type="button"
+          onClick={() => setFabOpen(v => !v)}
+          aria-label="Add"
+          className="
+            absolute left-1/2 -translate-x-1/2
+            -translate-y-1/2
+            bottom-0
+            w-[72px] h-[72px]
+            rounded-full bg-primary-600 text-white
+            shadow-lg shadow-primary-300/40
+            flex items-center justify-center
+            z-[60]
+            border-4 border-white
+            active:scale-95 transition
+          "
         >
-          <Plus size={32} className="text-white" />
+          <Plus size={28} />
         </button>
 
-        {/* Menu ABOVE the FAB */}
-        <div
-          id="fab-menu"
-          ref={menuRef}
-          className={`pointer-events-auto absolute left-1/2 -translate-x-1/2 bottom-[120px] w-[92%] max-w-[420px] z-[70]
-                      transition-all duration-150 ${open ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}
-          role="menu"
-          aria-hidden={!open}
-        >
-          <div className="rounded-2xl bg-white shadow-[0_18px_40px_rgba(0,0,0,.12)] border border-gray-100 overflow-hidden">
-            <div className="divide-y divide-gray-100">
-              <button
-                className="w-full text-left px-4 py-3 text-sm flex items-center gap-3 active:bg-gray-50"
-                onClick={() =>
-                  triggerPageModal("open:add-property", "/dashboard/properties", { new: "property" })
-                }
-                role="menuitem"
-              >
-                <Building2 size={18} className="text-primary-600" />
-                <span className="font-medium">Add Property</span>
-              </button>
-
-              <button
-                className="w-full text-left px-4 py-3 text-sm flex items-center gap-3 active:bg-gray-50"
-                onClick={() =>
-                  triggerPageModal("open:add-template", "/dashboard/templates", { new: "template" })
-                }
-                role="menuitem"
-              >
-                <LayoutTemplate size={18} className="text-primary-600" />
-                <span className="font-medium">Add Template</span>
-              </button>
-            </div>
+        {/* FAB Menu */}
+        {fabOpen && (
+          <div
+            className="
+              absolute left-1/2 -translate-x-1/2
+              bottom-[84px]
+              z-[70]
+              w-56 rounded-2xl bg-white shadow-xl border border-gray-200
+              p-2
+            "
+          >
+            <MenuItem label="Add Property" onClick={goAddProperty} />
+            <MenuItem label="Add Template" onClick={goAddTemplate} />
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default BottomNavigation;
+
+/* ---------- Helpers ---------- */
+
+function TabLink({
+  item,
+  locationPath,
+  requiresPayment,
+  needsPaymentSetup,
+}: {
+  item: NavItem | undefined;
+  locationPath: string;
+  requiresPayment: boolean;
+  needsPaymentSetup: boolean;
+}) {
+  if (!item) return <div />;
+
+  const isDisabled = (requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings');
+
+  return (
+    <NavLink
+      to={item.href}
+      className={({ isActive }) =>
+        `flex flex-col items-center justify-center text-xs font-medium transition-colors
+         py-3 px-1 min-w-0
+         ${isActive || locationPath === item.href ? 'text-primary-600 bg-primary-50' : isDisabled ? 'text-gray-400 opacity-60' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'}`
+      }
+      onClick={(e) => {
+        if (isDisabled) {
+          e.preventDefault();
+          window.location.href = '/subscription-required';
+        }
+      }}
+      end={item.href === '/dashboard'}
+    >
+      <div className="mb-1 flex-shrink-0">{IconMap[item.icon]}</div>
+      <span className="text-center leading-tight text-[10px] font-medium w-full">
+        {item.title}
+        {(requiresPayment || needsPaymentSetup) && !item.href.includes('/admin/settings') && (
+          <span className="block text-[8px] text-amber-600 mt-0.5 leading-none">Upgrade</span>
+        )}
+      </span>
+    </NavLink>
+  );
+}
+
+function MenuItem({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="
+        w-full text-left px-3 py-3 rounded-xl
+        hover:bg-gray-50 active:bg-gray-100
+        text-sm font-medium text-gray-800
+      "
+    >
+      {label}
+    </button>
+  );
+}
