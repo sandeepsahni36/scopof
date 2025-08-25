@@ -297,17 +297,32 @@ const TemplateDetailPage = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
               <div className="flex space-x-2">
+                {/* No color option */}
+                <button
+                  type="button"
+                  onClick={() => setValue('color', null)}
+                  className={`w-8 h-8 rounded-full border-2 transition-all bg-gray-100 relative ${
+                    watch('color') === null ? 'border-gray-800 scale-110' : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  {watch('color') === null && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                    </div>
+                  )}
+                </button>
                 {TEMPLATE_COLORS.map((color) => (
+                  color && (
                   <button
                     key={color}
                     type="button"
                     onClick={() => setValue('color', color)}
-                    className={`w-8 h-8 rounded border-2 transition-all ${
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${
                       watch('color') === color ? 'border-gray-800 scale-110' : 'border-gray-300 hover:border-gray-400'
                     }`}
                     style={{ backgroundColor: color }}
-                    title={color}
                   />
+                  )
                 ))}
               </div>
             </div>

@@ -118,6 +118,7 @@ export const RATING_COLORS = {
 } as const;
 
 export const TEMPLATE_COLORS = [
+  null, // No color option
   '#3B82F6', // Blue
   '#EAB308', // Yellow
   '#22C55E', // Green
