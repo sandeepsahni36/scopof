@@ -24,6 +24,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { checkPropertyLimit } from '../../lib/properties';
 import { supabase, devModeEnabled } from '../../lib/supabase';
+import { getTemplates } from '../../lib/templates';
+import { getReports } from '../../lib/reports';
 import {
   getStorageUsage,
   getUsagePercentage,
@@ -57,6 +59,12 @@ const DashboardPage: React.FC = () => {
   // --- Search ----
   const [search, setSearch] = useState('');
 
+  // --- Search Results ---
+  const [searchedProperties, setSearchedProperties] = useState<any[]>([]);
+  const [searchedTemplates, setSearchedTemplates] = useState<any[]>([]);
+  const [searchedReports, setSearchedReports] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  
   // --- Stats (unchanged wiring) ---
   const [stats, setStats] = useState({
     properties: 0,
@@ -100,6 +108,30 @@ const DashboardPage: React.FC = () => {
       try {
         setLoading(true);
 
+        // If search is active, load search results instead of dashboard stats
+        if (search.trim()) {
+          setSearchLoading(true);
+          try {
+            const [propertiesData, templatesData, reportsData] = await Promise.all([
+              import('../../lib/properties').then(module => module.getProperties(search)),
+              getTemplates(search),
+              getReports({ searchTerm: search })
+            ]);
+
+            setSearchedProperties(propertiesData || []);
+            setSearchedTemplates(templatesData || []);
+            setSearchedReports(reportsData || []);
+          } catch (error) {
+            console.error('Error loading search results:', error);
+            setSearchedProperties([]);
+            setSearchedTemplates([]);
+            setSearchedReports([]);
+          } finally {
+            setSearchLoading(false);
+          }
+          setLoading(false);
+          return;
+        }
         const propertyLimits = await checkPropertyLimit();
         const propertyCount = propertyLimits?.currentCount || 0;
 
@@ -258,7 +290,7 @@ const DashboardPage: React.FC = () => {
     };
 
     loadDashboardData();
-  }, []);
+  }, [search]);
 
   // Load storage usage (from your storage API) for storage chart
   useEffect(() => {

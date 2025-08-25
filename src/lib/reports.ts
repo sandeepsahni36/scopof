@@ -1,816 +1,688 @@
-// Add type declaration for autoTable
-declare module "jspdf" {
-  interface jsPDF {
-    autoTable: (options: any) => void;
-    lastAutoTable: {
-      finalY: number;
-    };
-  }
-}
+import React, { useEffect, useState, useMemo } from 'react';
+import { Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartOptions
+} from 'chart.js';
+import { motion } from 'framer-motion';
+import {
+  Building2,
+  CheckCircle2,
+  AlertTriangle,
+  Search
+} from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import { TIER_LIMITS } from '../../types';
+import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '../../components/ui/Button';
+import { checkPropertyLimit } from '../../lib/properties';
+import { supabase, devModeEnabled } from '../../lib/supabase';
+import { getTemplates } from '../../lib/templates';
+import { getReports } from '../../lib/reports';
+import {
+  getStorageUsage,
+  getUsagePercentage,
+  formatBytes,
+  StorageUsage,
+} from '../../lib/storage';
+import { Doughnut } from 'react-chartjs-2';
 
-import { supabase, validateUserSession, handleAuthError, devModeEnabled } from './supabase';
-import { uploadFile, getSignedUrlForFile } from './storage';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import "jspdf-autotable"; // Ensure this is imported after jsPDF
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
-// Mock data for dev mode
-const MOCK_REPORTS = [
-  {
-    id: 'mock-report-1',
-    inspectionId: 'mock-inspection-1',
-    propertyName: 'Oceanview Apartment 2B',
-    inspectionType: 'check_in',
-    primaryContactName: 'John Smith',
-    inspectorName: 'Jane Inspector',
-    reportUrl: 'https://example.com/mock-report-1.pdf',
-    fileKey: 'mock-report-1.pdf',
-    generatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-];
+const DashboardPage: React.FC = () => {
+  const {
+    company,
+    hasActiveSubscription,
+    isTrialExpired,
+    requiresPayment,
+    canStartInspections,
+    storageStatus,
+    isDevMode,
+  } = useAuthStore();
+  const navigate = useNavigate();
 
-let mockReportsState = [...MOCK_REPORTS];
+  // --- Search ----
+  const [search, setSearch] = useState('');
 
-export async function getReports(filters?: {
-  propertyId?: string;
-  inspectionType?: string;
-  dateFrom?: string;
-  dateTo?: string;
-}) {
-  try {
-    const user = await validateUserSession();
-    if (!user) {
-      throw new Error('User session is invalid. Please sign in again.');
-    }
-
-    // Handle dev mode
-    if (devModeEnabled()) {
-      console.log('Dev mode: Returning mock reports');
-      return mockReportsState;
-    }
-
-    let query = supabase
-      .from('reports')
-      .select(`
-        id,
-        inspection_id,
-        report_url,
-        file_key,
-        generated_at,
-        created_at,
-        inspections (
-          inspection_type,
-          primary_contact_name,
-          inspector_name,
-          properties (
-            name
-          )
-        )
-      `)
-      .order('generated_at', { ascending: false });
-
-    // Apply filters
-    if (filters?.propertyId) {
-      query = query.eq('inspections.property_id', filters.propertyId);
-    }
-
-    if (filters?.inspectionType) {
-      query = query.eq('inspections.inspection_type', filters.inspectionType);
-    }
-
-    if (filters?.dateFrom) {
-      query = query.gte('generated_at', filters.dateFrom);
-    }
-
-    if (filters?.dateTo) {
-      query = query.lte('generated_at', filters.dateTo);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-        await handleAuthError(error);
-        return null;
-      }
-      throw error;
-    }
-
-    // Transform data to match expected format
-    return data?.map(report => ({
-      id: report.id,
-      inspectionId: report.inspection_id,
-      propertyName: report.inspections?.properties?.name || 'Unknown Property',
-      inspectionType: report.inspections?.inspection_type || 'unknown',
-      primaryContactName: report.inspections?.primary_contact_name || '',
-      inspectorName: report.inspections?.inspector_name || '',
-      reportUrl: report.report_url,
-      fileKey: report.file_key,
-      generatedAt: report.generated_at,
-      createdAt: report.created_at,
-    })) || [];
-  } catch (error: any) {
-    console.error('Error fetching reports:', error);
-    
-    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-      await handleAuthError(error);
-      return null;
-    }
-    
-    throw error;
-  }
-}
-
-export async function generateInspectionReport(reportData: any): Promise<string | null> {
-  try {
-    const user = await validateUserSession();
-    if (!user) {
-      throw new Error('User session is invalid. Please sign in again.');
-    }
-
-    // Handle dev mode
-    if (devModeEnabled()) {
-      console.log('Dev mode: Mock PDF generation');
-      return 'https://example.com/mock-report.pdf';
-    }
-
-    // Fetch admin branding data
-    const { data: adminData, error: adminError } = await supabase
-      .from('admin')
-      .select('logo_url, brand_color, report_background, subscription_tier, company_name')
-      .eq('owner_id', user.id)
-      .single();
-
-    if (adminError) {
-      console.error('Error fetching admin branding data:', adminError);
-      // Continue with defaults
-    }
-
-    // Prepare branding data for PDF generation
-    const brandingData = {
-      logoUrl: adminData?.subscription_tier === 'starter' 
-        ? '/Scopostay long full logo white.png' 
-        : (adminData?.logo_url || null),
-      brandColor: adminData?.subscription_tier === 'starter' ? '#2563EB' : (adminData?.brand_color || '#2563EB'),
-      reportBackground: adminData?.subscription_tier === 'starter' ? '#FFFFFF' : (adminData?.report_background || '#FFFFFF'),
-      subscriptionTier: adminData?.subscription_tier || 'starter',
-      companyName: adminData?.company_name || 'Company',
-    };
-
-    console.log('Generating PDF with branding data:', brandingData);
-
-    // Generate PDF with branding
-    const pdfBlob = await createPDFReport({
-      ...reportData,
-      ...brandingData,
-    });
-
-    // Convert blob to file for upload
-    const pdfFile = new File([pdfBlob], `inspection-report-${Date.now()}.pdf`, {
-      type: 'application/pdf',
-    });
-
-    // Upload PDF to storage
-    const uploadResult = await uploadFile(
-      pdfFile,
-      'report',
-      reportData.inspection.id,
-      undefined
-    );
-
-    if (!uploadResult) {
-      throw new Error('Failed to upload PDF report');
-    }
-
-    // Save report record to database
-    await saveReportRecord(reportData, uploadResult.fileUrl, uploadResult.fileKey);
-
-    return uploadResult.fileUrl;
-  } catch (error: any) {
-    console.error('Error generating inspection report:', error);
-    
-    if (error.message?.includes('user_not_found') || error.message?.includes('JWT')) {
-      await handleAuthError(error);
-      return null;
-    }
-    
-    throw error;
-  }
-}
-
-async function createPDFReport(reportData: any): Promise<Blob> {
-  const pdf = new jsPDF();
-  
-  // Load company logo
-  let logoDataUrl: string | null = null;
-  try {
-    logoDataUrl = await loadImageAsDataUrl(reportData.logoUrl);
-    console.log('Logo loaded successfully for PDF');
-  } catch (error) {
-    console.error('Error loading logo for PDF:', error);
-    // Continue without logo
-  }
-
-  // Set document properties
-  pdf.setProperties({
-    title: `Inspection Report - ${reportData.inspection.propertyName}`,
-    subject: 'Property Inspection Report',
-    author: reportData.companyName || 'scopoStay',
-    creator: 'scopoStay Property Inspection Platform',
+  // --- Search Results ---
+  const [searchedProperties, setSearchedProperties] = useState<any[]>([]);
+  const [searchedTemplates, setSearchedTemplates] = useState<any[]>([]);
+  const [searchedReports, setSearchedReports] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  // --- Stats (unchanged wiring) ---
+  const [stats, setStats] = useState({
+    properties: 0,
+    completedInspections: 0,
+    pendingInspections: 0,
+    issuesDetected: 0,
+    averageInspectionDuration: 0,
   });
 
-  let yPosition = 20;
+  const [chartData, setChartData] = useState({
+    inspectionsByType: {
+      check_in: 0,
+      check_out: 0,
+      move_in: 0,
+      move_out: 0,
+    },
+    issuesByValue: {
+      'Needs Repair': 0,
+      'Poor': 0,
+      'Damaged': 0,
+      'Missing': 0,
+    },
+    propertiesByType: {} as Record<string, number>,
+    topPropertiesByInspections: [] as Array<{ name: string; count: number }>,
+  });
 
-  // Add header with logo and branding
-  function addHeader() {
-    // Header background with brand color
-    const brandColor = hexToRgb(reportData.brandColor || '#2563EB');
-    pdf.setFillColor(brandColor.r, brandColor.g, brandColor.b);
-    pdf.rect(0, 0, pdf.internal.pageSize.width, 40, 'F');
+  const [loading, setLoading] = useState(true);
 
-    // Add logo if available
-    if (logoDataUrl) {
+  // --- Storage usage (from your API bucket via lib/storage) ---
+  const [storage, setStorage] = useState<StorageUsage | null>(null);
+  const usagePct = useMemo(
+    () => (storage ? getUsagePercentage(storage.currentUsage, storage.quota) : 0),
+    [storage]
+  );
+  const nearLimit = usagePct >= 80 && usagePct < 100;
+  const overLimit = usagePct >= 100;
+
+  // Load dashboard data (same logic you had)
+  useEffect(() => {
+    const loadDashboardData = async () => {
       try {
-        pdf.addImage(logoDataUrl, 'PNG', 15, 8, 60, 24);
-      } catch (error) {
-        console.error('Error adding logo to PDF:', error);
-        // Add text fallback
-        pdf.setTextColor('#FFFFFF');
-        pdf.setFontSize(18);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(reportData.companyName || 'scopoStay', 15, 25);
-      }
-    } else {
-      // Fallback to text logo
-      pdf.setTextColor('#FFFFFF');
-      pdf.setFontSize(18);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(reportData.companyName || 'scopoStay', 15, 25);
-    }
+        setLoading(true);
 
-    // Report title
-    pdf.setTextColor('#FFFFFF');
-    pdf.setFontSize(16);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('INSPECTION REPORT', pdf.internal.pageSize.width - 15, 25, { align: 'right' });
+        // If search is active, load search results instead of dashboard stats
+        if (search.trim()) {
+          setSearchLoading(true);
+          try {
+            const [propertiesData, templatesData, reportsData] = await Promise.all([
+              import('../../lib/properties').then(module => module.getProperties(search)),
+              getTemplates(search),
+              getReports({ searchTerm: search })
+            ]);
 
-    // Add watermark for starter tier
-    if (reportData.subscriptionTier === 'starter') {
-      addWatermarkToPage(pdf, reportData.companyName);
-    }
-
-    // Reset text color for content
-    pdf.setTextColor('#000000');
-  }
-
-  // Add first page header
-  addHeader();
-  yPosition = 60;
-
-  // Property Information Section
-  pdf.setFontSize(18);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Property Information', 20, yPosition);
-  yPosition += 15;
-
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  
-  const propertyInfo = [
-    ['Property Name:', reportData.inspection.propertyName || 'N/A'],
-    ['Inspection Type:', reportData.inspection.inspection_type?.replace('_', ' ').toUpperCase() || 'N/A'],
-    ['Inspector:', reportData.inspectorName || 'N/A'],
-    ['Primary Contact:', reportData.primaryContactName || 'N/A'],
-    ['Date:', new Date(reportData.startTime).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })],
-    ['Duration:', reportData.durationSeconds ? formatDuration(reportData.durationSeconds) : 'N/A'],
-  ];
-
-  propertyInfo.forEach(([label, value]) => {
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(label, 20, yPosition);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(value, 80, yPosition);
-    yPosition += 8;
-  });
-
-  yPosition += 10;
-
-  // Inspection Items Section - Grouped by Room/Section
-  pdf.setFontSize(18);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Inspection Details', 20, yPosition);
-  yPosition += 15;
-
-  // Process each room/step
-  for (const step of reportData.rooms || []) {
-    console.log('Processing step for PDF:', step.name, 'Items:', step.items?.length || 0);
-    
-    // Check if we need a new page
-    if (yPosition > 250) {
-      pdf.addPage();
-      addHeader();
-      yPosition = 60;
-    }
-
-    // Section header
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(step.name, 20, yPosition);
-    yPosition += 12;
-
-    // Create table for this section
-    const tableHeaders = ['Item', 'Available', 'To Purchase', 'To Replace', 'Notes'];
-    const tableData = [];
-    
-    // Process items in this section
-    for (const item of step.items || []) {
-      const templateItem = item.template_items || item.templateItem;
-      
-      console.log('Processing item:', {
-        itemId: item.id,
-        templateLabel: templateItem?.label,
-        templateType: templateItem?.type,
-        hasPhotos: !!(item.photo_urls && item.photo_urls.length > 0),
-        photoCount: item.photo_urls?.length || 0
-      });
-      
-      if (!templateItem || templateItem.type === 'divider') {
-        console.log('Skipping divider or invalid template item');
-        continue;
-      }
-
-      // Prepare table row data
-      let availableStatus = '';
-      let purchaseStatus = '';
-      let replaceStatus = '';
-      
-      if (item.value !== null && item.value !== undefined) {
-        if (Array.isArray(item.value)) {
-          if (item.value.includes('available')) availableStatus = '✔';
-          if (item.value.includes('to_purchase')) purchaseStatus = '✔';
-          if (item.value.includes('to_replace')) replaceStatus = '✔';
-        } else if (typeof item.value === 'string') {
-          if (item.value === 'available') availableStatus = '✔';
-          if (item.value === 'to_purchase') purchaseStatus = '✔';
-          if (item.value === 'to_replace') replaceStatus = '✔';
+            setSearchedProperties(propertiesData || []);
+            setSearchedTemplates(templatesData || []);
+            setSearchedReports(reportsData || []);
+          } catch (error) {
+            console.error('Error loading search results:', error);
+            setSearchedProperties([]);
+            setSearchedTemplates([]);
+            setSearchedReports([]);
+          } finally {
+            setSearchLoading(false);
+          }
+          setLoading(false);
+          return;
         }
-      }
-      
-      tableData.push([
-        templateItem.label,
-        availableStatus,
-        purchaseStatus,
-        replaceStatus,
-        item.notes || ''
-      ]);
-    }
+        const propertyLimits = await checkPropertyLimit();
+        const propertyCount = propertyLimits?.currentCount || 0;
 
-    // Add table to PDF
-    autoTable(pdf, {
-      startY: yPosition,
-      head: [tableHeaders],
-      body: tableData,
-      theme: 'grid',
-      headStyles: {
-        fillColor: hexToRgbArray(reportData.brandColor || '#2563EB'),
-        textColor: 255,
-        fontStyle: 'bold'
-      },
-      styles: {
-        fontSize: 10,
-        cellPadding: 3,
-        overflow: 'linebreak'
-      },
-      columnStyles: {
-        0: { cellWidth: 60 },
-        1: { cellWidth: 20, halign: 'center' },
-        2: { cellWidth: 20, halign: 'center' },
-        3: { cellWidth: 20, halign: 'center' },
-        4: { cellWidth: 'auto' }
-      }
-    });
-    
-    // Update yPosition after table
-    yPosition = (pdf as any).lastAutoTable?.finalY + 15;
+        let completedInspections = 0;
+        let pendingInspections = 0;
+        let issuesDetected = 0;
+        let inspectionsByType = {
+          check_in: 0,
+          check_out: 0,
+          move_in: 0,
+          move_out: 0,
+        };
+        let issuesByValue = {
+          'Needs Repair': 0,
+          'Poor': 0,
+          'Damaged': 0,
+          'Missing': 0,
+        };
+        let propertiesByType: Record<string, number> = {};
+        let topPropertiesByInspections: Array<{ name: string; count: number }> = [];
+        let averageInspectionDuration = 0;
 
-    // Add photos section for this step if there are any photos
-    const sectionPhotos: Array<{
-      url: string;
-      label: string;
-      fileKey?: string;
-    }> = [];
+        if (!devModeEnabled()) {
+          const [completedResponse, pendingResponse, issuesResponse, inspectionTypesResponse] =
+            await Promise.all([
+              supabase.from('inspections').select('id', { count: 'exact' }).eq('status', 'completed'),
+              supabase.from('inspections').select('id', { count: 'exact' }).eq('status', 'in_progress'),
+              supabase.from('inspection_items').select('id', { count: 'exact' }).eq('marked_for_report', true),
+              supabase.from('inspections').select('inspection_type').eq('status', 'completed'),
+            ]);
 
-    // Collect all photos for this section
-    for (const item of step.items || []) {
-      const templateItem = item.template_items || item.templateItem;
-      if (!templateItem || templateItem.type === 'divider') continue;
-      
-      if (item.photo_urls && item.photo_urls.length > 0) {
-        console.log('Found photos for item:', templateItem.label, 'Count:', item.photo_urls.length);
-        for (const photoUrl of item.photo_urls) {
-          const fileKey = extractFileKeyFromUrl(photoUrl);
-          console.log('Photo URL:', photoUrl, 'Extracted file key:', fileKey);
-          sectionPhotos.push({
-            url: photoUrl,
-            label: templateItem.label,
-            fileKey: fileKey || undefined,
-          });
+          completedInspections = completedResponse.count || 0;
+          pendingInspections = pendingResponse.count || 0;
+          issuesDetected = issuesResponse.count || 0;
+
+          if (inspectionTypesResponse.data) {
+            inspectionTypesResponse.data.forEach((inspection: any) => {
+              const type = inspection.inspection_type;
+              if (type && (inspectionsByType as any)[type] !== undefined) {
+                (inspectionsByType as any)[type]++;
+              }
+            });
+          }
+
+          const { data: issueItems } = await supabase
+            .from('inspection_items')
+            .select('value')
+            .eq('marked_for_report', true)
+            .not('value', 'is', null);
+
+          if (issueItems) {
+            issueItems.forEach((item: any) => {
+              const value = item.value;
+              const bump = (k: keyof typeof issuesByValue) => (issuesByValue[k] = issuesByValue[k] + 1);
+              const checkStr = (s: string) => {
+                const v = s.toLowerCase();
+                if (v.includes('repair')) bump('Needs Repair');
+                else if (v.includes('poor') || v.includes('bad')) bump('Poor');
+                else if (v.includes('damage')) bump('Damaged');
+                else if (v.includes('missing') || v.includes('absent')) bump('Missing');
+              };
+              if (typeof value === 'string') checkStr(value);
+              if (Array.isArray(value)) value.forEach((v) => typeof v === 'string' && checkStr(v));
+            });
+          }
+
+          const { data: propertiesResponse } = await supabase.from('properties').select('type');
+          if (propertiesResponse) {
+            propertiesResponse.forEach((p: any) => {
+              const t = p.type;
+              if (t) propertiesByType[t] = (propertiesByType[t] || 0) + 1;
+            });
+          }
+
+          const { data: durationData } = await supabase
+            .from('inspections')
+            .select('duration_seconds')
+            .eq('status', 'completed')
+            .not('duration_seconds', 'is', null);
+
+          if (durationData && durationData.length > 0) {
+            const total = durationData.reduce((sum, i) => sum + (i.duration_seconds || 0), 0);
+            averageInspectionDuration = Math.round(total / durationData.length / 60);
+          }
+
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const { data: topProps } = await supabase
+            .from('inspections')
+            .select(
+              `
+              property_id,
+              properties ( name )
+            `
+            )
+            .eq('status', 'completed')
+            .gte('created_at', thirtyDaysAgo);
+
+          if (topProps) {
+            const counts: Record<string, number> = {};
+            topProps.forEach((i: any) => {
+              const name = i.properties?.name || 'Unknown Property';
+              counts[name] = (counts[name] || 0) + 1;
+            });
+            topPropertiesByInspections = Object.entries(counts)
+              .map(([name, count]) => ({ name, count }))
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 5);
+          }
+        } else {
+          // dev mode mock (kept minimal)
+          completedInspections = 8;
+          pendingInspections = 3;
+          issuesDetected = 5;
+          averageInspectionDuration = 42;
+          inspectionsByType = { check_in: 4, check_out: 4, move_in: 0, move_out: 0 };
+          issuesByValue = { 'Needs Repair': 2, 'Poor': 1, 'Damaged': 1, 'Missing': 1 };
+          propertiesByType = { apartment: 2, villa: 1, condo: 0 };
+          topPropertiesByInspections = [
+            { name: 'Oceanview Apartment 2B', count: 3 },
+            { name: 'Downtown Loft 5A', count: 2 },
+          ];
         }
-      }
-    }
 
-    // Add photos section if there are photos
-    if (sectionPhotos.length > 0) {
-      console.log('Adding photos section for step:', step.name, 'Photo count:', sectionPhotos.length);
-      
-      // Check if we need a new page for photos
-      if (yPosition > 200) {
-        pdf.addPage();
-        addHeader();
-        yPosition = 60;
-      }
-
-      // Photos section header
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`${step.name} - Photos`, 20, yPosition);
-      yPosition += 10;
-
-      // Display photos in 3 columns
-      const photosPerRow = 3;
-      const photoWidth = 50;
-      const photoHeight = 40;
-      const photoSpacing = 10;
-      const labelHeight = 8;
-      const startX = 20;
-      
-      console.log('Photo layout settings:', {
-        photosPerRow,
-        photoWidth,
-        photoHeight,
-        totalPhotos: sectionPhotos.length
-      });
-
-      for (let i = 0; i < sectionPhotos.length; i++) {
-        const photo = sectionPhotos[i];
-        const row = Math.floor(i / photosPerRow);
-        const col = i % photosPerRow;
-        
-        const photoX = startX + col * (photoWidth + photoSpacing);
-        const photoY = yPosition + row * (photoHeight + labelHeight + 15);
-
-        console.log(`Processing photo ${i + 1}/${sectionPhotos.length}:`, {
-          label: photo.label,
-          position: { x: photoX, y: photoY },
-          fileKey: photo.fileKey
+        setStats({
+          properties: propertyCount,
+          completedInspections,
+          pendingInspections,
+          issuesDetected,
+          averageInspectionDuration,
         });
 
-        // Check if we need a new page
-        if (photoY + photoHeight + labelHeight > pdf.internal.pageSize.height - 30) {
-          console.log('Adding new page for photo');
-          pdf.addPage();
-          addHeader();
-          yPosition = 60;
-          
-          // Recalculate positions for new page
-          const newRow = 0;
-          const newCol = i % photosPerRow;
-          const newPhotoX = startX + newCol * (photoWidth + photoSpacing);
-          const newPhotoY = yPosition + newRow * (photoHeight + labelHeight + 15);
-          
-          await addPhotoToPdf(pdf, photo, newPhotoX, newPhotoY, photoWidth, photoHeight);
-          
-          // Add label under photo
-          pdf.setFontSize(8);
-          pdf.setFont('helvetica', 'normal');
-          const labelLines = pdf.splitTextToSize(photo.label, photoWidth);
-          pdf.text(labelLines, newPhotoX + photoWidth/2, newPhotoY + photoHeight + 5, { align: 'center' });
-        } else {
-          await addPhotoToPdf(pdf, photo, photoX, photoY, photoWidth, photoHeight);
-          
-          // Add label under photo
-          pdf.setFontSize(8);
-          pdf.setFont('helvetica', 'normal');
-          const labelLines = pdf.splitTextToSize(photo.label, photoWidth);
-          pdf.text(labelLines, photoX + photoWidth/2, photoY + photoHeight + 5, { align: 'center' });
-        }
+        setChartData({
+          inspectionsByType,
+          issuesByValue,
+          propertiesByType,
+          topPropertiesByInspections,
+        });
+      } catch (err) {
+        console.error('Error loading dashboard data:', err);
+        setStats({
+          properties: 0,
+          completedInspections: 0,
+          pendingInspections: 0,
+          issuesDetected: 0,
+          averageInspectionDuration: 0,
+        });
+        setChartData({
+          inspectionsByType: { check_in: 0, check_out: 0, move_in: 0, move_out: 0 },
+          issuesByValue: { 'Needs Repair': 0, 'Poor': 0, 'Damaged': 0, 'Missing': 0 },
+          propertiesByType: {},
+          topPropertiesByInspections: [],
+        });
+      } finally {
+        setLoading(false);
       }
+    };
 
-      // Update yPosition to account for all photo rows
-      const totalRows = Math.ceil(sectionPhotos.length / photosPerRow);
-      yPosition += totalRows * (photoHeight + labelHeight + 15) + 10;
-      console.log('Photos section completed, new yPosition:', yPosition);
-    } else {
-      console.log('No photos found for step:', step.name);
-    }
+    loadDashboardData();
+  }, [search]);
 
-    yPosition += 10; // Space between sections
-  }
-
-  // Signatures Section
-  if (yPosition > 200) {
-    pdf.addPage();
-    addHeader();
-    yPosition = 60;
-  }
-
-  pdf.setFontSize(18);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Signatures', 20, yPosition);
-  yPosition += 20;
-
-  // Inspector signature
-  if (reportData.inspectorSignature) {
-    try {
-      pdf.addImage(reportData.inspectorSignature, 'PNG', 20, yPosition, 80, 40);
-    } catch (error) {
-      console.error('Error adding inspector signature to PDF:', error);
-    }
-  }
-  
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(`Inspector: ${reportData.inspectorName || 'N/A'}`, 20, yPosition + 45);
-  pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPosition + 52);
-
-  // Primary contact signature (if present)
-  if (reportData.primaryContactSignature) {
-    try {
-      pdf.addImage(reportData.primaryContactSignature, 'PNG', 110, yPosition, 80, 40);
-    } catch (error) {
-      console.error('Error adding primary contact signature to PDF:', error);
-    }
-    
-    pdf.text(`Primary Contact: ${reportData.primaryContactName || 'N/A'}`, 110, yPosition + 45);
-    pdf.text(`Date: ${new Date().toLocaleDateString()}`, 110, yPosition + 52);
-  }
-
-  // Add page numbers to all pages
-  addPageNumbers(pdf);
-
-  return pdf.output('blob');
-}
-
-// Helper function to add a photo to the PDF
-async function addPhotoToPdf(
-  pdf: any, 
-  photo: { url: string; label: string; fileKey?: string }, 
-  x: number, 
-  y: number, 
-  width: number, 
-  height: number
-) {
-  try {
-    let imageDataUrl: string | null = null;
-
-    // Try to get signed URL if we have a file key
-    if (photo.fileKey) {
+  // Load storage usage (from your storage API) for storage chart
+  useEffect(() => {
+    (async () => {
       try {
-        const signedUrl = await getSignedUrlForFile(photo.fileKey);
-        if (signedUrl) {
-          imageDataUrl = await loadImageAsDataUrl(signedUrl);
-        }
-      } catch (error) {
-        console.error('Error getting signed URL for photo:', error);
+        const u = await getStorageUsage();
+        setStorage(u);
+      } catch (e) {
+        console.error('Failed to load storage usage', e);
+        setStorage(null);
       }
-    }
+    })();
+  }, []);
 
-    // Fallback to original URL if signed URL failed
-    if (!imageDataUrl) {
-      try {
-        imageDataUrl = await loadImageAsDataUrl(photo.url);
-      } catch (error) {
-        console.error('Error loading photo from original URL:', error);
-      }
-    }
+  // --- Derived / chart prep ---
+  const tierLimits = TIER_LIMITS[company?.tier || 'starter'];
+  const totalInspections = stats.completedInspections + stats.pendingInspections;
 
-    if (imageDataUrl) {
-      // Add photo to PDF
-      pdf.addImage(imageDataUrl, 'JPEG', x, y, width, height);
-      
-      // Add clickable link to original image
-      if (photo.fileKey) {
-        try {
-          const signedUrl = await getSignedUrlForFile(photo.fileKey);
-          if (signedUrl) {
-            pdf.link(x, y, width, height, { url: signedUrl });
-          }
-        } catch (error) {
-          console.error('Error creating photo link:', error);
-        }
-      }
-    } else {
-      // Fallback: draw placeholder rectangle
-      pdf.setDrawColor('#CCCCCC');
-      pdf.setFillColor('#F5F5F5');
-      pdf.rect(x, y, width, height, 'FD');
-      
-      // Add "Image not available" text
-      pdf.setFontSize(8);
-      pdf.setTextColor('#666666');
-      pdf.text('Image not', x + width/2, y + height/2 - 2, { align: 'center' });
-      pdf.text('available', x + width/2, y + height/2 + 2, { align: 'center' });
-      pdf.setTextColor('#000000');
-    }
-  } catch (error) {
-    console.error('Error adding photo to PDF:', error);
-    
-    // Draw error placeholder
-    pdf.setDrawColor('#FF0000');
-    pdf.setFillColor('#FFE5E5');
-    pdf.rect(x, y, width, height, 'FD');
-    
-    pdf.setFontSize(8);
-    pdf.setTextColor('#FF0000');
-    pdf.text('Error loading', x + width/2, y + height/2 - 2, { align: 'center' });
-    pdf.text('image', x + width/2, y + height/2 + 2, { align: 'center' });
-    pdf.setTextColor('#000000');
+  const propertiesByTypeEntries = Object.entries(chartData.propertiesByType);
+  const hasPropertiesData = propertiesByTypeEntries.length > 0;
+
+  // storage doughnut
+  const storageUsed = storage?.currentUsage ?? 0;
+  const storageQuota = storage?.quota ?? 1;
+  const storageFree = Math.max(storageQuota - storageUsed, 0);
+  const storageDonut = {
+    labels: ['Used', 'Free'],
+    datasets: [
+      {
+        data: [storageUsed, storageFree],
+        backgroundColor: ['#2f66ff', '#E5E7EB'],
+        borderColor: ['#2f66ff', '#E5E7EB'],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  // property portfolio doughnut
+  const portfolioDonut = {
+    labels: propertiesByTypeEntries.map(([type]) =>
+      type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')
+    ),
+    datasets: [
+      {
+        data: propertiesByTypeEntries.map(([, count]) => count),
+        backgroundColor: ['#2f66ff', '#5f86ff', '#93b0ff', '#c8d4ff', '#a6a6ff', '#8ad1ff'],
+        borderColor: ['#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff'],
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const donutOptions: ChartOptions<'doughnut'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '68%',
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: true },
+    },
+  };
+
+  // Loading
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="py-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
-}
 
-// Helper function to extract file key from URL
-function extractFileKeyFromUrl(url: string): string | null {
-  try {
-    console.log('Extracting file key from URL:', url);
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/');
-    console.log('URL path parts:', pathParts);
+  // Trial days remaining
+  const trialDaysRemaining = company?.trialEndsAt
+    ? Math.max(
+        0,
+        Math.ceil(
+          (new Date(company.trialEndsAt).getTime() - new Date().getTime()) /
+            (1000 * 60 * 60 * 24)
+        )
+      )
+    : 0;
 
-    // For MinIO URLs like: https://minio.example.com/bucket-name/company/inspections/...
-    // The file key is everything after the bucket name
-    let fileKey = null;
-    
-    // Try different patterns to extract file key
-    if (pathParts.length > 2) {
-      // Skip the first empty element and bucket name, take the rest
-      fileKey = pathParts.slice(2).join('/');
-    } else if (pathParts.length > 1) {
-      fileKey = pathParts.slice(1).join('/');
-    }
-    
-    console.log('Extracted file key:', fileKey);
-    return fileKey;
-  } catch (error) {
-    console.error('Error extracting file key from URL:', error);
-    return null;
-  }
-}
+  const handleUpgradeClick = () => {
+    if (requiresPayment) navigate('/subscription-required');
+    else navigate('/dashboard/admin/subscription');
+  };
 
-// Helper function to format duration from seconds
-function formatDuration(durationSeconds: number): string {
-  if (!durationSeconds || durationSeconds <= 0) {
-    return 'N/A';
-  }
-  
-  const hours = Math.floor(durationSeconds / 3600);
-  const minutes = Math.floor((durationSeconds % 3600) / 60);
-  
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  } else {
-    return `${minutes}m`;
-  }
-}
+  return (
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Search on top */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search properties, templates, reports..."
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+        </div>
+      </div>
 
-async function saveReportRecord(reportData: any, reportUrl: string, fileKey: string) {
-  try {
-    const { error } = await supabase
-      .from('reports')
-      .insert([{
-        inspection_id: reportData.inspection.id,
-        report_url: reportUrl,
-        file_key: fileKey,
-        report_type: 'inspection',
-        generated_at: new Date().toISOString(),
-      }]);
+      {/* Search Results */}
+      {search.trim() && (
+        <div className="mb-6">
+          {searchLoading ? (
+            <div className="bg-white rounded-xl shadow p-6 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Searching...</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Search Results for "{search}"
+              </h2>
 
-    if (error) {
-      console.error('Error saving report record:', error);
-      throw error;
-    }
+              {/* Properties Results */}
+              {searchedProperties.length > 0 && (
+                <div className="bg-white rounded-xl shadow p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <Building2 className="h-5 w-5 mr-2 text-primary-600" />
+                    Properties ({searchedProperties.length})
+                  </h3>
+                  <div className="space-y-3">
+                    {searchedProperties.slice(0, 5).map((property) => (
+                      <Link
+                        key={property.id}
+                        to={`/dashboard/properties/${property.id}`}
+                        className="block p-3 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{property.name}</h4>
+                            <p className="text-sm text-gray-500">{property.address}</p>
+                          </div>
+                          <span className="text-xs text-gray-400 capitalize">{property.type}</span>
+                        </div>
+                      </Link>
+                    ))}
+                    {searchedProperties.length > 5 && (
+                      <Link
+                        to="/dashboard/properties"
+                        className="block text-center p-2 text-sm text-primary-600 hover:text-primary-700"
+                      >
+                        View all {searchedProperties.length} properties →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
 
-    console.log('Report record saved successfully');
-  } catch (error) {
-    console.error('Error in saveReportRecord:', error);
-    throw error;
-  }
-}
+              {/* Templates Results */}
+              {searchedTemplates.length > 0 && (
+                <div className="bg-white rounded-xl shadow p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <LayoutTemplate className="h-5 w-5 mr-2 text-primary-600" />
+                    Templates ({searchedTemplates.length})
+                  </h3>
+                  <div className="space-y-3">
+                    {searchedTemplates.slice(0, 5).map((template) => (
+                      <Link
+                        key={template.id}
+                        to={`/dashboard/templates/${template.id}`}
+                        className="block p-3 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+                      >
+                        <div>
+                          <h4 className="font-medium text-gray-900">{template.name}</h4>
+                          {template.description && (
+                            <p className="text-sm text-gray-500">{template.description}</p>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                    {searchedTemplates.length > 5 && (
+                      <Link
+                        to="/dashboard/templates"
+                        className="block text-center p-2 text-sm text-primary-600 hover:text-primary-700"
+                      >
+                        View all {searchedTemplates.length} templates →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
 
-// Helper function to add watermark to PDF page
-function addWatermarkToPage(pdf: any, companyName: string = 'scopoStay') {
-  try {
-    // Save current state
-    const currentFontSize = pdf.internal.getFontSize();
-    const currentTextColor = pdf.getTextColor();
-    
-    // Set watermark properties
-    pdf.setFontSize(50);
-    pdf.setTextColor(200, 200, 200); // Light gray
-    pdf.setFont('helvetica', 'bold');
-    
-    // Calculate center position
-    const pageWidth = pdf.internal.pageSize.width;
-    const pageHeight = pdf.internal.pageSize.height;
-    const centerX = pageWidth / 2;
-    const centerY = pageHeight / 2;
-    
-    // Add rotated watermark text
-    pdf.text(`Generated by ${companyName} • Professional Property Inspection Platform`, centerX, centerY, {
-      angle: 45,
-      align: 'center'
-    });
-    
-    // Restore previous state
-    pdf.setFontSize(currentFontSize);
-    pdf.setTextColor(currentTextColor);
-  } catch (error) {
-    console.error('Error adding watermark to PDF page:', error);
-    // Continue without watermark if there's an error
-  }
-}
+              {/* Reports Results */}
+              {searchedReports.length > 0 && (
+                <div className="bg-white rounded-xl shadow p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <FileText className="h-5 w-5 mr-2 text-primary-600" />
+                    Reports ({searchedReports.length})
+                  </h3>
+                  <div className="space-y-3">
+                    {searchedReports.slice(0, 5).map((report) => (
+                      <div
+                        key={report.id}
+                        className="block p-3 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{report.propertyName}</h4>
+                            <p className="text-sm text-gray-500">
+                              {report.inspectionType.replace('_', '-')} • {new Date(report.generatedAt).toLocaleDateString()}
+                            </p>
+                            {report.primaryContactName && (
+                              <p className="text-xs text-gray-400">Contact: {report.primaryContactName}</p>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-400">
+                            {report.inspectionType === 'check_in' ? 'Check-In' : 'Check-Out'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {searchedReports.length > 5 && (
+                      <Link
+                        to="/dashboard/reports"
+                        className="block text-center p-2 text-sm text-primary-600 hover:text-primary-700"
+                      >
+                        View all {searchedReports.length} reports →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
 
-// Helper function to add page numbers to all pages
-function addPageNumbers(pdf: any) {
-  try {
-    const totalPages = pdf.internal.getNumberOfPages();
-    
-    for (let i = 1; i <= totalPages; i++) {
-      pdf.setPage(i);
-      
-      // Save current state
-      const currentFontSize = pdf.internal.getFontSize();
-      
-      // Set page number properties
-      pdf.setFontSize(10);
-      pdf.setTextColor('#666666');
-      
-      // Add page number at bottom left
-      pdf.text(
-        `Page ${i} of ${totalPages}`,
-        20, // 20mm from left edge
-        pdf.internal.pageSize.height - 10 // 10mm from bottom
-      );
-      
-      // Restore font size
-      pdf.setFontSize(currentFontSize);
-      pdf.setTextColor('#000000');
-    }
-  } catch (error) {
-    console.error('Error adding page numbers to PDF:', error);
-    // Continue without page numbers if there's an error
-  }
-}
+              {/* No Results */}
+              {searchedProperties.length === 0 && searchedTemplates.length === 0 && searchedReports.length === 0 && !searchLoading && (
+                <div className="bg-white rounded-xl shadow p-8 text-center">
+                  <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
+                  <p className="text-gray-500">
+                    Try adjusting your search terms or browse by category.
+                  </p>
+                  <div className="mt-4 flex justify-center space-x-4">
+                    <Link to="/dashboard/properties">
+                      <Button variant="outline" size="sm">Browse Properties</Button>
+                    </Link>
+                    <Link to="/dashboard/templates">
+                      <Button variant="outline" size="sm">Browse Templates</Button>
+                    </Link>
+                    <Link to="/dashboard/reports">
+                      <Button variant="outline" size="sm">Browse Reports</Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
-// Helper function to load image as data URL
-async function loadImageAsDataUrl(imageUrl: string): Promise<string | null> {
-  try {
-    // Handle relative URLs by converting to absolute
-    const absoluteUrl = imageUrl.startsWith('/') 
-      ? `${window.location.origin}${imageUrl}`
-      : imageUrl;
-    
-    const response = await fetch(absoluteUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status}`);
-    }
-    
-    const blob = await response.blob();
-    
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error('Failed to read image blob'));
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.error('Error loading image as data URL:', error);
-    return null;
-  }
-}
+      {/* Show dashboard stats only when not searching */}
+      {!search.trim() && (
+        <>
+      {/* Trial block (kept) */}
+      {!isTrialExpired && company?.subscription_status === 'trialing' && (
+        <div className="mb-5 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg p-4 border border-primary-200">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-primary-900">Free Trial Active</h3>
+              <p className="text-xs text-primary-700">
+                {trialDaysRemaining} days remaining • Ends{' '}
+                {company?.trialEndsAt ? new Date(company.trialEndsAt).toLocaleDateString() : 'soon'}
+              </p>
+            </div>
+            <Button onClick={handleUpgradeClick} className="bg-primary-600 hover:bg-primary-700">
+              Upgrade Now
+            </Button>
+          </div>
+        </div>
+      )}
 
-// Helper function to convert hex color to RGB
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : { r: 37, g: 99, b: 235 }; // Default blue
-}
+      {/* Usage Statistics – 4 medium squares */}
+      <div className="mb-5">
+        <h2 className="text-base font-semibold text-gray-900 mb-3">Usage Statistics</h2>
 
-// Helper function to convert hex color to RGB array for jsPDF
-function hexToRgbArray(hex: string): [number, number, number] {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? [
-    parseInt(result[1], 16),
-    parseInt(result[2], 16),
-    parseInt(result[3], 16)
-  ] : [37, 99, 235]; // Default blue
-}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Properties */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl shadow p-4 aspect-square flex flex-col justify-between"
+          >
+            <div className="text-gray-500 text-xs">Properties</div>
+            <div className="text-3xl font-bold tracking-tight">
+              {stats.properties} / {TIER_LIMITS[company?.tier || 'starter'].properties === Infinity ? '∞' : TIER_LIMITS[company?.tier || 'starter'].properties}
+            </div>
+          </motion.div>
+
+          {/* Completed */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl shadow p-4 aspect-square flex flex-col justify-between"
+          >
+            <div className="text-gray-500 text-xs">
+              <span className="sm:hidden">Completed</span>
+              <span className="hidden sm:inline">Completed Inspections</span>
+            </div>
+            <div className="text-3xl font-bold tracking-tight">{stats.completedInspections}</div>
+          </motion.div>
+
+          {/* Flagged */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl shadow p-4 aspect-square flex flex-col justify-between"
+          >
+            <div className="text-gray-500 text-xs">Flagged Items</div>
+            <div className="text-3xl font-bold tracking-tight">{stats.issuesDetected}</div>
+          </motion.div>
+
+          {/* Inspections (Completed + Pending) */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl shadow p-4 aspect-square flex flex-col justify-between"
+          >
+            <div className="text-gray-500 text-xs">Inspections</div>
+            <div className="text-3xl font-bold tracking-tight">{totalInspections}</div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* 2 bigger squares (charts) – side by side on mobile & desktop */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Storage */}
+        <div className="bg-white rounded-xl shadow p-4 aspect-square relative overflow-hidden">
+          <div className="text-gray-500 text-xs mb-2">Storage</div>
+          <div className="absolute inset-0 p-6">
+            <Doughnut data={storageDonut} options={donutOptions} />
+          </div>
+          {/* center label */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${overLimit ? 'text-red-600' : nearLimit ? 'text-amber-600' : 'text-gray-900'}`}>
+                {Math.round(usagePct)}%
+              </div>
+              <div className="text-xs text-gray-500">
+                {formatBytes(storageUsed)} / {formatBytes(storageQuota)}
+              </div>
+            </div>
+          </div>
+
+          {/* storage warning */}
+          {(nearLimit || overLimit) && (
+            <div className={`absolute left-3 right-3 bottom-3 rounded-md px-2 py-1 text-xs
+                ${overLimit ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+              {overLimit ? 'Storage limit exceeded. Upgrade to continue uploading.' : 'Storage nearly full. Consider upgrading.'}
+            </div>
+          )}
+        </div>
+
+        {/* Property Portfolio */}
+        <div className="bg-white rounded-xl shadow p-4 aspect-square relative overflow-hidden">
+          <div className="text-gray-500 text-xs mb-2">Property Portfolio</div>
+          {hasPropertiesData ? (
+            <div className="absolute inset-0 p-6">
+              <Doughnut
+                data={portfolioDonut}
+                options={donutOptions}
+              />
+            </div>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
+              Add properties to see portfolio breakdown
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Empty-state CTA (kept, shows when there’s no data) */}
+      {stats.properties === 0 && (
+        <div className="mt-5 bg-white rounded-xl shadow p-6">
+          <div className="text-center">
+            <h3 className="text-base font-semibold text-gray-900">No data yet</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Start by adding properties and completing inspections to see your analytics.
+            </p>
+            <div className="mt-4">
+              <Link to="/dashboard/properties">
+                <Button>Add Your First Property</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DashboardPage;
