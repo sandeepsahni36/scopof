@@ -456,7 +456,7 @@ function buildItemHierarchy(flatItems: any[]): TemplateItem[] {
 }
 
 export async function createTemplate(
-  templateData: { name: string; description?: string; categoryId?: string | null },
+  templateData: { name: string; description?: string; categoryId?: string | null; color?: string },
   items: Array<{
     id: string;
     type: TemplateItemType;
@@ -533,6 +533,7 @@ export async function createTemplate(
         name: templateData.name,
         category_id: templateData.categoryId || null,
         description: templateData.description,
+        color: templateData.color,
       }])
       .select()
       .single();
@@ -601,7 +602,7 @@ export async function createTemplate(
 
 export async function updateTemplate(
   id: string,
-  templateData: { name: string; description?: string; categoryId?: string | null },
+  templateData: { name: string; description?: string; categoryId?: string | null; color?: string },
   items: Array<{
     id: string;
     type: TemplateItemType;
@@ -673,6 +674,7 @@ export async function updateTemplate(
         name: templateData.name,
         category_id: templateData.categoryId || null,
         description: templateData.description,
+        color: templateData.color,
       })
       .eq('id', id)
       .select()

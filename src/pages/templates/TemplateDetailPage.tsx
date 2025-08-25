@@ -21,6 +21,7 @@ import {
   TemplateItemType,
   RatingOption,
   RATING_COLORS,
+  TEMPLATE_COLORS,
   TemplateCategory,
 } from '../../types';
 import {
@@ -36,6 +37,7 @@ type FormValues = {
   name: string;
   description: string;
   categoryId: string;
+  color: string;
   items: {
     id: string;
     type: TemplateItemType;
@@ -69,6 +71,7 @@ const TemplateDetailPage = () => {
       name: '',
       description: '',
       categoryId: '',
+      color: TEMPLATE_COLORS[0],
       items: [],
     },
   });
@@ -98,6 +101,7 @@ const TemplateDetailPage = () => {
           setValue('name', templateData.template.name);
           setValue('description', templateData.template.description || '');
           setValue('categoryId', templateData.template.category_id || '');
+          setValue('color', templateData.template.color || TEMPLATE_COLORS[0]);
 
           const formItems = templateData.items.map((item) => ({
             id: item.id || uuidv4(),
@@ -132,6 +136,7 @@ const TemplateDetailPage = () => {
         name: data.name,
         description: data.description || undefined,
         categoryId: data.categoryId || undefined,
+        color: data.color,
       };
 
       const apiItems = data.items.map((item, index) => ({
@@ -267,7 +272,7 @@ const TemplateDetailPage = () => {
         {/* Full-width Template Information */}
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Template Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Input
               label="Template Name"
               error={errors.name?.message}
@@ -289,7 +294,25 @@ const TemplateDetailPage = () => {
               </select>
             </div>
 
-            <div className="md:col-span-1 md:col-start-1 md:row-start-2 md:col-end-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+              <div className="flex space-x-2">
+                {TEMPLATE_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setValue('color', color)}
+                    className={`w-8 h-8 rounded border-2 transition-all ${
+                      watch('color') === color ? 'border-gray-800 scale-110' : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="md:col-span-1 md:col-start-1 md:row-start-2 md:col-end-5">
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea
                 {...register('description')}

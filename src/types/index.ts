@@ -95,6 +95,7 @@ export type Template = {
   categoryId: string | null;
   name: string;
   description: string | null;
+  color?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -115,6 +116,14 @@ export const RATING_COLORS = {
   orange: '#F97316',
   blue: '#3B82F6',
 } as const;
+
+export const TEMPLATE_COLORS = [
+  '#3B82F6', // Blue
+  '#EAB308', // Yellow
+  '#22C55E', // Green
+  '#F97316', // Orange
+  '#EF4444', // Red
+] as const;
 
 export type RatingColorKey = keyof typeof RATING_COLORS;
 export type TemplateItem = {
