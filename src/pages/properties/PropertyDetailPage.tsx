@@ -10,6 +10,8 @@ import { getProperty, updateProperty } from '../../lib/properties';
 import { getTemplates } from '../../lib/templates';
 import { getPropertyChecklist, createPropertyChecklist, updatePropertyChecklist, deletePropertyChecklist, reorderChecklistTemplates, PropertyChecklist } from '../../lib/propertyChecklists';
 import { getInspectionsForProperty } from '../../lib/inspections';
+import { getSignedUrlForFile } from '../../lib/storage';
+import { supabase } from '../../lib/supabase';
 import PropertyForm, { PropertyFormData } from '../../components/properties/PropertyForm';
 import { toast } from 'sonner';
 
@@ -32,6 +34,7 @@ const PropertyDetailPage = () => {
   const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
+  const [viewingReports, setViewingReports] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (id) {
@@ -309,6 +312,43 @@ const PropertyDetailPage = () => {
     } catch (error: any) {
       console.error('Error deleting property:', error);
       toast.error('Failed to delete property');
+    }
+  };
+
+  const handleViewReport = async (inspectionId: string) => {
+    try {
+      setViewingReports(prev => new Set(prev).add(inspectionId));
+      
+      // Get the report for this inspection
+      const { data: report, error } = await supabase
+        .from('reports')
+        .select('file_key')
+        .eq('inspection_id', inspectionId)
+        .single();
+      
+      if (error || !report?.file_key) {
+        toast.error('Report not found for this inspection');
+        return;
+      }
+      
+      // Get signed URL from storage API
+      const signedUrl = await getSignedUrlForFile(report.file_key);
+      
+      if (!signedUrl) {
+        throw new Error('Failed to generate view URL');
+      }
+      
+      // Open in new window
+      window.open(signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (error: any) {
+      console.error('Error viewing report:', error);
+      toast.error(error.message || 'Failed to view report');
+    } finally {
+      setViewingReports(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(inspectionId);
+        return newSet;
+      });
     }
   };
 
@@ -834,22 +874,23 @@ const PropertyDetailPage = () => {
                                     </Link>
                                   )}
                                   {inspection.status === 'completed' && (
-                                    <Link to={`/dashboard/inspections/${inspection.id}`}>
                                       <Button
                                         variant="ghost"
                                         size="sm"
+                                        isLoading={viewingReports.has(inspection.id)}
+                                        disabled={viewingReports.has(inspection.id) || deletingInspections.has(inspection.id)}
                                         leftIcon={<Eye size={16} />}
+                                        onClick={() => handleViewReport(inspection.id)}
                                         className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                       >
                                         View
                                       </Button>
-                                    </Link>
                                   )}
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     isLoading={deletingInspections.has(inspection.id)}
-                                    disabled={deletingInspections.has(inspection.id)}
+                                    disabled={deletingInspections.has(inspection.id) || viewingReports.has(inspection.id)}
                                     leftIcon={<Trash2 size={16} />}
                                     onClick={() => handleDeleteInspection(inspection.id)}
                                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
