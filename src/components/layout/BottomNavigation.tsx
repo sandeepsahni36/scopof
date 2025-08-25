@@ -1,16 +1,21 @@
 // src/components/layout/BottomNavigation.tsx
 import React, { useEffect, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Home, Building2, LayoutTemplate, FileText, Plus } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import type { NavItem } from "../../types";
 
+// Tab items (5 columns layout with center reserved for FAB)
 const mainNavItems: NavItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: "Home" },
+  { title: "Home", href: "/dashboard", icon: "Home" },
   { title: "Templates", href: "/dashboard/templates", icon: "LayoutTemplate" },
   { title: "Properties", href: "/dashboard/properties", icon: "Building2" },
   { title: "Reports", href: "/dashboard/reports", icon: "FileText" },
 ];
+
+// 🔗 Adjust these to your actual creation routes if different
+const ADD_PROPERTY_ROUTE = "/dashboard/properties/new";
+const ADD_TEMPLATE_ROUTE = "/dashboard/templates/new";
 
 const IconMap: Record<string, React.ReactNode> = {
   Home: <Home size={26} />,
@@ -20,18 +25,19 @@ const IconMap: Record<string, React.ReactNode> = {
 };
 
 const BottomNavigation: React.FC = () => {
+  const navigate = useNavigate();
   const { requiresPayment, needsPaymentSetup } = useAuthStore();
+
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside/Esc
+  // Close the menu on outside click / Esc
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (!menuRef.current) return;
       if (!menuRef.current.contains(e.target as Node)) setOpen(false);
     };
     const onEsc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-
     if (open) {
       document.addEventListener("mousedown", onDocClick);
       document.addEventListener("keydown", onEsc);
@@ -41,6 +47,14 @@ const BottomNavigation: React.FC = () => {
       document.removeEventListener("keydown", onEsc);
     };
   }, [open]);
+
+  const gateOr = (path: string) => {
+    if (requiresPayment || needsPaymentSetup) {
+      navigate("/subscription-required");
+    } else {
+      navigate(path);
+    }
+  };
 
   const NavBtn = ({
     to,
@@ -61,7 +75,7 @@ const BottomNavigation: React.FC = () => {
       onClick={(e) => {
         if ((requiresPayment || needsPaymentSetup) && !to.includes("/admin/settings")) {
           e.preventDefault();
-          window.location.href = "/subscription-required";
+          navigate("/subscription-required");
         }
       }}
       end={to === "/dashboard"}
@@ -73,22 +87,22 @@ const BottomNavigation: React.FC = () => {
 
   return (
     <div className="md:hidden fixed inset-x-0 bottom-0 z-[60] pointer-events-none">
-      {/* Dimmer under menu (but above page) */}
+      {/* Scrim (above page, below menu) */}
       {open && (
         <div
-          className="pointer-events-auto fixed inset-0 z-[50] bg-black/20 backdrop-blur-[1px]"
+          className="pointer-events-auto fixed inset-0 z-[58] bg-black/20 backdrop-blur-[1px]"
           onClick={() => setOpen(false)}
         />
       )}
 
       {/* Bar */}
-      <div className="relative pointer-events-none z-[55]">
+      <div className="relative pointer-events-none z-[59]">
         <nav
           className="pointer-events-auto bg-white border-t border-gray-200
                      shadow-[0_-10px_28px_rgba(0,0,0,.06)]
-                     px-6 pt-2 pb-[max(14px,env(safe-area-inset-bottom))] w-full"
+                     px-6 pt-2 pb-[max(14px,env(safe-area-inset-bottom))] w-full rounded-t-2xl"
         >
-          <div className="grid grid-cols-5 items-center text-gray-700">
+          <div className="grid grid-cols-5 items-center">
             <div className="col-span-1 flex justify-center">
               <NavBtn to="/dashboard" icon={IconMap.Home} title="Home" />
             </div>
@@ -96,7 +110,7 @@ const BottomNavigation: React.FC = () => {
               <NavBtn to="/dashboard/templates" icon={IconMap.LayoutTemplate} title="Templates" />
             </div>
 
-            {/* center column kept empty; FAB sits above it */}
+            {/* center spacer for FAB */}
             <div className="col-span-1" />
 
             <div className="col-span-1 flex justify-center">
@@ -122,14 +136,15 @@ const BottomNavigation: React.FC = () => {
           <Plus size={32} className="text-white" />
         </button>
 
-        {/* Menu */}
+        {/* Menu (now ABOVE the FAB) */}
         <div
           id="fab-menu"
           ref={menuRef}
           className={`pointer-events-auto absolute left-1/2 -translate-x-1/2
-                      bottom-[86px] w-[92%] max-w-[420px] z-[59]
+                      bottom-[120px] w-[92%] max-w-[420px] z-[70]
                       transition-all duration-150
                       ${open ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}
+          role="menu"
           aria-hidden={!open}
         >
           <div className="rounded-2xl bg-white shadow-[0_18px_40px_rgba(0,0,0,.12)]
@@ -138,9 +153,10 @@ const BottomNavigation: React.FC = () => {
               <button
                 className="w-full text-left px-4 py-3 text-sm flex items-center gap-3 active:bg-gray-50"
                 onClick={() => {
-                  console.log("Add Property");
                   setOpen(false);
+                  gateOr(ADD_PROPERTY_ROUTE);
                 }}
+                role="menuitem"
               >
                 <Building2 size={18} className="text-primary-600" />
                 <span className="font-medium">Add Property</span>
@@ -148,22 +164,13 @@ const BottomNavigation: React.FC = () => {
               <button
                 className="w-full text-left px-4 py-3 text-sm flex items-center gap-3 active:bg-gray-50"
                 onClick={() => {
-                  console.log("Start Inspection");
                   setOpen(false);
+                  gateOr(ADD_TEMPLATE_ROUTE);
                 }}
+                role="menuitem"
               >
                 <LayoutTemplate size={18} className="text-primary-600" />
-                <span className="font-medium">Start Inspection</span>
-              </button>
-              <button
-                className="w-full text-left px-4 py-3 text-sm flex items-center gap-3 active:bg-gray-50"
-                onClick={() => {
-                  console.log("Create Template");
-                  setOpen(false);
-                }}
-              >
-                <FileText size={18} className="text-primary-600" />
-                <span className="font-medium">Create Template</span>
+                <span className="font-medium">Add Template</span>
               </button>
             </div>
           </div>
