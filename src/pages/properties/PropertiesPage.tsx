@@ -7,6 +7,7 @@ import { getProperties, createProperty, updateProperty, deleteProperty, checkPro
 import PropertyCard from '../../components/properties/PropertyCard';
 import PropertyForm, { PropertyFormData } from '../../components/properties/PropertyForm';
 import { toast } from 'sonner';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 interface Filters {
   type: string;
@@ -30,20 +31,23 @@ function PropertiesPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [propertyLimits, setPropertyLimits] = useState<any>(null);
 
+  // for FAB routing/state triggers
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+
   useEffect(() => {
     loadProperties();
     if (isAdmin) {
       loadPropertyLimits();
     }
-  }, [searchTerm, filters]);
+  }, [searchTerm, filters, isAdmin]);
 
   const loadProperties = async () => {
     try {
       setLoading(true);
       const data = await getProperties(searchTerm, filters);
-      if (data) {
-        setProperties(data);
-      }
+      if (data) setProperties(data);
     } catch (error: any) {
       console.error('Error loading properties:', error);
       toast.error('Failed to load properties');
@@ -66,12 +70,10 @@ function PropertiesPage() {
       toast.error('Only admins can add properties');
       return;
     }
-
     if (propertyLimits && !propertyLimits.canCreate) {
       toast.error(`Property limit reached (${propertyLimits.limit}). Please upgrade your plan to add more properties.`);
       return;
     }
-
     setEditingProperty(null);
     setShowPropertyForm(true);
   };
@@ -81,7 +83,6 @@ function PropertiesPage() {
       toast.error('Only admins can edit properties');
       return;
     }
-
     setEditingProperty(property);
     setShowPropertyForm(true);
   };
@@ -91,7 +92,6 @@ function PropertiesPage() {
       toast.error('Only admins can delete properties');
       return;
     }
-
     if (window.confirm(`Are you sure you want to delete "${property.name}"? This action cannot be undone.`)) {
       try {
         const success = await deleteProperty(property.id);
@@ -110,22 +110,16 @@ function PropertiesPage() {
   const handleFormSubmit = async (data: PropertyFormData) => {
     try {
       setFormLoading(true);
-
       if (editingProperty) {
         const updatedProperty = await updateProperty(editingProperty.id, data);
-        if (updatedProperty) {
-          toast.success('Property updated successfully');
-        }
+        if (updatedProperty) toast.success('Property updated successfully');
       } else {
         const newProperty = await createProperty({
           ...data,
-          companyId: '', // This will be set by the backend
+          companyId: '', // backend sets this
         });
-        if (newProperty) {
-          toast.success('Property added successfully');
-        }
+        if (newProperty) toast.success('Property added successfully');
       }
-
       setShowPropertyForm(false);
       setEditingProperty(null);
       loadProperties();
@@ -143,15 +137,47 @@ function PropertiesPage() {
     setEditingProperty(null);
   };
 
+  // ---------- FAB hooks: open the SAME modal ----------
+  // 1) CustomEvent from FAB (window.dispatchEvent(new CustomEvent('open:add-property')))
+  useEffect(() => {
+    const onFab = () => handleAddProperty();
+    window.addEventListener('open:add-property', onFab);
+    return () => window.removeEventListener('open:add-property', onFab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, propertyLimits]); // deps ensure up-to-date limits/admin check
+
+  // 2) location.state trigger { openCreateProperty: true }
+  useEffect(() => {
+    const state = (location.state || {}) as any;
+    if (state.openCreateProperty && (propertyLimits !== null || !isAdmin)) {
+      handleAddProperty();
+      // clear state so we don't reopen on back/forward
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, propertyLimits, isAdmin]);
+
+  // 3) query param trigger ?new=property
+  useEffect(() => {
+    if (params.get('new') === 'property' && (propertyLimits !== null || !isAdmin)) {
+      handleAddProperty();
+      params.delete('new');
+      setParams(params, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.toString(), propertyLimits, isAdmin]);
+  // -----------------------------------------------------
+
   const filteredProperties = properties.filter(property => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch =
+      searchTerm === '' ||
       property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.address.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesType = filters.type === 'all' || property.type === filters.type;
     const matchesBedrooms = filters.bedrooms === 'all' || property.bedrooms === filters.bedrooms;
     const matchesBathrooms = filters.bathrooms === 'all' || property.bathrooms === filters.bathrooms;
-    
+
     return matchesSearch && matchesType && matchesBedrooms && matchesBathrooms;
   });
 
@@ -161,9 +187,7 @@ function PropertiesPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Properties</h1>
-          <p className="mt-1 text-lg text-gray-500">
-            Manage your property portfolio
-          </p>
+          <p className="mt-1 text-lg text-gray-500">Manage your property portfolio</p>
           {propertyLimits && (
             <div className="mt-2 flex items-center space-x-4">
               <span className="text-sm text-gray-600">
@@ -217,9 +241,7 @@ function PropertiesPage() {
           <div className="border-t border-gray-200 p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Property Type
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
                 <select
                   value={filters.type}
                   onChange={(e) => setFilters({ ...filters, type: e.target.value })}
@@ -234,9 +256,7 @@ function PropertiesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bedrooms
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bedrooms</label>
                 <select
                   value={filters.bedrooms}
                   onChange={(e) => setFilters({ ...filters, bedrooms: e.target.value })}
@@ -253,9 +273,7 @@ function PropertiesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bathrooms
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bathrooms</label>
                 <select
                   value={filters.bathrooms}
                   onChange={(e) => setFilters({ ...filters, bathrooms: e.target.value })}
@@ -306,7 +324,7 @@ function PropertiesPage() {
             <p className="mt-2 text-base text-gray-500">
               {searchTerm || filters.type !== 'all' || filters.bedrooms !== 'all' || filters.bathrooms !== 'all'
                 ? "Try adjusting your search or filters to find what you're looking for."
-                : isAdmin 
+                : isAdmin
                   ? 'Get started by adding your first property.'
                   : 'Properties will appear here once your admin adds them.'}
             </p>
