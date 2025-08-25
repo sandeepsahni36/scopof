@@ -9,7 +9,7 @@ import {
   Plus,
   FilePlus2,
   ClipboardCheck,
-  FolderPlus
+  FolderPlus,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 
@@ -27,7 +27,7 @@ export default function BottomNavigation() {
   const [open, setOpen] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
 
-  // close popover on outside click / escape
+  // Close popover on outside click / ESC
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (!popRef.current) return;
@@ -59,10 +59,26 @@ export default function BottomNavigation() {
           bg-white/95 backdrop-blur border-t border-gray-200
           rounded-t-2xl shadow-[0_-6px_24px_rgba(18,20,23,.06)]
           px-3 pt-2 pb-[calc(10px+env(safe-area-inset-bottom))]
+          overflow-visible
         "
       >
+        {/* Center FAB (now docks ABOVE the bar) */}
+        <button
+          aria-label="Add"
+          onClick={() => setOpen((v) => !v)}
+          className="
+            absolute left-1/2 -translate-x-1/2 -top-8 z-10
+            w-16 h-16 rounded-full
+            bg-gradient-to-b from-[#2f66ff] to-[#5f86ff]
+            shadow-[0_10px_24px_rgba(47,102,255,.35),0_4px_10px_rgba(47,102,255,.25)]
+            grid place-items-center
+          "
+        >
+          <Plus size={28} className="text-white" />
+        </button>
+
         {/* nav row */}
-        <div className="grid grid-cols-4 text-[11px] font-medium text-gray-600">
+        <div className="grid grid-cols-4 text-[11px] font-medium">
           {NAV_ITEMS.map((item, idx) => (
             <NavLink
               key={item.href}
@@ -71,8 +87,8 @@ export default function BottomNavigation() {
               end={item.href === "/dashboard"}
               className={({ isActive }) =>
                 [
-                  "flex flex-col items-center justify-center gap-1 py-2",
-                  // push the two right items a bit to make visual room for the FAB
+                  "flex flex-col items-center justify-center gap-1 py-3",
+                  // small nudge so labels don't collide with the FAB
                   idx > 1 ? "translate-x-2" : "-translate-x-2",
                   isActive ? "text-[#2f66ff]" : "text-gray-600 hover:text-gray-800",
                 ].join(" ")
@@ -84,29 +100,13 @@ export default function BottomNavigation() {
           ))}
         </div>
 
-        {/* Center FAB */}
-        <button
-          aria-label="Add"
-          onClick={() => setOpen((v) => !v)}
-          className="
-            absolute left-1/2 -translate-x-1/2 -translate-y-7
-            w-16 h-16 rounded-full
-            bg-gradient-to-b from-[#2f66ff] to-[#5f86ff]
-            shadow-[0_10px_24px_rgba(47,102,255,.35),0_4px_10px_rgba(47,102,255,.25)]
-            grid place-items-center
-          "
-        >
-          <Plus size={28} className="text-white" />
-        </button>
-
         {/* Popover menu */}
         {open && (
           <div
             ref={popRef}
             className="
               absolute left-1/2 -translate-x-1/2 bottom-20
-              w-[min(88vw,360px)] rounded-2xl border border-gray-200 bg-white shadow-xl
-              p-2
+              w-[min(88vw,360px)] rounded-2xl border border-gray-200 bg-white shadow-xl p-2
             "
           >
             <MenuItem
@@ -148,11 +148,7 @@ function MenuItem({
   return (
     <button
       onClick={onClick}
-      className="
-        w-full text-left rounded-xl p-3
-        hover:bg-gray-50 active:bg-gray-100 transition
-        flex items-center gap-3
-      "
+      className="w-full text-left rounded-xl p-3 hover:bg-gray-50 active:bg-gray-100 transition flex items-center gap-3"
     >
       <div className="w-9 h-9 rounded-lg bg-gray-100 grid place-items-center">{icon}</div>
       <div className="min-w-0">
