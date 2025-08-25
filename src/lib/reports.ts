@@ -89,7 +89,7 @@ export async function getReports(filters: GetReportsFilters = {}): Promise<Repor
     if (searchTerm) {
       const searchPattern = `%${searchTerm}%`;
       query = query.or(
-        `inspections.properties.name.ilike."${searchPattern}",inspections.primary_contact_name.ilike."${searchPattern}",inspections.inspector_name.ilike."${searchPattern}"`
+        `inspections.properties.name.ilike.${searchPattern},inspections.primary_contact_name.ilike.${searchPattern},inspections.inspector_name.ilike.${searchPattern}`
       );
     }
 
