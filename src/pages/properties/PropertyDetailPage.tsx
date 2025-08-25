@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Building2, Bed, Bath, MapPin, ClipboardCheck, Camera, Edit, ArrowLeft, Calendar, User, Plus, X, Check, Trash2, GripVertical, ArrowUp, ArrowDown, Folder, LayoutTemplate } from 'lucide-react';
+import { Building2, Bed, Bath, MapPin, ClipboardCheck, Camera, Edit, ArrowLeft, Calendar, User, Plus, X, Check, Trash2, GripVertical, ArrowUp, ArrowDown, Folder, LayoutTemplate, Eye } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -830,6 +830,18 @@ const PropertyDetailPage = () => {
                                         className="text-green-600 hover:text-green-700 hover:bg-green-50"
                                       >
                                         Continue
+                                      </Button>
+                                    </Link>
+                                  )}
+                                  {inspection.status === 'completed' && (
+                                    <Link to={`/dashboard/inspections/${inspection.id}`}>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        leftIcon={<Eye size={16} />}
+                                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                      >
+                                        View
                                       </Button>
                                     </Link>
                                   )}
