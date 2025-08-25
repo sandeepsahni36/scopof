@@ -23,6 +23,7 @@ const TemplateCategoryCard: React.FC<TemplateCategoryCardProps> = ({
         bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl p-6 relative group
         transition-all duration-200 hover:bg-blue-100 hover:border-blue-300
         ${isDraggedOver ? 'bg-blue-100 border-blue-400 scale-105 shadow-lg' : ''}
+        overflow-hidden                      /* ← NEW: keep popover within the card */
       `}
     >
       {/* Category Menu */}
@@ -37,7 +38,13 @@ const TemplateCategoryCard: React.FC<TemplateCategoryCardProps> = ({
             </button>
 
             {showMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+              <div
+                className="
+                  absolute right-0 mt-2 w-44                      /* ← was w-48 */
+                  max-w-[calc(100%-0.75rem)]                      /* ← NEW: fit inside (0.75rem = right-3) */
+                  bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50
+                "
+              >
                 <button
                   onClick={() => {
                     onDelete(category.id);
